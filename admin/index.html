@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Thor's Notes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+    <script type="module" src="js/admin.js" defer></script>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-section" class="auth-container">
+        <div class="auth-box">
+            <h2>Thor's Notes Admin</h2>
+            <p>Please sign in to manage courses and vocabulary.</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="email" required placeholder="admin@example.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn-primary">Sign In</button>
+                <div id="login-error" class="error-msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard Layout -->
+    <div id="dashboard-section" class="dashboard-layout" style="display: none;">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h3>Admin Panel</h3>
+            </div>
+            <ul class="sidebar-nav">
+                <li class="nav-item active" data-tab="tab-units">Manage Units</li>
+                <li class="nav-item" data-tab="tab-vocab">Manage Vocabulary</li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn-secondary">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            
+            <!-- Units Tab -->
+            <div id="tab-units" class="tab-pane active">
+                <div class="dashboard-header">
+                    <h2>Course Units</h2>
+                    <button id="add-unit-btn" class="btn-primary">+ Add Unit</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Unit Title</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="units-list">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Vocabulary Tab -->
+            <div id="tab-vocab" class="tab-pane" style="display: none;">
+                <div class="dashboard-header">
+                    <h2>Vocabulary Database</h2>
+                    <button id="add-vocab-btn" class="btn-primary">+ Add Word</button>
+                </div>
+                <div class="filter-bar">
+                    <label>Filter by Unit:</label>
+                    <select id="filter-unit-select" class="input-field">
+                        <option value="all">All Units</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Word</th>
+                                <th>POS</th>
+                                <th>Pronunciation</th>
+                                <th>Unit</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vocab-list">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Unit Modal -->
+    <div id="unit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" data-target="unit-modal">&times;</span>
+            <h3 id="unit-modal-title">Add New Unit</h3>
+            <form id="unit-form">
+                <input type="hidden" id="unit-id">
+                <div class="input-group">
+                    <label>Unit Title (e.g., Unit 3: Fun & Games)</label>
+                    <input type="text" id="unit-title" required>
+                </div>
+                <div class="input-group">
+                    <label>Order (Number to sort by)</label>
+                    <input type="number" id="unit-order" value="1" required>
+                </div>
+                <button type="submit" class="btn-primary">Save Unit</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Vocab Modal -->
+    <div id="vocab-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close-modal" data-target="vocab-modal">&times;</span>
+            <h3 id="vocab-modal-title">Add New Vocabulary</h3>
+            <form id="vocab-form">
+                <input type="hidden" id="vocab-id">
+                
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Word</label>
+                        <input type="text" id="vocab-word" required placeholder="e.g. beat">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Part of Speech (POS)</label>
+                        <input type="text" id="vocab-pos" required placeholder="e.g. v, n phr">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Pronunciation</label>
+                        <input type="text" id="vocab-pron" required placeholder="e.g. /biːt/">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Audio URL (Link to .mp3)</label>
+                        <input type="url" id="vocab-audio" placeholder="https://.../audio.mp3">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Belongs to Unit</label>
+                    <select id="vocab-unit-id" class="input-field" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Definition</label>
+                    <textarea id="vocab-def" rows="3" required placeholder="to defeat someone..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>Example Sentence</label>
+                    <textarea id="vocab-example" rows="2" placeholder="England needed to beat Germany..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary">Save Vocabulary</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
