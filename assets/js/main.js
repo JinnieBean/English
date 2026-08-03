@@ -16,6 +16,27 @@ const db = getFirestore(app);
 
 document.addEventListener('DOMContentLoaded', async () => {
     
+    // Sidebar Toggle
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebarToggle && sidebar) {
+        // Khôi phục trạng thái từ localStorage
+        if (localStorage.getItem('sidebar-collapsed') === 'true') {
+            sidebar.classList.add('collapsed');
+            // Tắt transition tạm thời để tránh flash animation lúc mới load
+            sidebar.style.transition = 'none';
+            setTimeout(() => {
+                sidebar.style.transition = '';
+            }, 100);
+        }
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            // Lưu trạng thái vào localStorage
+            localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+        });
+    }
+
     // Trang Units: Tải danh sách Units
     const unitsListContainer = document.getElementById('units-list-container');
     if (unitsListContainer) {

@@ -68,7 +68,7 @@
 
 /* Units Page */
 .units-container {
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 2rem 2rem;
 }
@@ -157,7 +157,7 @@
 }
 
 .vocab-left {
-    flex: 0 0 350px;
+    flex: 0 0 450px;
 }
 
 .vocab-word-group {
@@ -169,13 +169,13 @@
 
 .vocab-word {
     font-family: var(--font-body);
-    font-size: 2.2rem;
+    font-size: 2.8rem;
     color: var(--text-primary);
-    font-weight: 400;
+    font-weight: 500;
 }
 
 .vocab-pos {
-    font-size: 1rem;
+    font-size: 1.2rem;
     color: var(--text-secondary);
     font-weight: 500;
 }
@@ -187,9 +187,10 @@
 }
 
 .vocab-pronunciation {
-    font-size: 1rem;
+    font-size: 1.3rem;
     color: var(--text-primary);
     font-weight: 500;
+    white-space: nowrap;
 }
 
 .vocab-audio-player {
@@ -204,15 +205,17 @@
 }
 
 .vocab-def {
-    font-size: 1.1rem;
+    font-size: 1.4rem;
     color: var(--text-primary);
     margin-bottom: 1rem;
+    line-height: 1.5;
 }
 
 .vocab-example {
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     color: #6a8cba; 
     font-style: italic;
+    line-height: 1.5;
 }
 
 @media (max-width: 900px) {
