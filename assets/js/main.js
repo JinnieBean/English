@@ -54,9 +54,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             units.forEach(unit => {
                 unitsListContainer.innerHTML += `
-                    <div class="unit-item">
+                    <div class="unit-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem; justify-content: center;">
                         <span class="unit-name">${unit.title}</span>
-                        <a href="unit_detail.html?id=${unit.id}" class="btn-more">More</a>
+                        <div class="unit-submenu">
+                            <a href="unit_detail.html?id=${unit.id}" class="unit-submenu-link">Vocabulary</a>
+                            <a href="unit_phrasal.html?id=${unit.id}" class="unit-submenu-link">Phrasal Verbs</a>
+                            <a href="unit_prep.html?id=${unit.id}" class="unit-submenu-link">Prepositional Phrases</a>
+                            <a href="unit_wordform.html?id=${unit.id}" class="unit-submenu-link">Word Formation</a>
+                        </div>
                     </div>
                 `;
             });
@@ -132,4 +137,224 @@ document.addEventListener('DOMContentLoaded', async () => {
             vocabListContainer.innerHTML = '<p style="color: red;">Lỗi tải từ vựng.</p>';
         }
     }
+
+    // Trang Unit Phrasal: Tải danh sách Phrasal verbs
+    const phrasalListContainer = document.getElementById('phrasal-list-container');
+    if (phrasalListContainer) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const unitId = urlParams.get('id');
+        
+        if (!unitId) {
+            phrasalListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            return;
+        }
+
+        phrasalListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+        
+        try {
+            const unitsSnapshot = await getDocs(collection(db, "units"));
+            const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
+            
+            if (currentUnit) {
+                const titleEl = document.querySelector('.unit-detail-title');
+                if(titleEl) titleEl.innerText = currentUnit.title;
+            }
+
+            const phrasalSnapshot = await getDocs(collection(db, "phrasal_verbs"));
+            let phrasals = phrasalSnapshot.docs
+                            .map(doc => ({ id: doc.id, ...doc.data() }))
+                            .filter(p => p.unitId === unitId);
+            
+            phrasalListContainer.innerHTML = '';
+            
+            if(phrasals.length === 0) {
+                phrasalListContainer.innerHTML = '<p>Unit này chưa có Phrasal verb nào.</p>';
+            }
+
+            phrasals.forEach(p => {
+                phrasalListContainer.innerHTML += `
+                    <div class="phrasal-item">
+                        <div class="phrasal-left">
+                            <div class="phrasal-word">${p.word}</div>
+                            <div class="phrasal-pron">${p.pron}</div>
+                        </div>
+                        <div class="phrasal-right">
+                            <p class="phrasal-def">${p.def}</p>
+                            <p class="phrasal-example">${p.example}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch(e) {
+            console.error(e);
+            phrasalListContainer.innerHTML = '<p style="color: red;">Lỗi tải dữ liệu.</p>';
+        }
+    }
+
+    // Trang Unit Prep: Tải danh sách Prepositional phrases
+    const prepListContainer = document.getElementById('prep-list-container');
+    if (prepListContainer) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const unitId = urlParams.get('id');
+        
+        if (!unitId) {
+            prepListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            return;
+        }
+
+        prepListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+        
+        try {
+            const unitsSnapshot = await getDocs(collection(db, "units"));
+            const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
+            
+            if (currentUnit) {
+                const titleEl = document.querySelector('.unit-detail-title');
+                if(titleEl) titleEl.innerText = currentUnit.title;
+            }
+
+            const prepSnapshot = await getDocs(collection(db, "prep_phrases"));
+            let preps = prepSnapshot.docs
+                            .map(doc => ({ id: doc.id, ...doc.data() }))
+                            .filter(p => p.unitId === unitId);
+            
+            prepListContainer.innerHTML = '';
+            
+            if(preps.length === 0) {
+                prepListContainer.innerHTML = '<p>Unit này chưa có Prepositional phrase nào.</p>';
+            }
+
+            preps.forEach(p => {
+                prepListContainer.innerHTML += `
+                    <div class="phrasal-item">
+                        <div class="phrasal-left">
+                            <div class="phrasal-word">${p.word}</div>
+                        </div>
+                        <div class="phrasal-right">
+                            <p class="phrasal-def">${p.def}</p>
+                            <p class="phrasal-example">${p.example}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch(e) {
+            console.error(e);
+            prepListContainer.innerHTML = '<p style="color: red;">Lỗi tải dữ liệu.</p>';
+        }
+    }
+
+    // Trang Unit Word Formation
+    const wfListContainer = document.getElementById('wordform-list-container');
+    if (wfListContainer) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const unitId = urlParams.get('id');
+        
+        if (!unitId) {
+            wfListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            return;
+        }
+
+        wfListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+        
+        try {
+            const unitsSnapshot = await getDocs(collection(db, "units"));
+            const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
+            
+            if (currentUnit) {
+                const titleEl = document.querySelector('.unit-detail-title');
+                if(titleEl) titleEl.innerText = currentUnit.title;
+            }
+
+            const wfSnapshot = await getDocs(collection(db, "word_formations"));
+            let wordforms = wfSnapshot.docs
+                            .map(doc => ({ id: doc.id, ...doc.data() }))
+                            .filter(w => w.unitId === unitId);
+            
+            wfListContainer.innerHTML = '';
+            
+            if(wordforms.length === 0) {
+                wfListContainer.innerHTML = '<p>Unit này chưa có Word formation nào.</p>';
+            }
+
+            wordforms.forEach(w => {
+                let overviewsHtml = '';
+                if(w.overviews && w.overviews.length > 0) {
+                    w.overviews.forEach(o => {
+                        overviewsHtml += `
+                            <div class="wf-overview-row">
+                                <span class="wf-pos">${o.pos}</span>
+                                <span class="wf-words">${o.words}</span>
+                            </div>
+                        `;
+                    });
+                }
+                
+                let formsHtml = '';
+                if(w.forms && w.forms.length > 0) {
+                    w.forms.forEach(f => {
+                        let audiosHtml = '';
+                        if(f.audios && f.audios.length > 0) {
+                            f.audios.forEach(a => {
+                                audiosHtml += `
+                                    <div class="wf-audio-wrapper">
+                                        <span class="wf-audio-pron">${a.pron}</span>
+                                        <audio controls src="${a.url}"></audio>
+                                    </div>
+                                `;
+                            });
+                        }
+                        
+                        let defsHtml = f.definitions ? f.definitions.split('\\n').map(line => `<p class="wf-def-line">${line}</p>`).join('') : '';
+                        let examplesHtml = f.examples ? f.examples.split('\\n').map(line => `<p class="wf-example-line">${line}</p>`).join('') : '';
+
+                        formsHtml += `
+                            <div class="wf-form-block">
+                                <div class="wf-form-left">
+                                    <h4 class="wf-form-title">${f.title}</h4>
+                                    ${audiosHtml}
+                                </div>
+                                <div class="wf-form-right">
+                                    <div class="wf-form-defs">
+                                        ${defsHtml}
+                                    </div>
+                                    <div class="wf-form-examples">
+                                        ${examplesHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                wfListContainer.innerHTML += `
+                    <div class="wf-item">
+                        <div class="wf-main">
+                            <div class="wf-root">${w.rootWord}</div>
+                            <div class="wf-overview-list">
+                                ${overviewsHtml}
+                            </div>
+                        </div>
+                        <div class="wf-toggle" id="wf-toggle-${w.id}" onclick="window.toggleWf('${w.id}')">▶</div>
+                        <div class="wf-forms collapsed" id="wf-forms-${w.id}">
+                            ${formsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+        } catch(e) {
+            console.error(e);
+            wfListContainer.innerHTML = '<p style="color: red;">Lỗi tải dữ liệu.</p>';
+        }
+    }
 });
+
+window.toggleWf = function(id) {
+    const forms = document.getElementById('wf-forms-' + id);
+    const toggle = document.getElementById('wf-toggle-' + id);
+    if(forms.classList.contains('collapsed')) {
+        forms.classList.remove('collapsed');
+        toggle.innerHTML = '▼';
+    } else {
+        forms.classList.add('collapsed');
+        toggle.innerHTML = '▶';
+    }
+};

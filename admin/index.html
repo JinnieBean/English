@@ -40,6 +40,9 @@
             <ul class="sidebar-nav">
                 <li class="nav-item active" data-tab="tab-units">Manage Units</li>
                 <li class="nav-item" data-tab="tab-vocab">Manage Vocabulary</li>
+                <li class="nav-item" data-tab="tab-phrasal">Manage Phrasal Verbs</li>
+                <li class="nav-item" data-tab="tab-prep">Manage Prepositional Phrases</li>
+                <li class="nav-item" data-tab="tab-wordform">Manage Word Formation</li>
             </ul>
             <div class="sidebar-footer">
                 <button id="logout-btn" class="btn-secondary">Logout</button>
@@ -94,6 +97,91 @@
                             </tr>
                         </thead>
                         <tbody id="vocab-list">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Phrasal Verbs Tab -->
+            <div id="tab-phrasal" class="tab-pane" style="display: none;">
+                <div class="dashboard-header">
+                    <h2>Phrasal Verbs Database</h2>
+                    <button id="add-phrasal-btn" class="btn-primary">+ Add Phrasal Verb</button>
+                </div>
+                <div class="filter-bar">
+                    <label>Filter by Unit:</label>
+                    <select id="filter-unit-select-phrasal" class="input-field">
+                        <option value="all">All Units</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Phrasal Verb</th>
+                                <th>Pronunciation</th>
+                                <th>Unit</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="phrasal-list">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Prepositional Phrases Tab -->
+            <div id="tab-prep" class="tab-pane" style="display: none;">
+                <div class="dashboard-header">
+                    <h2>Prepositional Phrases Database</h2>
+                    <button id="add-prep-btn" class="btn-primary">+ Add Phrase</button>
+                </div>
+                <div class="filter-bar">
+                    <label>Filter by Unit:</label>
+                    <select id="filter-unit-select-prep" class="input-field">
+                        <option value="all">All Units</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Phrase</th>
+                                <th>Unit</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prep-list">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Word Formation Tab -->
+            <div id="tab-wordform" class="tab-pane" style="display: none;">
+                <div class="dashboard-header">
+                    <h2>Word Formation Database</h2>
+                    <button id="add-new-wordform-btn" class="btn-primary">+ Add Word Family</button>
+                </div>
+                <div class="filter-bar">
+                    <label>Filter by Unit:</label>
+                    <select id="filter-unit-select-wordform" class="input-field">
+                        <option value="all">All Units</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Root Word</th>
+                                <th>Unit</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wordform-list">
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -172,6 +260,122 @@
                 </div>
 
                 <button type="submit" class="btn-primary">Save Vocabulary</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Phrasal Verb Modal -->
+    <div id="phrasal-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close-modal" data-target="phrasal-modal">&times;</span>
+            <h3 id="phrasal-modal-title">Add New Phrasal Verb</h3>
+            <form id="phrasal-form">
+                <input type="hidden" id="phrasal-id">
+                
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Phrasal Verb</label>
+                        <input type="text" id="phrasal-word" required placeholder="e.g. carry on">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Pronunciation</label>
+                        <input type="text" id="phrasal-pron" required placeholder="e.g. /ˌkæri ˈɑːn/">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Belongs to Unit</label>
+                    <select id="phrasal-unit-id" class="input-field" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Definition</label>
+                    <textarea id="phrasal-def" rows="3" required placeholder="to continue..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>Example Sentence</label>
+                    <textarea id="phrasal-example" rows="2" placeholder="The phone rang, but Mark..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary">Save Phrasal Verb</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Prepositional Phrase Modal -->
+    <div id="prep-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close-modal" data-target="prep-modal">&times;</span>
+            <h3 id="prep-modal-title">Add New Phrase</h3>
+            <form id="prep-form">
+                <input type="hidden" id="prep-id">
+                
+                <div class="input-group">
+                    <label>Phrase</label>
+                    <input type="text" id="prep-word" required placeholder="e.g. for a long time">
+                </div>
+
+                <div class="input-group">
+                    <label>Belongs to Unit</label>
+                    <select id="prep-unit-id" class="input-field" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Definition</label>
+                    <textarea id="prep-def" rows="3" required placeholder="for a long period of time..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>Example Sentence</label>
+                    <textarea id="prep-example" rows="2" placeholder="I haven't seen George..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary">Save Phrase</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Word Formation Modal -->
+    <div id="wordform-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close-modal" data-target="wordform-modal">&times;</span>
+            <h3 id="wordform-modal-title">Add Word Formation</h3>
+            <form id="wordform-form">
+                <input type="hidden" id="wordform-id">
+                
+                <div class="input-group">
+                    <label>Belongs to Unit</label>
+                    <select id="wordform-unit-id" class="input-field" required>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Root Word</label>
+                    <input type="text" id="wordform-root" required placeholder="e.g. act">
+                </div>
+                
+                <div class="input-group">
+                    <label>Overview Forms (e.g. pos: (verb), words: act ≠ overact)</label>
+                    <div id="wordform-overview-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    </div>
+                    <button type="button" id="add-overview-btn" class="btn-secondary btn-small">+ Add Overview Form</button>
+                </div>
+                
+                <hr style="margin: 1rem 0; border: 0; border-top: 1px solid #ccc;">
+
+                <div class="input-group">
+                    <label>Detailed Forms (Audios, Definitions, Examples)</label>
+                    <div id="wordform-forms-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    </div>
+                    <button type="button" id="add-wordform-btn" class="btn-secondary btn-small">+ Add Detailed Form</button>
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Save Word Formation</button>
             </form>
         </div>
     </div>
