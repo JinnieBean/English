@@ -37,6 +37,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Mobile Sidebar Toggle
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    if (mobileMenuBtn && sidebar) {
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('mobile-open');
+        });
+        
+        // Đóng sidebar khi click ngoài sidebar trên mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && sidebar.classList.contains('mobile-open')) {
+                if (!sidebar.contains(e.target) && e.target !== mobileMenuBtn) {
+                    sidebar.classList.remove('mobile-open');
+                }
+            }
+        });
+    }
+
     // Trang Units: Tải danh sách Units
     const unitsListContainer = document.getElementById('units-list-container');
     if (unitsListContainer) {
@@ -277,12 +294,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             wordforms.forEach(w => {
+                const formatPos = (text) => {
+                    if(!text) return '';
+                    return text.replace(/\b(v|n|adj|adv|prep|conj|pron|det)\b/gi, (match) => {
+                        return `<span class="vocab-pos">(${match.toLowerCase()})</span>`;
+                    });
+                };
+                
                 let overviewsHtml = '';
                 if(w.overviews && w.overviews.length > 0) {
                     w.overviews.forEach(o => {
                         overviewsHtml += `
                             <div class="wf-overview-row">
-                                <span class="wf-pos">${o.pos}</span>
+                                <span class="wf-pos">${formatPos(o.pos)}</span>
                                 <span class="wf-words">${o.words}</span>
                             </div>
                         `;
@@ -310,7 +334,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         formsHtml += `
                             <div class="wf-form-block">
                                 <div class="wf-form-left">
-                                    <h4 class="wf-form-title">${f.title}</h4>
+                                    <h4 class="wf-form-title">${formatPos(f.title)}</h4>
                                     ${audiosHtml}
                                 </div>
                                 <div class="wf-form-right">

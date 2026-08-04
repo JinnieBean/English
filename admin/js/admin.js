@@ -157,10 +157,26 @@ unitForm.addEventListener('submit', async (e) => {
     }
 });
 
+document.getElementById('search-unit').addEventListener('input', renderUnits);
+document.getElementById('sort-unit').addEventListener('change', renderUnits);
+
 function renderUnits() {
     const list = document.getElementById('units-list');
+    const searchQuery = document.getElementById('search-unit').value.toLowerCase();
+    const sortValue = document.getElementById('sort-unit').value;
     list.innerHTML = '';
-    unitsData.sort((a,b) => a.order - b.order).forEach(unit => {
+    
+    let filteredData = unitsData.filter(u => u.title.toLowerCase().includes(searchQuery));
+    
+    if (sortValue === 'az') {
+        filteredData.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortValue === 'za') {
+        filteredData.sort((a, b) => b.title.localeCompare(a.title));
+    } else {
+        filteredData.sort((a, b) => a.order - b.order);
+    }
+
+    filteredData.forEach(unit => {
         list.innerHTML += `
             <tr>
                 <td>${unit.title}</td>
@@ -277,13 +293,24 @@ vocabForm.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
+document.getElementById('search-vocab').addEventListener('input', renderVocab);
+document.getElementById('sort-vocab').addEventListener('change', renderVocab);
 
 function renderVocab() {
     const list = document.getElementById('vocab-list');
     const filter = document.getElementById('filter-unit-select').value;
+    const searchQuery = document.getElementById('search-vocab').value.toLowerCase();
+    const sortValue = document.getElementById('sort-vocab').value;
     list.innerHTML = '';
     
-    const filteredVocab = filter === 'all' ? vocabData : vocabData.filter(v => v.unitId === filter);
+    let filteredVocab = filter === 'all' ? vocabData : vocabData.filter(v => v.unitId === filter);
+    filteredVocab = filteredVocab.filter(v => v.word.toLowerCase().includes(searchQuery) || (v.def && v.def.toLowerCase().includes(searchQuery)));
+    
+    if (sortValue === 'az') {
+        filteredVocab.sort((a, b) => a.word.localeCompare(b.word));
+    } else if (sortValue === 'za') {
+        filteredVocab.sort((a, b) => b.word.localeCompare(a.word));
+    }
     
     filteredVocab.forEach(v => {
         const unitName = unitsData.find(u => u.id === v.unitId)?.title || 'Unknown';
@@ -366,13 +393,24 @@ phrasalForm.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('filter-unit-select-phrasal').addEventListener('change', renderPhrasal);
+document.getElementById('search-phrasal').addEventListener('input', renderPhrasal);
+document.getElementById('sort-phrasal').addEventListener('change', renderPhrasal);
 
 function renderPhrasal() {
     const list = document.getElementById('phrasal-list');
     const filter = document.getElementById('filter-unit-select-phrasal').value;
+    const searchQuery = document.getElementById('search-phrasal').value.toLowerCase();
+    const sortValue = document.getElementById('sort-phrasal').value;
     list.innerHTML = '';
     
-    const filteredPhrasal = filter === 'all' ? phrasalData : phrasalData.filter(p => p.unitId === filter);
+    let filteredPhrasal = filter === 'all' ? phrasalData : phrasalData.filter(p => p.unitId === filter);
+    filteredPhrasal = filteredPhrasal.filter(p => p.word.toLowerCase().includes(searchQuery) || (p.def && p.def.toLowerCase().includes(searchQuery)));
+
+    if (sortValue === 'az') {
+        filteredPhrasal.sort((a, b) => a.word.localeCompare(b.word));
+    } else if (sortValue === 'za') {
+        filteredPhrasal.sort((a, b) => b.word.localeCompare(a.word));
+    }
     
     filteredPhrasal.forEach(p => {
         const unitName = unitsData.find(u => u.id === p.unitId)?.title || 'Unknown';
@@ -451,13 +489,24 @@ prepForm.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('filter-unit-select-prep').addEventListener('change', renderPrep);
+document.getElementById('search-prep').addEventListener('input', renderPrep);
+document.getElementById('sort-prep').addEventListener('change', renderPrep);
 
 function renderPrep() {
     const list = document.getElementById('prep-list');
     const filter = document.getElementById('filter-unit-select-prep').value;
+    const searchQuery = document.getElementById('search-prep').value.toLowerCase();
+    const sortValue = document.getElementById('sort-prep').value;
     list.innerHTML = '';
     
-    const filteredPrep = filter === 'all' ? prepData : prepData.filter(p => p.unitId === filter);
+    let filteredPrep = filter === 'all' ? prepData : prepData.filter(p => p.unitId === filter);
+    filteredPrep = filteredPrep.filter(p => p.word.toLowerCase().includes(searchQuery) || (p.def && p.def.toLowerCase().includes(searchQuery)));
+
+    if (sortValue === 'az') {
+        filteredPrep.sort((a, b) => a.word.localeCompare(b.word));
+    } else if (sortValue === 'za') {
+        filteredPrep.sort((a, b) => b.word.localeCompare(a.word));
+    }
     
     filteredPrep.forEach(p => {
         const unitName = unitsData.find(u => u.id === p.unitId)?.title || 'Unknown';
@@ -655,13 +704,24 @@ wordformForm.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('filter-unit-select-wordform').addEventListener('change', renderWordform);
+document.getElementById('search-wordform').addEventListener('input', renderWordform);
+document.getElementById('sort-wordform').addEventListener('change', renderWordform);
 
 function renderWordform() {
     const list = document.getElementById('wordform-list');
     const filter = document.getElementById('filter-unit-select-wordform').value;
+    const searchQuery = document.getElementById('search-wordform').value.toLowerCase();
+    const sortValue = document.getElementById('sort-wordform').value;
     list.innerHTML = '';
     
-    const filteredWf = filter === 'all' ? wordformData : wordformData.filter(w => w.unitId === filter);
+    let filteredWf = filter === 'all' ? wordformData : wordformData.filter(w => w.unitId === filter);
+    filteredWf = filteredWf.filter(w => w.rootWord.toLowerCase().includes(searchQuery));
+
+    if (sortValue === 'az') {
+        filteredWf.sort((a, b) => a.rootWord.localeCompare(b.rootWord));
+    } else if (sortValue === 'za') {
+        filteredWf.sort((a, b) => b.rootWord.localeCompare(a.rootWord));
+    }
     
     filteredWf.forEach(w => {
         const unitName = unitsData.find(u => u.id === w.unitId)?.title || 'Unknown';

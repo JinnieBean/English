@@ -58,6 +58,14 @@
                     <h2>Course Units</h2>
                     <button id="add-unit-btn" class="btn-primary">+ Add Unit</button>
                 </div>
+                <div class="filter-bar">
+                    <input type="text" id="search-unit" class="input-field" placeholder="Search units...">
+                    <select id="sort-unit" class="input-field" style="max-width: 150px;">
+                        <option value="az" selected>A-Z</option>
+                        <option value="za">Z-A</option>
+                        <option value="default">Default Sort</option>
+                    </select>
+                </div>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -81,8 +89,14 @@
                 </div>
                 <div class="filter-bar">
                     <label>Filter by Unit:</label>
-                    <select id="filter-unit-select" class="input-field">
+                    <select id="filter-unit-select" class="input-field" style="max-width: 200px;">
                         <option value="all">All Units</option>
+                    </select>
+                    <input type="text" id="search-vocab" class="input-field" placeholder="Search vocabulary...">
+                    <select id="sort-vocab" class="input-field" style="max-width: 150px;">
+                        <option value="az" selected>A-Z</option>
+                        <option value="za">Z-A</option>
+                        <option value="default">Default Sort</option>
                     </select>
                 </div>
                 <div class="table-container">
@@ -111,8 +125,14 @@
                 </div>
                 <div class="filter-bar">
                     <label>Filter by Unit:</label>
-                    <select id="filter-unit-select-phrasal" class="input-field">
+                    <select id="filter-unit-select-phrasal" class="input-field" style="max-width: 200px;">
                         <option value="all">All Units</option>
+                    </select>
+                    <input type="text" id="search-phrasal" class="input-field" placeholder="Search phrasal verbs...">
+                    <select id="sort-phrasal" class="input-field" style="max-width: 150px;">
+                        <option value="az" selected>A-Z</option>
+                        <option value="za">Z-A</option>
+                        <option value="default">Default Sort</option>
                     </select>
                 </div>
                 <div class="table-container">
@@ -140,8 +160,14 @@
                 </div>
                 <div class="filter-bar">
                     <label>Filter by Unit:</label>
-                    <select id="filter-unit-select-prep" class="input-field">
+                    <select id="filter-unit-select-prep" class="input-field" style="max-width: 200px;">
                         <option value="all">All Units</option>
+                    </select>
+                    <input type="text" id="search-prep" class="input-field" placeholder="Search prep phrases...">
+                    <select id="sort-prep" class="input-field" style="max-width: 150px;">
+                        <option value="az" selected>A-Z</option>
+                        <option value="za">Z-A</option>
+                        <option value="default">Default Sort</option>
                     </select>
                 </div>
                 <div class="table-container">
@@ -168,8 +194,14 @@
                 </div>
                 <div class="filter-bar">
                     <label>Filter by Unit:</label>
-                    <select id="filter-unit-select-wordform" class="input-field">
+                    <select id="filter-unit-select-wordform" class="input-field" style="max-width: 200px;">
                         <option value="all">All Units</option>
+                    </select>
+                    <input type="text" id="search-wordform" class="input-field" placeholder="Search root words...">
+                    <select id="sort-wordform" class="input-field" style="max-width: 150px;">
+                        <option value="az" selected>A-Z</option>
+                        <option value="za">Z-A</option>
+                        <option value="default">Default Sort</option>
                     </select>
                 </div>
                 <div class="table-container">

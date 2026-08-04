@@ -132,7 +132,6 @@ body {
     text-decoration: none;
     color: var(--text-primary);
     font-family: var(--font-heading);
-    font-style: italic;
     font-size: 1.2rem;
     padding: 0.5rem 3rem;
     border: 1px solid var(--text-primary);
@@ -335,4 +334,41 @@ body {
         justify-content: center;
         gap: 2rem;
     }
+    
+    .mobile-menu-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .sidebar {
+        position: fixed;
+        left: -100%; /* Hide off-screen */
+        top: 0;
+        z-index: 1000;
+        height: 100vh;
+        transition: left 0.3s ease;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+
+    .sidebar.mobile-open {
+        left: 0;
+    }
+}
+
+.mobile-menu-btn {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: var(--text-primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+    z-index: 1100;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
