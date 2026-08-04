@@ -1,0 +1,166 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBiGp-ZZD0Yq-Tok2aAOwVbxXMmq7eRZuM",
+    authDomain: "english-study-68459.firebaseapp.com",
+    projectId: "english-study-68459",
+    storageBucket: "english-study-68459.firebasestorage.app",
+    messagingSenderId: "1048895043926",
+    appId: "1:1048895043926:web:06c3c04a722e2f3f647ef7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Sidebar Toggle Logic (copied from main.js)
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebarToggle && sidebar) {
+        if (localStorage.getItem('sidebar-collapsed') === 'true') {
+            sidebar.style.transition = 'none';
+            sidebar.classList.add('collapsed');
+            setTimeout(() => sidebar.style.transition = '', 50);
+        }
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+        });
+    }
+
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    if (mobileMenuBtn && sidebar) {
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('mobile-open');
+        });
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && sidebar.classList.contains('mobile-open')) {
+                if (!sidebar.contains(e.target) && e.target !== mobileMenuBtn) {
+                    sidebar.classList.remove('mobile-open');
+                }
+            }
+        });
+    }
+
+    // Grammar Overview Page Logic
+    const overviewContainer = document.getElementById('grammar-overview-container');
+    if (overviewContainer) {
+        try {
+            // Fetch Intro
+            const introDocRef = doc(db, 'grammar_intro', 'main');
+            const introSnap = await getDoc(introDocRef);
+            let introHtml = '';
+            if (introSnap.exists()) {
+                const introData = introSnap.data();
+                introHtml = `
+                    <div class="grammar-intro">
+                        <h2 class="grammar-intro-title">${introData.title || 'English Grammar Overview'}</h2>
+                        <p class="grammar-intro-desc">${introData.description || ''}</p>
+                        ${introData.content ? `<a href="grammar_lesson.html?id=intro" class="grammar-read-more">Read More</a>` : ''}
+                    </div>
+                `;
+            } else {
+                introHtml = `
+                    <div class="grammar-intro">
+                        <h2 class="grammar-intro-title">English Grammar Overview</h2>
+                        <p class="grammar-intro-desc">Introduction to English Grammar.</p>
+                    </div>
+                `;
+            }
+
+            // Fetch Categories
+            const catSnap = await getDocs(collection(db, 'grammar_categories'));
+            let categories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            categories.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            // Fetch Lessons
+            const lesSnap = await getDocs(collection(db, 'grammar_lessons'));
+            let lessons = lesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            lessons.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            let catsHtml = '';
+            categories.forEach(cat => {
+                const catLessons = lessons.filter(l => l.categoryId === cat.id);
+                if (catLessons.length > 0) {
+                    let lesHtml = catLessons.map(l => `
+                        <a href="grammar_lesson.html?id=${l.id}" class="grammar-lesson-link">
+                            <span class="lesson-title">${l.title}</span>
+                            <span class="lesson-more">More</span>
+                        </a>
+                    `).join('');
+                    
+                    catsHtml += `
+                        <div class="grammar-category">
+                            <h3 class="grammar-category-title">${cat.title}</h3>
+                            <div class="grammar-category-lessons">
+                                ${lesHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            overviewContainer.innerHTML = introHtml + catsHtml;
+
+        } catch (e) {
+            console.error(e);
+            overviewContainer.innerHTML = '<p style="color:red;">Error loading grammar data.</p>';
+        }
+    }
+
+    // Grammar Lesson Page Logic
+    const lessonContainer = document.getElementById('grammar-lesson-container');
+    if (lessonContainer) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const lessonId = urlParams.get('id');
+        
+        if (!lessonId) {
+            lessonContainer.innerHTML = '<p style="color:red;">Lesson ID not found.</p>';
+            return;
+        }
+
+        try {
+            let title = '';
+            let authorHtml = '';
+            let content = '';
+
+            if (lessonId === 'intro') {
+                const introDocRef = doc(db, 'grammar_intro', 'main');
+                const introSnap = await getDoc(introDocRef);
+                if (introSnap.exists()) {
+                    const data = introSnap.data();
+                    title = data.title || 'English Grammar Overview';
+                    content = data.content || '';
+                }
+            } else {
+                const lessonDocRef = doc(db, 'grammar_lessons', lessonId);
+                const lessonSnap = await getDoc(lessonDocRef);
+                if (lessonSnap.exists()) {
+                    const data = lessonSnap.data();
+                    title = data.title;
+                    authorHtml = data.author ? `<p class="lesson-author">Written By ${data.author}</p>` : '';
+                    content = data.content;
+                }
+            }
+
+            if (!title) {
+                lessonContainer.innerHTML = '<p style="color:red;">Lesson not found.</p>';
+                return;
+            }
+
+            lessonContainer.innerHTML = `
+                <div class="lesson-header">
+                    <h1 class="lesson-main-title">${title}</h1>
+                    ${authorHtml}
+                </div>
+                <div class="lesson-content">
+                    ${content}
+                </div>
+            `;
+        } catch (e) {
+            console.error(e);
+            lessonContainer.innerHTML = '<p style="color:red;">Error loading lesson.</p>';
+        }
+    }
+});

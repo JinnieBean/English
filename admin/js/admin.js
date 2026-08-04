@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, setDoc, getDoc, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBiGp-ZZD0Yq-Tok2aAOwVbxXMmq7eRZuM",
@@ -11,7 +11,7 @@ const firebaseConfig = {
     appId: "1:1048895043926:web:06c3c04a722e2f3f647ef7"
 };
 
-// Khởi tạo Firebase
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -82,7 +82,7 @@ loginForm.addEventListener('submit', async (e) => {
     try {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-        loginError.innerText = "Đăng nhập thất bại. Vui lòng kiểm tra lại email/mật khẩu.";
+        loginError.innerText = "Login failed. Please check your email/password.";
         console.error(error);
     }
 });
@@ -131,8 +131,8 @@ async function loadData() {
         renderPattern();
         renderLexical();
     } catch (error) {
-        console.error("Lỗi khi tải dữ liệu:", error);
-        alert("Không thể tải dữ liệu từ Database: " + (error.message || error));
+        console.error("Error loading data:", error);
+        alert("Cannot load data from Database: " + (error.message || error));
     }
 }
 
@@ -164,8 +164,8 @@ unitForm.addEventListener('submit', async (e) => {
         unitModal.style.display = 'none';
         await loadData();
     } catch (error) {
-        console.error("Lỗi khi lưu Unit:", error);
-        alert("Lỗi khi lưu Unit!");
+        console.error("Error saving Unit:", error);
+        alert("Error saving Unit!");
     }
 });
 
@@ -218,7 +218,7 @@ window.deleteUnit = async (id) => {
             await deleteDoc(doc(db, "units", id));
             await loadData();
         } catch (error) {
-            console.error("Lỗi khi xóa Unit:", error);
+            console.error("Error deleting Unit:", error);
         }
     }
 }
@@ -243,7 +243,7 @@ function populateUnitSelects() {
     
     const options = unitsData.sort((a,b) => a.order - b.order).map(u => `<option value="${u.id}">${u.title}</option>`).join('');
     
-    // Giữ lại option hiện tại nếu đang chọn filter
+    // Keep current option if filter is selected
     const currentFilter = filterSelect.value;
     filterSelect.innerHTML = `<option value="all">All Units</option>` + options;
     if(currentFilter && currentFilter !== 'all') {
@@ -317,8 +317,8 @@ vocabForm.addEventListener('submit', async (e) => {
         vocabModal.style.display = 'none';
         await loadData();
     } catch (error) {
-        console.error("Lỗi khi lưu từ vựng:", error);
-        alert("Lỗi khi lưu từ vựng!");
+        console.error("Error saving vocabulary:", error);
+        alert("Error saving vocabulary!");
     }
 });
 
@@ -381,7 +381,7 @@ window.deleteVocab = async (id) => {
             await deleteDoc(doc(db, "vocabularies", id));
             await loadData();
         } catch (error) {
-            console.error("Lỗi khi xóa từ vựng:", error);
+            console.error("Error deleting vocabulary:", error);
         }
     }
 }
@@ -417,8 +417,8 @@ phrasalForm.addEventListener('submit', async (e) => {
         phrasalModal.style.display = 'none';
         await loadData();
     } catch (error) {
-        console.error("Lỗi khi lưu Phrasal Verb:", error);
-        alert("Lỗi khi lưu Phrasal Verb!");
+        console.error("Error saving Phrasal Verb:", error);
+        alert("Error saving Phrasal Verb!");
     }
 });
 
@@ -478,7 +478,7 @@ window.deletePhrasal = async (id) => {
             await deleteDoc(doc(db, "phrasal_verbs", id));
             await loadData();
         } catch (error) {
-            console.error("Lỗi khi xóa Phrasal Verb:", error);
+            console.error("Error deleting Phrasal Verb:", error);
         }
     }
 }
@@ -513,8 +513,8 @@ prepForm.addEventListener('submit', async (e) => {
         prepModal.style.display = 'none';
         await loadData();
     } catch (error) {
-        console.error("Lỗi khi lưu Phrase:", error);
-        alert("Lỗi khi lưu Phrase!");
+        console.error("Error saving Phrase:", error);
+        alert("Error saving Phrase!");
     }
 });
 
@@ -572,7 +572,7 @@ window.deletePrep = async (id) => {
             await deleteDoc(doc(db, "prep_phrases", id));
             await loadData();
         } catch (error) {
-            console.error("Lỗi khi xóa Phrase:", error);
+            console.error("Error deleting Phrase:", error);
         }
     }
 }
@@ -608,11 +608,31 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
     row.style.marginBottom = '1rem';
     row.style.position = 'relative';
 
+
+    let wordVal = title;
+    let posVal = '';
+    if (title) {
+        const parts = title.trim().split(' ');
+        if (parts.length > 1) {
+            const lastPart = parts[parts.length - 1];
+            if (['v', 'n', 'adj', 'adv', 'prep', 'conj', 'pron', 'det'].includes(lastPart.toLowerCase())) {
+                posVal = lastPart;
+                wordVal = parts.slice(0, -1).join(' ');
+            }
+        }
+    }
+
     row.innerHTML = `
         <button type="button" class="btn-secondary btn-danger btn-small" style="position:absolute; top: 1rem; right: 1rem;" onclick="this.parentElement.remove()">Remove Form</button>
-        <div class="input-group">
-            <label>Title (e.g. act v ≠ overact v)</label>
-            <input type="text" class="input-field wf-title" value="${title.replace(/"/g, '&quot;')}" required>
+        <div class="form-row">
+            <div class="input-group flex-1">
+                <label>Word</label>
+                <input type="text" class="input-field wf-word" value="${wordVal.replace(/"/g, '&quot;')}" required>
+            </div>
+            <div class="input-group" style="width: 200px;">
+                <label>Part of Speech (POS)</label>
+                <input type="text" class="input-field wf-pos" value="${posVal.replace(/"/g, '&quot;')}">
+            </div>
         </div>
         <div class="input-group">
             <label>Audios</label>
@@ -693,7 +713,9 @@ wordformForm.addEventListener('submit', async (e) => {
     const rows = wordformContainer.querySelectorAll('.wf-complex-row');
     let forms = [];
     rows.forEach(r => {
-        const title = r.querySelector('.wf-title').value.trim();
+        const word = r.querySelector('.wf-word').value.trim();
+        const pos = r.querySelector('.wf-pos').value.trim();
+        const title = pos ? (word + ' ' + pos) : word;
         const defs = r.querySelector('.wf-defs').value.trim();
         const examples = r.querySelector('.wf-examples').value.trim();
         
@@ -728,8 +750,8 @@ wordformForm.addEventListener('submit', async (e) => {
         wordformModal.style.display = 'none';
         await loadData();
     } catch (error) {
-        console.error("Lỗi khi lưu Word Formation:", error);
-        alert("Lỗi khi lưu Word Formation!");
+        console.error("Error saving Word Formation:", error);
+        alert("Error saving Word Formation!");
     }
 });
 
@@ -800,7 +822,7 @@ window.deleteWordform = async (id) => {
             await deleteDoc(doc(db, "word_formations", id));
             await loadData();
         } catch (error) {
-            console.error("Lỗi khi xóa Word formation:", error);
+            console.error("Error deleting Word formation:", error);
         }
     }
 }
@@ -838,8 +860,8 @@ patternForm.addEventListener('submit', async (e) => {
         patternModal.style.display = 'none';
         await loadData();
     } catch (error) {
-        console.error("Lỗi khi lưu Word Pattern:", error);
-        alert("Lỗi khi lưu Word Pattern!");
+        console.error("Error saving Word Pattern:", error);
+        alert("Error saving Word Pattern!");
     }
 });
 
@@ -896,13 +918,13 @@ window.editPattern = (id) => {
 };
 
 window.deletePattern = async (id) => {
-    if(confirm("Bạn có chắc chắn muốn xóa Pattern này?")) {
+    if(confirm("Are you sure you want to delete this pattern?")) {
         try {
             await deleteDoc(doc(db, "word_patterns", id));
             await loadData();
         } catch (error) {
-            console.error("Lỗi khi xóa Pattern:", error);
-            alert("Lỗi khi xóa!");
+            console.error("Error deleting Pattern:", error);
+            alert("Error deleting!");
         }
     }
 };
@@ -1066,3 +1088,299 @@ window.deleteLexical = async (id) => {
         }
     }
 };
+
+
+// =========================================================
+// GRAMMAR MANAGEMENT LOGIC
+// =========================================================
+
+// State
+let grammarCategoriesData = [];
+let grammarLessonsData = [];
+
+// DOM Elements
+const grammarIntroForm = document.getElementById('grammar-intro-form');
+const grammarCatList = document.getElementById('grammar-cat-list');
+const grammarLessonList = document.getElementById('grammar-lesson-list');
+const filterGrammarCat = document.getElementById('filter-grammar-cat');
+
+const grammarCatModal = document.getElementById('grammar-cat-modal');
+const grammarCatForm = document.getElementById('grammar-cat-form');
+
+const grammarLessonModal = document.getElementById('grammar-lesson-modal');
+const grammarLessonForm = document.getElementById('grammar-lesson-form');
+
+// Initialize TinyMCE
+let tinymceInitialized = false;
+function initTinyMCE() {
+    if (tinymceInitialized || typeof tinymce === 'undefined') return;
+    tinymce.init({
+        selector: '.tinymce-editor',
+        plugins: 'lists link image table code help wordcount',
+        toolbar: 'undo redo | blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | table | removeformat | help',
+        menubar: false,
+        height: 400,
+        promotion: false
+    });
+    tinymceInitialized = true;
+}
+
+// Ensure TinyMCE is initialized when switching to Grammar tab
+document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+        if (item.dataset.tab === 'tab-grammar') {
+            initTinyMCE();
+            loadGrammarData();
+        }
+    });
+});
+
+async function loadGrammarData() {
+    try {
+        // Load Intro
+        const introDocRef = doc(db, 'grammar_intro', 'main');
+        const introSnap = await getDoc(introDocRef);
+        if (introSnap.exists()) {
+            const data = introSnap.data();
+            document.getElementById('grammar-intro-title').value = data.title || '';
+            document.getElementById('grammar-intro-desc').value = data.description || '';
+            if (tinymce.get('grammar-intro-content')) {
+                tinymce.get('grammar-intro-content').setContent(data.content || '');
+            } else {
+                document.getElementById('grammar-intro-content').value = data.content || '';
+            }
+        }
+
+        // Load Categories
+        const catSnap = await getDocs(collection(db, 'grammar_categories'));
+        grammarCategoriesData = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        grammarCategoriesData.sort((a,b) => (a.order || 0) - (b.order || 0));
+        
+        renderGrammarCategories();
+        updateGrammarCatSelects();
+
+        // Load Lessons
+        const lesSnap = await getDocs(collection(db, 'grammar_lessons'));
+        grammarLessonsData = lesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        renderGrammarLessons();
+    } catch (e) {
+        console.error("Error loading Grammar Data:", e);
+    }
+}
+
+function renderGrammarCategories() {
+    if (!grammarCatList) return;
+    grammarCatList.innerHTML = '';
+    grammarCategoriesData.forEach(cat => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${cat.order || 0}</td>
+            <td><strong>${cat.title}</strong></td>
+            <td>
+                <button class="btn-secondary btn-small" onclick="editGrammarCat('${cat.id}')">Edit</button>
+                <button class="btn-secondary btn-danger btn-small" onclick="deleteGrammarCat('${cat.id}')">Delete</button>
+            </td>
+        `;
+        grammarCatList.appendChild(tr);
+    });
+}
+
+function updateGrammarCatSelects() {
+    const filterCat = document.getElementById('filter-grammar-cat');
+    const lessonCat = document.getElementById('grammar-lesson-category');
+    
+    if (filterCat) {
+        const currentFilter = filterCat.value;
+        filterCat.innerHTML = '<option value="all">All Categories</option>';
+        grammarCategoriesData.forEach(cat => {
+            filterCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
+        });
+        filterCat.value = currentFilter || 'all';
+    }
+
+    if (lessonCat) {
+        const currentLessonCat = lessonCat.value;
+        lessonCat.innerHTML = '';
+        grammarCategoriesData.forEach(cat => {
+            lessonCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
+        });
+        if (currentLessonCat) lessonCat.value = currentLessonCat;
+    }
+}
+
+function renderGrammarLessons() {
+    if (!grammarLessonList) return;
+    const filterId = document.getElementById('filter-grammar-cat')?.value || 'all';
+    
+    let filtered = grammarLessonsData;
+    if (filterId !== 'all') {
+        filtered = filtered.filter(l => l.categoryId === filterId);
+    }
+    
+    // Sort by order
+    filtered.sort((a,b) => (a.order || 0) - (b.order || 0));
+
+    grammarLessonList.innerHTML = '';
+    filtered.forEach(les => {
+        const catName = grammarCategoriesData.find(c => c.id === les.categoryId)?.title || 'Unknown';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${les.order || 0}</td>
+            <td><span class="badge">${catName}</span></td>
+            <td><strong>${les.title}</strong></td>
+            <td>
+                <button class="btn-secondary btn-small" onclick="editGrammarLesson('${les.id}')">Edit</button>
+                <button class="btn-secondary btn-danger btn-small" onclick="deleteGrammarLesson('${les.id}')">Delete</button>
+            </td>
+        `;
+        grammarLessonList.appendChild(tr);
+    });
+}
+
+if (filterGrammarCat) {
+    filterGrammarCat.addEventListener('change', renderGrammarLessons);
+}
+
+// Intro Form
+if (grammarIntroForm) {
+    grammarIntroForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('grammar-intro-title').value;
+        const description = document.getElementById('grammar-intro-desc').value;
+        const content = tinymce.get('grammar-intro-content') ? tinymce.get('grammar-intro-content').getContent() : document.getElementById('grammar-intro-content').value;
+        
+        try {
+            await setDoc(doc(db, "grammar_intro", "main"), { title, description, content });
+            alert("Introduction saved successfully!");
+        } catch (e) {
+            console.error(e);
+            alert("Error saving introduction!");
+        }
+    });
+}
+
+// Category CRUD
+if (document.getElementById('add-grammar-cat-btn')) {
+    document.getElementById('add-grammar-cat-btn').addEventListener('click', () => {
+        grammarCatForm.reset();
+        document.getElementById('grammar-cat-id').value = '';
+        document.getElementById('grammar-cat-modal-title').innerText = 'Add Category';
+        grammarCatModal.style.display = 'flex';
+    });
+}
+
+if (grammarCatForm) {
+    grammarCatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('grammar-cat-id').value;
+        const title = document.getElementById('grammar-cat-title').value.trim();
+        const order = parseInt(document.getElementById('grammar-cat-order').value) || 0;
+
+        try {
+            if (id) {
+                await updateDoc(doc(db, "grammar_categories", id), { title, order });
+            } else {
+                await addDoc(collection(db, "grammar_categories"), { title, order });
+            }
+            grammarCatModal.style.display = 'none';
+            loadGrammarData();
+        } catch (err) {
+            console.error(err);
+            alert("Error saving category!");
+        }
+    });
+}
+
+window.editGrammarCat = function(id) {
+    const cat = grammarCategoriesData.find(c => c.id === id);
+    if (!cat) return;
+    document.getElementById('grammar-cat-id').value = cat.id;
+    document.getElementById('grammar-cat-title').value = cat.title;
+    document.getElementById('grammar-cat-order').value = cat.order || 0;
+    document.getElementById('grammar-cat-modal-title').innerText = 'Edit Category';
+    grammarCatModal.style.display = 'flex';
+};
+
+window.deleteGrammarCat = async function(id) {
+    if (confirm("Are you sure you want to delete this category? Lessons in this category might be orphaned.")) {
+        try {
+            await deleteDoc(doc(db, "grammar_categories", id));
+            loadGrammarData();
+        } catch (e) {
+            console.error(e);
+            alert("Error deleting category!");
+        }
+    }
+};
+
+// Lesson CRUD
+if (document.getElementById('add-grammar-lesson-btn')) {
+    document.getElementById('add-grammar-lesson-btn').addEventListener('click', () => {
+        grammarLessonForm.reset();
+        document.getElementById('grammar-lesson-id').value = '';
+        if (tinymce.get('grammar-lesson-content')) {
+            tinymce.get('grammar-lesson-content').setContent('');
+        }
+        document.getElementById('grammar-lesson-modal-title').innerText = 'Add Lesson';
+        grammarLessonModal.style.display = 'flex';
+    });
+}
+
+if (grammarLessonForm) {
+    grammarLessonForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('grammar-lesson-id').value;
+        const categoryId = document.getElementById('grammar-lesson-category').value;
+        const title = document.getElementById('grammar-lesson-title').value.trim();
+        const author = document.getElementById('grammar-lesson-author').value.trim();
+        const order = parseInt(document.getElementById('grammar-lesson-order').value) || 0;
+        const content = tinymce.get('grammar-lesson-content') ? tinymce.get('grammar-lesson-content').getContent() : document.getElementById('grammar-lesson-content').value;
+
+        try {
+            if (id) {
+                await updateDoc(doc(db, "grammar_lessons", id), { categoryId, title, author, order, content });
+            } else {
+                await addDoc(collection(db, "grammar_lessons"), { categoryId, title, author, order, content });
+            }
+            grammarLessonModal.style.display = 'none';
+            loadGrammarData();
+        } catch (err) {
+            console.error(err);
+            alert("Error saving lesson!");
+        }
+    });
+}
+
+window.editGrammarLesson = async function(id) {
+    const les = grammarLessonsData.find(l => l.id === id);
+    if (!les) return;
+    document.getElementById('grammar-lesson-id').value = les.id;
+    document.getElementById('grammar-lesson-category').value = les.categoryId;
+    document.getElementById('grammar-lesson-title').value = les.title;
+    document.getElementById('grammar-lesson-author').value = les.author || '';
+    document.getElementById('grammar-lesson-order').value = les.order || 0;
+    
+    if (tinymce.get('grammar-lesson-content')) {
+        tinymce.get('grammar-lesson-content').setContent(les.content || '');
+    } else {
+        document.getElementById('grammar-lesson-content').value = les.content || '';
+    }
+    
+    document.getElementById('grammar-lesson-modal-title').innerText = 'Edit Lesson';
+    grammarLessonModal.style.display = 'flex';
+};
+
+window.deleteGrammarLesson = async function(id) {
+    if (confirm("Are you sure you want to delete this lesson?")) {
+        try {
+            await deleteDoc(doc(db, "grammar_lessons", id));
+            loadGrammarData();
+        } catch (e) {
+            console.error(e);
+            alert("Error deleting lesson!");
+        }
+    }
+};
+
+window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };

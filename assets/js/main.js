@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Sử dụng chung config
+// Use shared config
 const firebaseConfig = {
     apiKey: "AIzaSyBiGp-ZZD0Yq-Tok2aAOwVbxXMmq7eRZuM",
     authDomain: "english-study-68459.firebaseapp.com",
@@ -26,10 +26,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const sidebar = document.querySelector('.sidebar');
     if (sidebarToggle && sidebar) {
-        // Khôi phục trạng thái từ localStorage
+        // Restore state from localStorage
         if (localStorage.getItem('sidebar-collapsed') === 'true') {
             sidebar.classList.add('collapsed');
-            // Tắt transition tạm thời để tránh flash animation lúc mới load
+            // Temporarily disable transition to prevent flash animation on load
             sidebar.style.transition = 'none';
             setTimeout(() => {
                 sidebar.style.transition = '';
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         sidebarToggle.addEventListener('click', () => {
             sidebar.classList.toggle('collapsed');
-            // Lưu trạng thái vào localStorage
+            // Save state to localStorage
             localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
         });
     }
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             sidebar.classList.toggle('mobile-open');
         });
         
-        // Đóng sidebar khi click ngoài sidebar trên mobile
+        // Close sidebar when clicking outside on mobile
         document.addEventListener('click', (e) => {
             if (window.innerWidth <= 768 && sidebar.classList.contains('mobile-open')) {
                 if (!sidebar.contains(e.target) && e.target !== mobileMenuBtn) {
@@ -60,19 +60,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Trang Units: Tải danh sách Units
+    // Units Page: Load Units list
     const unitsListContainer = document.getElementById('units-list-container');
     if (unitsListContainer) {
-        unitsListContainer.innerHTML = '<p style="padding: 1rem 0;">Đang tải dữ liệu...</p>';
+        unitsListContainer.innerHTML = '<p style="padding: 1rem 0;">Loading data...</p>';
         try {
             const unitsSnapshot = await getDocs(collection(db, "units"));
             let units = unitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            units.sort((a,b) => a.order - b.order); // Sắp xếp theo order
+            units.sort((a,b) => a.order - b.order); // Sort by order
             
-            unitsListContainer.innerHTML = ''; // Xóa chữ loading
+            unitsListContainer.innerHTML = ''; // Remove loading text
             
             if(units.length === 0) {
-                unitsListContainer.innerHTML = '<p style="padding: 1rem 0;">Chưa có bài học nào được tạo.</p>';
+                unitsListContainer.innerHTML = '<p style="padding: 1rem 0;">No units have been created yet.</p>';
             }
             
             units.forEach(unit => {
@@ -92,26 +92,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } catch(e) {
             console.error(e);
-            unitsListContainer.innerHTML = '<p style="color: red; padding: 1rem 0;">Lỗi tải dữ liệu. Hãy kiểm tra kết nối mạng hoặc Firebase.</p>';
+            unitsListContainer.innerHTML = '<p style="color: red; padding: 1rem 0;">Error loading data. Please check your network connection or Firebase.</p>';
         }
     }
     
-    // Trang Unit Detail: Tải danh sách từ vựng thuộc Unit
+    // Unit Detail Page: Load vocabulary list for the unit
     const vocabListContainer = document.getElementById('vocab-list-container');
     if (vocabListContainer) {
-        // Lấy unit ID từ URL (vd: unit_detail.html?id=xxx)
+        // Get unit ID from URL (e.g. unit_detail.html?id=xxx)
         const urlParams = new URLSearchParams(window.location.search);
         const unitId = urlParams.get('id');
         
         if (!unitId) {
-            vocabListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            vocabListContainer.innerHTML = '<p style="color: red;">Unit ID not found.</p>';
             return;
         }
 
-        vocabListContainer.innerHTML = '<p>Đang tải từ vựng...</p>';
+        vocabListContainer.innerHTML = '<p>Loading vocabulary...</p>';
         
         try {
-            // Lấy lại tên Unit (Tùy chọn: tối ưu hơn thì có thể lấy 1 doc thay vì getDocs toàn bộ)
+            // Get Unit name again (Optional: more optimal to get 1 doc instead of getDocs all)
             const unitsSnapshot = await getDocs(collection(db, "units"));
             const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
             
@@ -120,20 +120,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if(titleEl) titleEl.innerText = currentUnit.title;
             }
 
-            // Tải danh sách từ vựng
+            // Load vocabulary list
             const vocabSnapshot = await getDocs(collection(db, "vocabularies"));
             let vocabs = vocabSnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
-                            .filter(v => v.unitId === unitId); // Lọc những từ thuộc Unit này
+                            .filter(v => v.unitId === unitId); // Filter words belonging to this Unit
             
             vocabListContainer.innerHTML = '';
             
             if(vocabs.length === 0) {
-                vocabListContainer.innerHTML = '<p>Unit này chưa có từ vựng nào.</p>';
+                vocabListContainer.innerHTML = '<p>This unit has no vocabulary yet.</p>';
             }
 
             vocabs.forEach(v => {
-                // Xử lý Audio (nếu ko có link thì ẩn thẻ source đi hoặc báo lỗi nhẹ)
+                // Handle Audio (if no link, hide source tag or show light error)
                 const audioHtml = v.audio 
                     ? `<audio controls class="vocab-audio-player"><source src="${v.audio}" type="audio/mpeg"></audio>`
                     : `<span style="font-size: 0.8rem; color: #888; font-style: italic;">No audio</span>`;
@@ -159,22 +159,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } catch(e) {
             console.error(e);
-            vocabListContainer.innerHTML = '<p style="color: red;">Lỗi tải từ vựng.</p>';
+            vocabListContainer.innerHTML = '<p style="color: red;">Error loading vocabulary.</p>';
         }
     }
 
-    // Trang Unit Phrasal: Tải danh sách Phrasal verbs
+    // Unit Phrasal Page: Load Phrasal verbs list
     const phrasalListContainer = document.getElementById('phrasal-list-container');
     if (phrasalListContainer) {
         const urlParams = new URLSearchParams(window.location.search);
         const unitId = urlParams.get('id');
         
         if (!unitId) {
-            phrasalListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            phrasalListContainer.innerHTML = '<p style="color: red;">Unit ID not found.</p>';
             return;
         }
 
-        phrasalListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+        phrasalListContainer.innerHTML = '<p>Loading data...</p>';
         
         try {
             const unitsSnapshot = await getDocs(collection(db, "units"));
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             phrasalListContainer.innerHTML = '';
             
             if(phrasals.length === 0) {
-                phrasalListContainer.innerHTML = '<p>Unit này chưa có Phrasal verb nào.</p>';
+                phrasalListContainer.innerHTML = '<p>This unit has no phrasal verbs yet.</p>';
             }
 
             phrasals.forEach(p => {
@@ -212,22 +212,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } catch(e) {
             console.error(e);
-            phrasalListContainer.innerHTML = '<p style="color: red;">Lỗi tải dữ liệu.</p>';
+            phrasalListContainer.innerHTML = '<p style="color: red;">Error loading data.</p>';
         }
     }
 
-    // Trang Unit Prep: Tải danh sách Prepositional phrases
+    // Unit Prep Page: Load Prepositional phrases list
     const prepListContainer = document.getElementById('prep-list-container');
     if (prepListContainer) {
         const urlParams = new URLSearchParams(window.location.search);
         const unitId = urlParams.get('id');
         
         if (!unitId) {
-            prepListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            prepListContainer.innerHTML = '<p style="color: red;">Unit ID not found.</p>';
             return;
         }
 
-        prepListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+        prepListContainer.innerHTML = '<p>Loading data...</p>';
         
         try {
             const unitsSnapshot = await getDocs(collection(db, "units"));
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             prepListContainer.innerHTML = '';
             
             if(preps.length === 0) {
-                prepListContainer.innerHTML = '<p>Unit này chưa có Prepositional phrase nào.</p>';
+                prepListContainer.innerHTML = '<p>This unit has no prepositional phrases yet.</p>';
             }
 
             preps.forEach(p => {
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } catch(e) {
             console.error(e);
-            prepListContainer.innerHTML = '<p style="color: red;">Lỗi tải dữ liệu.</p>';
+            prepListContainer.innerHTML = '<p style="color: red;">Error loading data.</p>';
         }
     }
 
@@ -275,11 +275,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const unitId = urlParams.get('id');
         
         if (!unitId) {
-            wfListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            wfListContainer.innerHTML = '<p style="color: red;">Unit ID not found.</p>';
             return;
         }
 
-        wfListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+        wfListContainer.innerHTML = '<p>Loading data...</p>';
         
         try {
             const unitsSnapshot = await getDocs(collection(db, "units"));
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             wfListContainer.innerHTML = '';
             
             if(wordforms.length === 0) {
-                wfListContainer.innerHTML = '<p>Unit này chưa có Word formation nào.</p>';
+                wfListContainer.innerHTML = '<p>This unit has no word formations yet.</p>';
             }
 
             wordforms.forEach(w => {
@@ -374,22 +374,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } catch(e) {
             console.error(e);
-            wfListContainer.innerHTML = '<p style="color: red;">Lỗi tải dữ liệu.</p>';
+            wfListContainer.innerHTML = '<p style="color: red;">Error loading data.</p>';
         }
     }
 
-    // Trang Unit Pattern: Tải danh sách Word patterns
+    // Unit Pattern Page: Load Word patterns list
     const patternListContainer = document.getElementById('pattern-list-container');
     if (patternListContainer) {
         const urlParams = new URLSearchParams(window.location.search);
         const unitId = urlParams.get('id');
         
         if (!unitId) {
-            patternListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            patternListContainer.innerHTML = '<p style="color: red;">Unit ID not found.</p>';
             return;
         }
 
-        patternListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+        patternListContainer.innerHTML = '<p>Loading data...</p>';
         
         try {
             const unitsSnapshot = await getDocs(collection(db, "units"));
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             patternListContainer.innerHTML = '';
             
             if(patterns.length === 0) {
-                patternListContainer.innerHTML = '<p>Unit này chưa có Word pattern nào.</p>';
+                patternListContainer.innerHTML = '<p>This unit has no word patterns yet.</p>';
             }
 
             const formatPos = (text) => {
@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <span class="vocab-word" style="font-size: 1.8rem;">${p.word}</span>
                                 <span class="vocab-pos">${window.formatStandalonePos(p.pos)}</span>
                             </div>
-                            <div style="font-size: 1.1rem; color: #4a7578;">${p.pattern}</div>
+                            <div style="font-size: 1.1rem; color: #4a7578;">${p.pattern ? p.pattern.replace(/\n/g, '<br>') : ''}</div>
                         </div>
                         <div class="phrasal-right">
                             <p class="phrasal-def">${p.def}</p>
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } catch(e) {
             console.error(e);
-            patternListContainer.innerHTML = '<p style="color: red;">Lỗi tải dữ liệu.</p>';
+            patternListContainer.innerHTML = '<p style="color: red;">Error loading data.</p>';
         }
     }
 });
@@ -455,16 +455,16 @@ window.toggleWf = function(id) {
 };
 
 
-    // Trang Unit Lexical: Tải danh sách Lexical Expansion
+    // Unit Lexical Page: Load Lexical Expansion list
     const lexicalListContainer = document.getElementById('lexical-list-container');
     if (lexicalListContainer) {
         const urlParams = new URLSearchParams(window.location.search);
         const unitId = urlParams.get('id');
         
         if (!unitId) {
-            lexicalListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            lexicalListContainer.innerHTML = '<p style="color: red;">Unit ID not found.</p>';
         } else {
-            lexicalListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+            lexicalListContainer.innerHTML = '<p>Loading data...</p>';
             
             try {
                 const unitsSnapshot = await getDocs(collection(db, "units"));
@@ -495,7 +495,7 @@ window.toggleWf = function(id) {
                 lexicalListContainer.innerHTML = '';
                 
                 if(lexicals.length === 0) {
-                    lexicalListContainer.innerHTML = '<p>Unit này chưa có Lexical Expansion.</p>';
+                    lexicalListContainer.innerHTML = '<p>This unit has no lexical expansion yet.</p>';
                 }
 
                 lexicals.forEach(lex => {
@@ -544,7 +544,7 @@ window.toggleWf = function(id) {
                 });
             } catch(e) {
                 console.error(e);
-                lexicalListContainer.innerHTML = '<p style="color: red;">Lỗi tải Lexical Expansion.</p>';
+                lexicalListContainer.innerHTML = '<p style="color: red;">Error loading Lexical Expansion.</p>';
             }
         }
     }
