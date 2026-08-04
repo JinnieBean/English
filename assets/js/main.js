@@ -14,6 +14,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+window.formatStandalonePos = (pos) => {
+    if (!pos) return '';
+    const clean = pos.trim().replace(/^\(+|\)+$/g, '').toLowerCase();
+    return clean ? `(${clean})` : '';
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
     
     // Sidebar Toggle
@@ -78,6 +84,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <a href="unit_phrasal.html?id=${unit.id}" class="unit-submenu-link">Phrasal Verbs</a>
                             <a href="unit_prep.html?id=${unit.id}" class="unit-submenu-link">Prepositional Phrases</a>
                             <a href="unit_wordform.html?id=${unit.id}" class="unit-submenu-link">Word Formation</a>
+                            <a href="unit_pattern.html?id=${unit.id}" class="unit-submenu-link">Word Patterns</a>
+                            <a href="unit_lexical.html?id=${unit.id}" class="unit-submenu-link">Lexical Expansion</a>
                         </div>
                     </div>
                 `;
@@ -135,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="vocab-left">
                             <div class="vocab-word-group">
                                 <span class="vocab-word">${v.word}</span>
-                                <span class="vocab-pos">${v.pos}</span>
+                                <span class="vocab-pos">${window.formatStandalonePos(v.pos)}</span>
                             </div>
                             <div class="vocab-audio-group">
                                 <span class="vocab-pronunciation">${v.pron}</span>
@@ -306,7 +314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     w.overviews.forEach(o => {
                         overviewsHtml += `
                             <div class="wf-overview-row">
-                                <span class="wf-pos">${formatPos(o.pos)}</span>
+                                <span class="wf-pos"><span class="vocab-pos">${window.formatStandalonePos(o.pos)}</span></span>
                                 <span class="wf-words">${o.words}</span>
                             </div>
                         `;
@@ -369,6 +377,69 @@ document.addEventListener('DOMContentLoaded', async () => {
             wfListContainer.innerHTML = '<p style="color: red;">Lỗi tải dữ liệu.</p>';
         }
     }
+
+    // Trang Unit Pattern: Tải danh sách Word patterns
+    const patternListContainer = document.getElementById('pattern-list-container');
+    if (patternListContainer) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const unitId = urlParams.get('id');
+        
+        if (!unitId) {
+            patternListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+            return;
+        }
+
+        patternListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+        
+        try {
+            const unitsSnapshot = await getDocs(collection(db, "units"));
+            const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
+            
+            if (currentUnit) {
+                const titleEl = document.querySelector('.unit-detail-title');
+                if(titleEl) titleEl.innerText = currentUnit.title;
+            }
+
+            const patternSnapshot = await getDocs(collection(db, "word_patterns"));
+            let patterns = patternSnapshot.docs
+                            .map(doc => ({ id: doc.id, ...doc.data() }))
+                            .filter(p => p.unitId === unitId);
+            
+            patternListContainer.innerHTML = '';
+            
+            if(patterns.length === 0) {
+                patternListContainer.innerHTML = '<p>Unit này chưa có Word pattern nào.</p>';
+            }
+
+            const formatPos = (text) => {
+                if(!text) return '';
+                return text.replace(/\b(v|n|adj|adv|prep|conj|pron|det)\b/gi, (match) => {
+                    return `<span class="vocab-pos">(${match.toLowerCase()})</span>`;
+                });
+            };
+
+            patterns.forEach(p => {
+                patternListContainer.innerHTML += `
+                    <div class="phrasal-item" style="align-items: flex-start;">
+                        <div class="phrasal-left" style="flex-direction: column; align-items: flex-start;">
+                            <div class="vocab-word-group" style="margin-bottom: 1rem;">
+                                <span class="vocab-word" style="font-size: 1.8rem;">${p.word}</span>
+                                <span class="vocab-pos">${window.formatStandalonePos(p.pos)}</span>
+                            </div>
+                            <div style="font-size: 1.1rem; color: #4a7578;">${p.pattern}</div>
+                        </div>
+                        <div class="phrasal-right">
+                            <p class="phrasal-def">${p.def}</p>
+                            <p class="phrasal-example">${p.example}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch(e) {
+            console.error(e);
+            patternListContainer.innerHTML = '<p style="color: red;">Lỗi tải dữ liệu.</p>';
+        }
+    }
 });
 
 window.toggleWf = function(id) {
@@ -382,3 +453,98 @@ window.toggleWf = function(id) {
         toggle.innerHTML = '▶';
     }
 };
+
+
+    // Trang Unit Lexical: Tải danh sách Lexical Expansion
+    const lexicalListContainer = document.getElementById('lexical-list-container');
+    if (lexicalListContainer) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const unitId = urlParams.get('id');
+        
+        if (!unitId) {
+            lexicalListContainer.innerHTML = '<p style="color: red;">Không tìm thấy Unit ID.</p>';
+        } else {
+            lexicalListContainer.innerHTML = '<p>Đang tải dữ liệu...</p>';
+            
+            try {
+                const unitsSnapshot = await getDocs(collection(db, "units"));
+                const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
+                
+                if (currentUnit) {
+                    const titleEl = document.querySelector('.unit-detail-title');
+                    if(titleEl) titleEl.innerText = currentUnit.title;
+                    
+                    const submenu = document.getElementById('unit-submenu');
+                    if(submenu) {
+                        submenu.innerHTML = `
+                            <a href="unit_detail.html?id=${unitId}" class="unit-submenu-link">Vocabulary</a>
+                            <a href="unit_phrasal.html?id=${unitId}" class="unit-submenu-link">Phrasal Verbs</a>
+                            <a href="unit_prep.html?id=${unitId}" class="unit-submenu-link">Prepositional Phrases</a>
+                            <a href="unit_wordform.html?id=${unitId}" class="unit-submenu-link">Word Formation</a>
+                            <a href="unit_pattern.html?id=${unitId}" class="unit-submenu-link">Word Patterns</a>
+                            <a href="unit_lexical.html?id=${unitId}" class="unit-submenu-link active">Lexical Expansion</a>
+                        `;
+                    }
+                }
+
+                const lexicalSnapshot = await getDocs(collection(db, "lexical_expansions"));
+                let lexicals = lexicalSnapshot.docs
+                                .map(doc => ({ id: doc.id, ...doc.data() }))
+                                .filter(l => l.unitId === unitId);
+                
+                lexicalListContainer.innerHTML = '';
+                
+                if(lexicals.length === 0) {
+                    lexicalListContainer.innerHTML = '<p>Unit này chưa có Lexical Expansion.</p>';
+                }
+
+                lexicals.forEach(lex => {
+                    let textLeftHtml = lex.textLeft ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1rem; text-align: ${lex.alignLeft || 'left'};">${lex.textLeft}</div>` : '';
+                    let textRightHtml = lex.textRight ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1rem; text-align: ${lex.alignRight || 'left'};">${lex.textRight}</div>` : '';
+                    
+                    let topSectionHtml = '';
+                    if(textLeftHtml || textRightHtml) {
+                        topSectionHtml = `
+                            <div style="display: flex; gap: 2rem; margin-bottom: 2rem; color: #4a7578;">
+                                ${textLeftHtml}
+                                ${textRightHtml}
+                            </div>
+                        `;
+                    }
+                    
+                    let wordsHtml = '';
+                    if(lex.words && lex.words.length > 0) {
+                        lex.words.forEach(w => {
+                            wordsHtml += `
+                                <div class="vocab-item">
+                                    <div class="vocab-left">
+                                        <div class="vocab-word-group">
+                                            <span class="vocab-word">${w.word}</span>
+                                            <span class="vocab-pos">${window.formatStandalonePos(w.pos)}</span>
+                                        </div>
+                                        <div class="vocab-audio-group" style="align-items: flex-start; margin-top: 0.5rem;">
+                                            <span class="vocab-pronunciation" style="white-space: pre-wrap; line-height: 1.6;">${w.pron}</span>
+                                        </div>
+                                    </div>
+                                    <div class="vocab-right">
+                                        <p class="vocab-def">${w.def}</p>
+                                        <p class="vocab-example">${w.example}</p>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    lexicalListContainer.innerHTML += `
+                        <div style="margin-bottom: 4rem;">
+                            ${topSectionHtml}
+                            ${wordsHtml}
+                        </div>
+                    `;
+                });
+            } catch(e) {
+                console.error(e);
+                lexicalListContainer.innerHTML = '<p style="color: red;">Lỗi tải Lexical Expansion.</p>';
+            }
+        }
+    }

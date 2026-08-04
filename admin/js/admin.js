@@ -33,6 +33,8 @@ let vocabData = [];
 let phrasalData = [];
 let prepData = [];
 let wordformData = [];
+let patternData = [];
+let lexicalData = [];
 
 // --- Tabs Logic ---
 navItems.forEach(item => {
@@ -111,6 +113,14 @@ async function loadData() {
         // Load Word Formations
         const wfSnapshot = await getDocs(collection(db, "word_formations"));
         wordformData = wfSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Load Word Patterns
+        const patternSnapshot = await getDocs(collection(db, "word_patterns"));
+        patternData = patternSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Load Lexical Expansions
+        const lexicalSnapshot = await getDocs(collection(db, "lexical_expansions"));
+        lexicalData = lexicalSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         renderUnits();
         populateUnitSelects();
@@ -118,9 +128,11 @@ async function loadData() {
         renderPhrasal();
         renderPrep();
         renderWordform();
+        renderPattern();
+        renderLexical();
     } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
-        alert("Không thể tải dữ liệu từ Database. Đảm bảo bạn đã mở quyền test mode trong Firestore.");
+        alert("Không thể tải dữ liệu từ Database: " + (error.message || error));
     }
 }
 
@@ -224,6 +236,10 @@ function populateUnitSelects() {
     const formSelectPrep = document.getElementById('prep-unit-id');
     const filterSelectWordform = document.getElementById('filter-unit-select-wordform');
     const formSelectWordform = document.getElementById('wordform-unit-id');
+    const filterSelectPattern = document.getElementById('filter-unit-select-pattern');
+    const formSelectPattern = document.getElementById('pattern-unit');
+    const filterSelectLexical = document.getElementById('filter-unit-select-lexical');
+    const formSelectLexical = document.getElementById('lexical-unit-id');
     
     const options = unitsData.sort((a,b) => a.order - b.order).map(u => `<option value="${u.id}">${u.title}</option>`).join('');
     
@@ -252,10 +268,24 @@ function populateUnitSelects() {
         filterSelectWordform.value = currentFilterWordform;
     }
 
+    const currentFilterPattern = filterSelectPattern ? filterSelectPattern.value : null;
+    if (filterSelectPattern) filterSelectPattern.innerHTML = `<option value="all">All Units</option>` + options;
+    if (filterSelectPattern && currentFilterPattern && currentFilterPattern !== 'all') {
+        filterSelectPattern.value = currentFilterPattern;
+    }
+
+    const currentFilterLexical = filterSelectLexical ? filterSelectLexical.value : null;
+    if (filterSelectLexical) filterSelectLexical.innerHTML = `<option value="all">All Units</option>` + options;
+    if (filterSelectLexical && currentFilterLexical && currentFilterLexical !== 'all') {
+        filterSelectLexical.value = currentFilterLexical;
+    }
+
     formSelect.innerHTML = options;
     formSelectPhrasal.innerHTML = options;
     formSelectPrep.innerHTML = options;
     formSelectWordform.innerHTML = options;
+    if (formSelectPattern) formSelectPattern.innerHTML = options;
+    if (formSelectLexical) formSelectLexical.innerHTML = options;
 }
 
 document.getElementById('add-vocab-btn').addEventListener('click', () => {
@@ -774,3 +804,265 @@ window.deleteWordform = async (id) => {
         }
     }
 }
+
+
+// --- Word Patterns Logic ---
+const patternModal = document.getElementById('pattern-modal');
+const patternForm = document.getElementById('pattern-form');
+
+document.getElementById('add-pattern-btn').addEventListener('click', () => {
+    document.getElementById('pattern-id').value = '';
+    patternForm.reset();
+    document.getElementById('pattern-modal-title').innerText = 'Add New Word Pattern';
+    patternModal.style.display = 'flex';
+});
+
+patternForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('pattern-id').value;
+    const unitId = document.getElementById('pattern-unit').value;
+    const word = document.getElementById('pattern-word').value;
+    const pos = document.getElementById('pattern-pos').value;
+    const pattern = document.getElementById('pattern-pattern').value;
+    const def = document.getElementById('pattern-def').value;
+    const example = document.getElementById('pattern-example').value;
+    
+    const payload = { unitId, word, pos, pattern, def, example };
+    
+    try {
+        if (id) {
+            await updateDoc(doc(db, "word_patterns", id), payload);
+        } else {
+            await addDoc(collection(db, "word_patterns"), payload);
+        }
+        patternModal.style.display = 'none';
+        await loadData();
+    } catch (error) {
+        console.error("Lỗi khi lưu Word Pattern:", error);
+        alert("Lỗi khi lưu Word Pattern!");
+    }
+});
+
+document.getElementById('filter-unit-select-pattern').addEventListener('change', renderPattern);
+document.getElementById('search-pattern').addEventListener('input', renderPattern);
+document.getElementById('sort-pattern').addEventListener('change', renderPattern);
+
+function renderPattern() {
+    const list = document.getElementById('pattern-list');
+    if(!list) return;
+    const filter = document.getElementById('filter-unit-select-pattern').value;
+    const searchQuery = document.getElementById('search-pattern').value.toLowerCase();
+    const sortValue = document.getElementById('sort-pattern').value;
+    list.innerHTML = '';
+    
+    let filteredData = filter === 'all' ? patternData : patternData.filter(p => p.unitId === filter);
+    filteredData = filteredData.filter(p => p.word.toLowerCase().includes(searchQuery));
+
+    if (sortValue === 'az') {
+        filteredData.sort((a, b) => a.word.localeCompare(b.word));
+    } else if (sortValue === 'za') {
+        filteredData.sort((a, b) => b.word.localeCompare(a.word));
+    }
+    
+    filteredData.forEach(p => {
+        const unitName = unitsData.find(u => u.id === p.unitId)?.title || 'Unknown';
+        list.innerHTML += `
+            <tr>
+                <td><strong>${p.word}</strong> <span style="font-size: 0.9em; color: #666;">${p.pos}</span><br><small>${p.pattern}</small></td>
+                <td>${unitName}</td>
+                <td>
+                    <button class="btn-secondary btn-small" onclick="editPattern('${p.id}')">Edit</button>
+                    <button class="btn-secondary btn-danger btn-small" onclick="deletePattern('${p.id}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+window.editPattern = (id) => {
+    const p = patternData.find(x => x.id === id);
+    if(p) {
+        document.getElementById('pattern-id').value = p.id;
+        document.getElementById('pattern-unit').value = p.unitId;
+        document.getElementById('pattern-word').value = p.word;
+        document.getElementById('pattern-pos').value = p.pos;
+        document.getElementById('pattern-pattern').value = p.pattern;
+        document.getElementById('pattern-def').value = p.def;
+        document.getElementById('pattern-example').value = p.example;
+        
+        document.getElementById('pattern-modal-title').innerText = 'Edit Word Pattern';
+        patternModal.style.display = 'flex';
+    }
+};
+
+window.deletePattern = async (id) => {
+    if(confirm("Bạn có chắc chắn muốn xóa Pattern này?")) {
+        try {
+            await deleteDoc(doc(db, "word_patterns", id));
+            await loadData();
+        } catch (error) {
+            console.error("Lỗi khi xóa Pattern:", error);
+            alert("Lỗi khi xóa!");
+        }
+    }
+};
+
+
+// --- Lexical Expansion Logic ---
+const lexicalModal = document.getElementById('lexical-modal');
+const lexicalForm = document.getElementById('lexical-form');
+const lexicalWordsContainer = document.getElementById('lexical-words-container');
+
+window.addLexicalWordRow = function(word = '', pos = '', pron = '', audio = '', def = '', example = '') {
+    const rowId = 'lexical-word-' + Date.now() + Math.random().toString(36).substr(2, 9);
+    const div = document.createElement('div');
+    div.className = 'lexical-word-row';
+    div.style.border = '1px solid #ddd';
+    div.style.padding = '0.5rem';
+    div.style.borderRadius = '4px';
+    div.style.position = 'relative';
+    div.innerHTML = `
+        <button type="button" class="btn-secondary btn-danger btn-small" style="position: absolute; top: 0.5rem; right: 0.5rem;" onclick="this.parentElement.remove()">Remove</button>
+        <div class="form-row" style="margin-bottom: 0.5rem; padding-right: 4rem;">
+            <div class="input-group flex-1">
+                <label>Word</label>
+                <input type="text" class="input-field lx-word" placeholder="Word" value="${word.replace(/"/g, '&quot;')}">
+            </div>
+            <div class="input-group" style="width: 100px;">
+                <label>POS</label>
+                <input type="text" class="input-field lx-pos" placeholder="POS" value="${pos.replace(/"/g, '&quot;')}">
+            </div>
+        </div>
+        <div class="input-group" style="margin-bottom: 0.5rem;">
+            <label>Pronunciation / Notes</label>
+            <textarea class="lx-pron" rows="2" placeholder="Pronunciation / Notes">${pron}</textarea>
+        </div>
+        <div class="input-group" style="margin-bottom: 0.5rem;">
+            <label>Definition</label>
+            <textarea class="lx-def" rows="2" placeholder="Definition">${def}</textarea>
+        </div>
+        <div class="input-group" style="margin-bottom: 0;">
+            <label>Example</label>
+            <textarea class="lx-example" rows="2" placeholder="Example">${example}</textarea>
+        </div>
+    `;
+    lexicalWordsContainer.appendChild(div);
+};
+
+if (document.getElementById('add-lexical-word-btn')) {
+    document.getElementById('add-lexical-word-btn').addEventListener('click', () => {
+        addLexicalWordRow();
+    });
+}
+
+if (document.getElementById('add-lexical-btn')) {
+    document.getElementById('add-lexical-btn').addEventListener('click', () => {
+        document.getElementById('lexical-id').value = '';
+        lexicalForm.reset();
+        lexicalWordsContainer.innerHTML = '';
+        addLexicalWordRow();
+        document.getElementById('lexical-modal-title').innerText = 'Add Lexical Expansion';
+        lexicalModal.style.display = 'flex';
+    });
+}
+
+if (lexicalForm) {
+    lexicalForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('lexical-id').value;
+        const unitId = document.getElementById('lexical-unit-id').value;
+        const textLeft = document.getElementById('lexical-text-left').value;
+        const alignLeft = document.getElementById('lexical-align-left').value;
+        const textRight = document.getElementById('lexical-text-right').value;
+        const alignRight = document.getElementById('lexical-align-right').value;
+
+        const wordRows = lexicalWordsContainer.querySelectorAll('.lexical-word-row');
+        let words = [];
+        wordRows.forEach(r => {
+            const w = r.querySelector('.lx-word').value.trim();
+            const p = r.querySelector('.lx-pos').value.trim();
+            const pr = r.querySelector('.lx-pron').value.trim();
+            const d = r.querySelector('.lx-def').value.trim();
+            const ex = r.querySelector('.lx-example').value.trim();
+            if (w) {
+                words.push({ word: w, pos: p, pron: pr, def: d, example: ex });
+            }
+        });
+
+        const payload = { unitId, textLeft, alignLeft, textRight, alignRight, words };
+
+        try {
+            if (id) {
+                await updateDoc(doc(db, "lexical_expansions", id), payload);
+            } else {
+                await addDoc(collection(db, "lexical_expansions"), payload);
+            }
+            lexicalModal.style.display = 'none';
+            await loadData();
+        } catch (error) {
+            console.error("Error saving Lexical Expansion:", error);
+            alert("Error saving Lexical Expansion!");
+        }
+    });
+}
+
+if (document.getElementById('filter-unit-select-lexical')) {
+    document.getElementById('filter-unit-select-lexical').addEventListener('change', () => renderLexical());
+}
+
+function renderLexical() {
+    const list = document.getElementById('lexical-list');
+    if(!list) return;
+    const filter = document.getElementById('filter-unit-select-lexical').value;
+    list.innerHTML = '';
+    
+    let filteredData = filter === 'all' ? lexicalData : lexicalData.filter(p => p.unitId === filter);
+
+    filteredData.forEach(p => {
+        const unitName = unitsData.find(u => u.id === p.unitId)?.title || 'Unknown';
+        list.innerHTML += `
+            <tr>
+                <td>${unitName}</td>
+                <td><pre style="font-family:inherit; font-size: 0.8rem; max-width: 300px; max-height: 100px; overflow: hidden; margin:0;">${p.textLeft || ''}</pre></td>
+                <td>
+                    <button class="btn-secondary btn-small" onclick="editLexical('${p.id}')">Edit</button>
+                    <button class="btn-secondary btn-danger btn-small" onclick="deleteLexical('${p.id}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    });
+};
+
+window.editLexical = (id) => {
+    const p = lexicalData.find(x => x.id === id);
+    if(p) {
+        document.getElementById('lexical-id').value = p.id;
+        document.getElementById('lexical-unit-id').value = p.unitId;
+        document.getElementById('lexical-text-left').value = p.textLeft || '';
+        document.getElementById('lexical-align-left').value = p.alignLeft || 'left';
+        document.getElementById('lexical-text-right').value = p.textRight || '';
+        document.getElementById('lexical-align-right').value = p.alignRight || 'left';
+        
+        lexicalWordsContainer.innerHTML = '';
+        if(p.words && p.words.length > 0) {
+            p.words.forEach(w => addLexicalWordRow(w.word, w.pos, w.pron, w.audio, w.def, w.example));
+        } else {
+            addLexicalWordRow();
+        }
+
+        document.getElementById('lexical-modal-title').innerText = 'Edit Lexical Expansion';
+        lexicalModal.style.display = 'flex';
+    }
+};
+
+window.deleteLexical = async (id) => {
+    if(confirm("Are you sure you want to delete this Lexical Expansion?")) {
+        try {
+            await deleteDoc(doc(db, "lexical_expansions", id));
+            await loadData();
+        } catch (error) {
+            console.error("Error deleting Lexical Expansion:", error);
+            alert("Error deleting!");
+        }
+    }
+};
