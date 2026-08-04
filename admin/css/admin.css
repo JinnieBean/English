@@ -26,6 +26,7 @@ body { font-family: var(--font-family); background-color: var(--bg-color); color
 .sidebar { width: 250px; background-color: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; }
 .sidebar-brand { padding: 2rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .sidebar-nav { list-style: none; flex: 1; padding-top: 1rem; }
+.sidebar-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); padding: 1.5rem 1.5rem 0.5rem 1.5rem; font-weight: 600; }
 .nav-item { padding: 1rem 1.5rem; cursor: pointer; transition: background 0.2s; opacity: 0.8; }
 .nav-item:hover { background-color: rgba(255,255,255,0.05); opacity: 1; }
 .nav-item.active { background-color: rgba(255,255,255,0.1); opacity: 1; font-weight: 500; border-left: 4px solid #fff; }
