@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Use shared config
 const firebaseConfig = {
@@ -22,6 +22,29 @@ window.formatStandalonePos = (pos) => {
 
 document.addEventListener('DOMContentLoaded', async () => {
     
+    // Render dynamic Unit Detail Header (Book Title, Unit Title, Tab Menu)
+    const headerContainer = document.getElementById('unit-detail-header-container');
+    if (headerContainer) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const unitId = urlParams.get('id');
+        if (unitId) {
+            try {
+                // Fetch Unit
+                const unitDoc = await getDoc(doc(db, "units", unitId));
+                if (unitDoc.exists()) {
+                    const unitData = unitDoc.data();
+                    document.getElementById('unit-detail-title').innerText = unitData.title;
+                    
+                    // Fetch Book title not needed as per user request
+
+                    // Render Tabs not needed as per user request
+                }
+            } catch(e) {
+                console.error("Error loading header details", e);
+            }
+        }
+    }
+
     // Sidebar Toggle
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const sidebar = document.querySelector('.sidebar');
@@ -60,39 +83,110 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Books Page: Load Books list
+    const booksListContainer = document.getElementById('books-list-container');
+    if (booksListContainer) {
+        booksListContainer.innerHTML = '<p style="padding: 1rem 0;">Loading books...</p>';
+        try {
+            const booksSnapshot = await getDocs(collection(db, "books"));
+            let books = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            books.sort((a,b) => (a.order||0) - (b.order||0));
+            
+            booksListContainer.innerHTML = '';
+            
+            if(books.length === 0) {
+                booksListContainer.innerHTML = '<p style="padding: 1rem 0;">No books have been created yet.</p>';
+            } else {
+                let booksHtml = '';
+                books.forEach(book => {
+                    booksHtml += `
+                        <div class="book-container">
+                            <div class="book-cover">
+                                <img src="${book.image || 'assets/images/book_cover.png'}" alt="${book.title}" loading="lazy" decoding="async">
+                            </div>
+                            <div class="book-details">
+                                <h1 class="book-title">${book.title}</h1>
+                                <h2 class="book-subtitle">${book.subtitle || ''}</h2>
+                                <p class="book-desc">${book.desc || ''}</p>
+                                <a href="units.html?bookId=${book.id}" class="btn-learn-more">Learn More</a>
+                            </div>
+                        </div>
+                    `;
+                });
+                booksListContainer.innerHTML = booksHtml;
+            }
+        } catch(e) {
+            console.error(e);
+            booksListContainer.innerHTML = '<p style="color: red; padding: 1rem 0;">Error loading data.</p>';
+        }
+    }
+
     // Units Page: Load Units list
     const unitsListContainer = document.getElementById('units-list-container');
     if (unitsListContainer) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookId = urlParams.get('bookId');
+        
         unitsListContainer.innerHTML = '<p style="padding: 1rem 0;">Loading data...</p>';
         try {
+            if (bookId) {
+                const bookDoc = await getDocs(collection(db, "books"));
+                const currentBook = bookDoc.docs.find(d => d.id === bookId)?.data();
+                if (currentBook) {
+                    const header = document.querySelector('.course-header');
+                    if (header) header.innerHTML = `${currentBook.title} ${currentBook.subtitle ? `<br><span style="font-size:0.8em;font-weight:400;">${currentBook.subtitle}</span>` : ''}`;
+                }
+            }
+
             const unitsSnapshot = await getDocs(collection(db, "units"));
             let units = unitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            units.sort((a,b) => a.order - b.order); // Sort by order
+            if (bookId) {
+                units = units.filter(u => u.bookId === bookId);
+            }
+            units.sort((a,b) => (a.order||0) - (b.order||0)); // Sort by order
             
             unitsListContainer.innerHTML = ''; // Remove loading text
             
             if(units.length === 0) {
-                unitsListContainer.innerHTML = '<p style="padding: 1rem 0;">No units have been created yet.</p>';
-            }
-            
-            units.forEach(unit => {
-                unitsListContainer.innerHTML += `
-                    <div class="unit-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem; justify-content: center;">
-                        <span class="unit-name">${unit.title}</span>
-                        <div class="unit-submenu">
-                            <a href="unit_detail.html?id=${unit.id}" class="unit-submenu-link">Vocabulary</a>
-                            <a href="unit_phrasal.html?id=${unit.id}" class="unit-submenu-link">Phrasal Verbs</a>
-                            <a href="unit_prep.html?id=${unit.id}" class="unit-submenu-link">Prepositional Phrases</a>
-                            <a href="unit_wordform.html?id=${unit.id}" class="unit-submenu-link">Word Formation</a>
-                            <a href="unit_pattern.html?id=${unit.id}" class="unit-submenu-link">Word Patterns</a>
-                            <a href="unit_lexical.html?id=${unit.id}" class="unit-submenu-link">Lexical Expansion</a>
+                unitsListContainer.innerHTML = '<p style="padding: 1rem 0;">No units have been created for this book yet.</p>';
+            } else {
+                let unitsHtml = '';
+                units.forEach(unit => {
+                    let sectionsHtml = '';
+                    if (unit.sections && unit.sections.length > 0) {
+                        const sectionMap = [
+                            { id: 'vocab', name: 'Vocabulary', url: 'unit_detail.html' },
+                            { id: 'phrasal', name: 'Phrasal Verbs', url: 'unit_phrasal.html' },
+                            { id: 'prep', name: 'Prepositional Phrases', url: 'unit_prep.html' },
+                            { id: 'wordform', name: 'Word Formation', url: 'unit_wordform.html' },
+                            { id: 'pattern', name: 'Word Patterns', url: 'unit_pattern.html' },
+                            { id: 'lexical', name: 'Lexical Expansion', url: 'unit_lexical.html' }
+                        ];
+                        
+                        sectionMap.forEach(sec => {
+                            if (unit.sections.includes(sec.id)) {
+                                sectionsHtml += `<a href="${sec.url}?id=${unit.id}" class="unit-tab-btn">${sec.name}</a>`;
+                            }
+                        });
+                    } else {
+                        // Fallback to vocab if sections array is missing/empty
+                        sectionsHtml = `<a href="unit_detail.html?id=${unit.id}" class="unit-tab-btn">Vocabulary</a>`;
+                    }
+
+                    unitsHtml += `
+                        <div class="unit-item" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
+                            <span class="unit-name">${unit.title}</span>
+                            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                                ${sectionsHtml}
+                            </div>
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
+                unitsListContainer.innerHTML = unitsHtml;
+            }
         } catch(e) {
             console.error(e);
-            unitsListContainer.innerHTML = '<p style="color: red; padding: 1rem 0;">Error loading data. Please check your network connection or Firebase.</p>';
+            unitsListContainer.innerHTML = '<p style="color: red; padding: 1rem 0;">Error loading data.</p>';
         }
     }
     
@@ -111,15 +205,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         vocabListContainer.innerHTML = '<p>Loading vocabulary...</p>';
         
         try {
-            // Get Unit name again (Optional: more optimal to get 1 doc instead of getDocs all)
-            const unitsSnapshot = await getDocs(collection(db, "units"));
-            const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
-            
-            if (currentUnit) {
-                const titleEl = document.querySelector('.unit-detail-title');
-                if(titleEl) titleEl.innerText = currentUnit.title;
-            }
-
             // Load vocabulary list
             const vocabSnapshot = await getDocs(collection(db, "vocabularies"));
             let vocabs = vocabSnapshot.docs
@@ -132,33 +217,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if(vocabs.length === 0) {
                 vocabListContainer.innerHTML = '<p>This unit has no vocabulary yet.</p>';
+            } else {
+                let vocabHtml = '';
+                vocabs.forEach(v => {
+                    // Handle Audio (if no link, hide source tag or show light error)
+                    const audioHtml = v.audio 
+                        ? `<audio controls preload="none" class="vocab-audio-player"><source src="${v.audio}" type="audio/mpeg"></audio>`
+                        : `<span style="font-size: 0.8rem; color: #888; font-style: italic;">No audio</span>`;
+
+                    vocabHtml += `
+                        <div class="vocab-item">
+                            <div class="vocab-left">
+                                <div class="vocab-word-group">
+                                    <span class="vocab-word">${v.word}</span>
+                                    <span class="vocab-pos">${window.formatStandalonePos(v.pos)}</span>
+                                </div>
+                                <div class="vocab-audio-group">
+                                    <span class="vocab-pronunciation">${v.pron}</span>
+                                    ${audioHtml}
+                                </div>
+                            </div>
+                            <div class="vocab-right">
+                                <p class="vocab-def">${v.def}</p>
+                                <p class="vocab-example">${v.example}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                vocabListContainer.innerHTML = vocabHtml;
             }
-
-            vocabs.forEach(v => {
-                // Handle Audio (if no link, hide source tag or show light error)
-                const audioHtml = v.audio 
-                    ? `<audio controls preload="none" class="vocab-audio-player"><source src="${v.audio}" type="audio/mpeg"></audio>`
-                    : `<span style="font-size: 0.8rem; color: #888; font-style: italic;">No audio</span>`;
-
-                vocabListContainer.innerHTML += `
-                    <div class="vocab-item">
-                        <div class="vocab-left">
-                            <div class="vocab-word-group">
-                                <span class="vocab-word">${v.word}</span>
-                                <span class="vocab-pos">${window.formatStandalonePos(v.pos)}</span>
-                            </div>
-                            <div class="vocab-audio-group">
-                                <span class="vocab-pronunciation">${v.pron}</span>
-                                ${audioHtml}
-                            </div>
-                        </div>
-                        <div class="vocab-right">
-                            <p class="vocab-def">${v.def}</p>
-                            <p class="vocab-example">${v.example}</p>
-                        </div>
-                    </div>
-                `;
-            });
         } catch(e) {
             console.error(e);
             vocabListContainer.innerHTML = '<p style="color: red;">Error loading vocabulary.</p>';
@@ -179,14 +266,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         phrasalListContainer.innerHTML = '<p>Loading data...</p>';
         
         try {
-            const unitsSnapshot = await getDocs(collection(db, "units"));
-            const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
-            
-            if (currentUnit) {
-                const titleEl = document.querySelector('.unit-detail-title');
-                if(titleEl) titleEl.innerText = currentUnit.title;
-            }
-
             const phrasalSnapshot = await getDocs(collection(db, "phrasal_verbs"));
             let phrasals = phrasalSnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -234,14 +313,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         prepListContainer.innerHTML = '<p>Loading data...</p>';
         
         try {
-            const unitsSnapshot = await getDocs(collection(db, "units"));
-            const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
-            
-            if (currentUnit) {
-                const titleEl = document.querySelector('.unit-detail-title');
-                if(titleEl) titleEl.innerText = currentUnit.title;
-            }
-
             const prepSnapshot = await getDocs(collection(db, "prep_phrases"));
             let preps = prepSnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -288,14 +359,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         wfListContainer.innerHTML = '<p>Loading data...</p>';
         
         try {
-            const unitsSnapshot = await getDocs(collection(db, "units"));
-            const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
-            
-            if (currentUnit) {
-                const titleEl = document.querySelector('.unit-detail-title');
-                if(titleEl) titleEl.innerText = currentUnit.title;
-            }
-
             const wfSnapshot = await getDocs(collection(db, "word_formations"));
             let wordforms = wfSnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -400,14 +463,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         patternListContainer.innerHTML = '<p>Loading data...</p>';
         
         try {
-            const unitsSnapshot = await getDocs(collection(db, "units"));
-            const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
-            
-            if (currentUnit) {
-                const titleEl = document.querySelector('.unit-detail-title');
-                if(titleEl) titleEl.innerText = currentUnit.title;
-            }
-
             const patternSnapshot = await getDocs(collection(db, "word_patterns"));
             let patterns = patternSnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -477,26 +532,6 @@ window.toggleWf = function(id) {
             lexicalListContainer.innerHTML = '<p>Loading data...</p>';
             
             try {
-                const unitsSnapshot = await getDocs(collection(db, "units"));
-                const currentUnit = unitsSnapshot.docs.find(d => d.id === unitId)?.data();
-                
-                if (currentUnit) {
-                    const titleEl = document.querySelector('.unit-detail-title');
-                    if(titleEl) titleEl.innerText = currentUnit.title;
-                    
-                    const submenu = document.getElementById('unit-submenu');
-                    if(submenu) {
-                        submenu.innerHTML = `
-                            <a href="unit_detail.html?id=${unitId}" class="unit-submenu-link">Vocabulary</a>
-                            <a href="unit_phrasal.html?id=${unitId}" class="unit-submenu-link">Phrasal Verbs</a>
-                            <a href="unit_prep.html?id=${unitId}" class="unit-submenu-link">Prepositional Phrases</a>
-                            <a href="unit_wordform.html?id=${unitId}" class="unit-submenu-link">Word Formation</a>
-                            <a href="unit_pattern.html?id=${unitId}" class="unit-submenu-link">Word Patterns</a>
-                            <a href="unit_lexical.html?id=${unitId}" class="unit-submenu-link active">Lexical Expansion</a>
-                        `;
-                    }
-                }
-
                 const lexicalSnapshot = await getDocs(collection(db, "lexical_expansions"));
                 let lexicals = lexicalSnapshot.docs
                                 .map(doc => ({ id: doc.id, ...doc.data() }))

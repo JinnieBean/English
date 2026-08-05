@@ -28,6 +28,7 @@ const navItems = document.querySelectorAll('.nav-item');
 const tabPanes = document.querySelectorAll('.tab-pane');
 
 // State
+let booksData = [];
 let unitsData = [];
 let vocabData = [];
 let phrasalData = [];
@@ -94,6 +95,10 @@ logoutBtn.addEventListener('click', () => {
 // --- Data Loading ---
 async function loadData() {
     try {
+        // Load Books
+        const booksSnapshot = await getDocs(collection(db, "books"));
+        booksData = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
         // Load Units
         const unitsSnapshot = await getDocs(collection(db, "units"));
         unitsData = unitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -122,7 +127,9 @@ async function loadData() {
         const lexicalSnapshot = await getDocs(collection(db, "lexical_expansions"));
         lexicalData = lexicalSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
+        renderBooks();
         renderUnits();
+        populateBookSelects();
         populateUnitSelects();
         renderVocab();
         renderPhrasal();
@@ -136,13 +143,129 @@ async function loadData() {
     }
 }
 
+// --- Books Logic ---
+const bookModal = document.getElementById('book-modal');
+const bookForm = document.getElementById('book-form');
+
+document.getElementById('add-book-btn').addEventListener('click', () => {
+    document.getElementById('book-id').value = '';
+    bookForm.reset();
+    document.getElementById('book-order').value = booksData.length > 0 ? Math.max(...booksData.map(b => b.order || 0)) + 1 : 1;
+    document.getElementById('book-modal-title').innerText = 'Add New Book';
+    bookModal.style.display = 'flex';
+});
+
+bookForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('book-id').value;
+    const bookData = {
+        title: document.getElementById('book-title').value.trim(),
+        subtitle: document.getElementById('book-subtitle').value.trim(),
+        desc: document.getElementById('book-desc').value.trim(),
+        image: document.getElementById('book-image').value.trim(),
+        order: parseInt(document.getElementById('book-order').value) || 1
+    };
+
+    try {
+        if (id) {
+            await updateDoc(doc(db, "books", id), bookData);
+        } else {
+            await addDoc(collection(db, "books"), bookData);
+        }
+        bookModal.style.display = 'none';
+        await loadData();
+    } catch (error) {
+        console.error("Error saving book:", error);
+        alert("Failed to save book.");
+    }
+});
+
+function renderBooks() {
+    const list = document.getElementById('books-list');
+    const searchTerm = document.getElementById('search-book')?.value.toLowerCase() || '';
+    
+    let filtered = booksData.filter(b => b.title.toLowerCase().includes(searchTerm));
+    filtered.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    list.innerHTML = '';
+    filtered.forEach(b => {
+        list.innerHTML += `
+            <tr>
+                <td>${b.order || 0}</td>
+                <td><img src="${b.image || 'assets/images/book_cover.png'}" alt="cover" style="height: 40px; border-radius: 4px;"></td>
+                <td>${b.title} ${b.subtitle ? `<br><small style="color: #666;">${b.subtitle}</small>` : ''}</td>
+                <td>
+                    <button class="btn-secondary btn-small" onclick="editBook('${b.id}')">Edit</button>
+                    <button class="btn-danger btn-small" onclick="deleteBook('${b.id}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+window.editBook = (id) => {
+    const b = booksData.find(x => x.id === id);
+    if (b) {
+        document.getElementById('book-id').value = b.id;
+        document.getElementById('book-title').value = b.title;
+        document.getElementById('book-subtitle').value = b.subtitle || '';
+        document.getElementById('book-desc').value = b.desc || '';
+        document.getElementById('book-image').value = b.image || 'assets/images/book_cover.png';
+        document.getElementById('book-order').value = b.order || 1;
+        
+        document.getElementById('book-modal-title').innerText = 'Edit Book';
+        bookModal.style.display = 'flex';
+    }
+};
+
+window.deleteBook = async (id) => {
+    if (confirm("Are you sure you want to delete this Book? Make sure no units belong to it first!")) {
+        try {
+            await deleteDoc(doc(db, "books", id));
+            await loadData();
+        } catch (error) {
+            console.error("Error deleting book:", error);
+            alert("Failed to delete book.");
+        }
+    }
+};
+
+document.getElementById('search-book')?.addEventListener('input', renderBooks);
+
 // --- Units Logic ---
 const unitModal = document.getElementById('unit-modal');
 const unitForm = document.getElementById('unit-form');
 
+function populateBookSelects() {
+    const filterSelect = document.getElementById('filter-unit-book');
+    const formSelect = document.getElementById('unit-book');
+    
+    if(!filterSelect || !formSelect) return;
+
+    const options = booksData.sort((a,b) => (a.order||0) - (b.order||0)).map(b => `<option value="${b.id}">${b.title}</option>`).join('');
+    
+    const currentFilter = filterSelect.value;
+    filterSelect.innerHTML = `<option value="all">All Books</option>` + options;
+    if(currentFilter && currentFilter !== 'all') {
+        filterSelect.value = currentFilter;
+    }
+
+    const currentForm = formSelect.value;
+    formSelect.innerHTML = options;
+    if(currentForm) {
+        formSelect.value = currentForm;
+    } else if (lastSelectedBookId) {
+        formSelect.value = lastSelectedBookId;
+    }
+}
+
+let lastSelectedBookId = null;
+
 document.getElementById('add-unit-btn').addEventListener('click', () => {
     document.getElementById('unit-id').value = '';
     unitForm.reset();
+    if(lastSelectedBookId) document.getElementById('unit-book').value = lastSelectedBookId;
+    document.getElementById('unit-order').value = unitsData.length > 0 ? Math.max(...unitsData.map(u => u.order || 0)) + 1 : 1;
     document.getElementById('unit-modal-title').innerText = 'Add New Unit';
     unitModal.style.display = 'flex';
 });
@@ -150,16 +273,24 @@ document.getElementById('add-unit-btn').addEventListener('click', () => {
 unitForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = document.getElementById('unit-id').value;
-    const title = document.getElementById('unit-title').value;
+    const bookId = document.getElementById('unit-book').value;
+    const title = document.getElementById('unit-title').value.trim();
     const order = parseInt(document.getElementById('unit-order').value);
     
+    const sectionCheckboxes = document.querySelectorAll('input[name="unit-section"]:checked');
+    const sections = Array.from(sectionCheckboxes).map(cb => cb.value);
+
+    lastSelectedBookId = bookId; // Remember for next time
+    
+    const unitData = { bookId, title, order, sections };
+
     try {
         if (id) {
             // Update
-            await updateDoc(doc(db, "units", id), { title, order });
+            await updateDoc(doc(db, "units", id), unitData);
         } else {
             // Create
-            await addDoc(collection(db, "units"), { title, order });
+            await addDoc(collection(db, "units"), unitData);
         }
         unitModal.style.display = 'none';
         await loadData();
@@ -169,16 +300,22 @@ unitForm.addEventListener('submit', async (e) => {
     }
 });
 
-document.getElementById('search-unit').addEventListener('input', renderUnits);
-document.getElementById('sort-unit').addEventListener('change', renderUnits);
+document.getElementById('search-unit')?.addEventListener('input', renderUnits);
+document.getElementById('sort-unit')?.addEventListener('change', renderUnits);
+document.getElementById('filter-unit-book')?.addEventListener('change', renderUnits);
 
 function renderUnits() {
     const list = document.getElementById('units-list');
-    const searchQuery = document.getElementById('search-unit').value.toLowerCase();
-    const sortValue = document.getElementById('sort-unit').value;
+    if (!list) return;
+    const searchQuery = document.getElementById('search-unit')?.value.toLowerCase() || '';
+    const sortValue = document.getElementById('sort-unit')?.value || 'az';
+    const bookFilter = document.getElementById('filter-unit-book')?.value || 'all';
     list.innerHTML = '';
     
     let filteredData = unitsData.filter(u => u.title.toLowerCase().includes(searchQuery));
+    if (bookFilter !== 'all') {
+        filteredData = filteredData.filter(u => u.bookId === bookFilter);
+    }
     
     if (sortValue === 'az') {
         filteredData.sort((a, b) => a.title.localeCompare(b.title));
@@ -189,8 +326,11 @@ function renderUnits() {
     }
 
     filteredData.forEach(unit => {
+        const book = booksData.find(b => b.id === unit.bookId);
         list.innerHTML += `
             <tr>
+                <td>${unit.order || 0}</td>
+                <td>${book ? book.title : '<em>No Book</em>'}</td>
                 <td>${unit.title}</td>
                 <td>
                     <button class="btn-secondary btn-small" onclick="editUnit('${unit.id}')">Edit</button>
@@ -205,8 +345,20 @@ window.editUnit = (id) => {
     const unit = unitsData.find(u => u.id === id);
     if(unit) {
         document.getElementById('unit-id').value = unit.id;
+        document.getElementById('unit-book').value = unit.bookId || '';
         document.getElementById('unit-title').value = unit.title;
-        document.getElementById('unit-order').value = unit.order;
+        document.getElementById('unit-order').value = unit.order || 1;
+        
+        // Reset checkboxes
+        document.querySelectorAll('input[name="unit-section"]').forEach(cb => cb.checked = false);
+        // Check selected
+        if (unit.sections) {
+            unit.sections.forEach(sec => {
+                const cb = document.querySelector(`input[name="unit-section"][value="${sec}"]`);
+                if (cb) cb.checked = true;
+            });
+        }
+
         document.getElementById('unit-modal-title').innerText = 'Edit Unit';
         unitModal.style.display = 'flex';
     }

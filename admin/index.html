@@ -40,10 +40,9 @@
                 <h3>Admin Panel</h3>
             </div>
             <ul class="sidebar-nav">
-                <div class="sidebar-section-title">Unit</div>
-                <li class="nav-item active" data-tab="tab-units">Manage Units</li>
-                
                 <div class="sidebar-section-title">Vocabulary</div>
+                <li class="nav-item active" data-tab="tab-books">Manage Books</li>
+                <li class="nav-item" data-tab="tab-units">Manage Units</li>
                 <li class="nav-item" data-tab="tab-vocab">Manage Vocabulary</li>
                 <li class="nav-item" data-tab="tab-phrasal">Manage Phrasal Verbs</li>
                 <li class="nav-item" data-tab="tab-prep">Manage Prepositional Phrases</li>
@@ -62,13 +61,43 @@
         <!-- Main Content -->
         <main class="dashboard-content">
             
+            <!-- Books Tab -->
+            <div id="tab-books" class="tab-pane active">
+                <div class="dashboard-header">
+                    <h2>Books</h2>
+                    <button id="add-book-btn" class="btn-primary">+ Add Book</button>
+                </div>
+                <div class="filter-bar">
+                    <input type="text" id="search-book" class="input-field" placeholder="Search books...">
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Cover</th>
+                                <th>Book Title</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="books-list">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Units Tab -->
-            <div id="tab-units" class="tab-pane active">
+            <div id="tab-units" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
                     <h2>Course Units</h2>
                     <button id="add-unit-btn" class="btn-primary">+ Add Unit</button>
                 </div>
                 <div class="filter-bar">
+                    <label>Filter by Book:</label>
+                    <select id="filter-unit-book" class="input-field" style="max-width: 200px;">
+                        <option value="all">All Books</option>
+                    </select>
                     <input type="text" id="search-unit" class="input-field" placeholder="Search units...">
                     <select id="sort-unit" class="input-field" style="max-width: 150px;">
                         <option value="az" selected>A-Z</option>
@@ -80,6 +109,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th>Order</th>
+                                <th>Book</th>
                                 <th>Unit Title</th>
                                 <th>Actions</th>
                             </tr>
@@ -383,6 +414,38 @@
 
     <!-- Modals -->
 
+    <!-- Book Modal -->
+    <div id="book-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" data-target="book-modal">&times;</span>
+            <h3 id="book-modal-title">Add New Book</h3>
+            <form id="book-form">
+                <input type="hidden" id="book-id">
+                <div class="input-group">
+                    <label>Book Title (e.g., Destination B1)</label>
+                    <input type="text" id="book-title" required>
+                </div>
+                <div class="input-group">
+                    <label>Subtitle (e.g., Grammar & Vocabulary)</label>
+                    <input type="text" id="book-subtitle">
+                </div>
+                <div class="input-group">
+                    <label>Description (e.g., Only Vocabulary.)</label>
+                    <textarea id="book-desc" rows="2"></textarea>
+                </div>
+                <div class="input-group">
+                    <label>Cover Image URL (e.g., assets/images/book_cover.png or https://...)</label>
+                    <input type="text" id="book-image" value="assets/images/book_cover.png">
+                </div>
+                <div class="input-group">
+                    <label>Order</label>
+                    <input type="number" id="book-order" value="1" required>
+                </div>
+                <button type="submit" class="btn-primary">Save Book</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Pattern Modal -->
     <div id="pattern-modal" class="modal">
         <div class="modal-content modal-large">
@@ -436,12 +499,29 @@
             <form id="unit-form">
                 <input type="hidden" id="unit-id">
                 <div class="input-group">
+                    <label>Belongs to Book</label>
+                    <select id="unit-book" class="input-field" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="input-group">
                     <label>Unit Title (e.g., Unit 3: Fun & Games)</label>
                     <input type="text" id="unit-title" required>
                 </div>
                 <div class="input-group">
                     <label>Order (Number to sort by)</label>
                     <input type="number" id="unit-order" value="1" required>
+                </div>
+                <div class="input-group">
+                    <label>Enabled Sections</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                        <label><input type="checkbox" name="unit-section" value="vocab"> Vocabulary</label>
+                        <label><input type="checkbox" name="unit-section" value="phrasal"> Phrasal Verbs</label>
+                        <label><input type="checkbox" name="unit-section" value="prep"> Prepositional Phrases</label>
+                        <label><input type="checkbox" name="unit-section" value="wordform"> Word Formation</label>
+                        <label><input type="checkbox" name="unit-section" value="pattern"> Word Patterns</label>
+                        <label><input type="checkbox" name="unit-section" value="lexical"> Lexical Expansion</label>
+                    </div>
                 </div>
                 <button type="submit" class="btn-primary">Save Unit</button>
             </form>
