@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
     <script type="module" src="js/admin.js" defer></script>
 </head>
+
 <body>
     <!-- Login Screen -->
     <div id="login-section" class="auth-container">
@@ -33,7 +35,7 @@
 
     <!-- Dashboard Layout -->
     <div id="dashboard-section" class="dashboard-layout" style="display: none;">
-        
+
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-brand">
@@ -60,7 +62,7 @@
 
         <!-- Main Content -->
         <main class="dashboard-content">
-            
+
             <!-- Books Tab -->
             <div id="tab-books" class="tab-pane active">
                 <div class="dashboard-header">
@@ -293,7 +295,7 @@
                     </table>
                 </div>
             </div>
-        
+
             <!-- Lexical Expansion Tab -->
             <div id="tab-lexical" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
@@ -321,17 +323,19 @@
                     </table>
                 </div>
             </div>
-        
+
 
             <!-- Grammar Tab Pane -->
             <div id="tab-grammar" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
                     <h2>Grammar Management</h2>
                 </div>
-                
+
                 <!-- Categories Section -->
-                <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div
+                    style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h3>Grammar Categories</h3>
                         <button id="add-grammar-cat-btn" class="btn-primary btn-small">+ Add Category</button>
                     </div>
@@ -350,8 +354,10 @@
                 </div>
 
                 <!-- Lessons Section -->
-                <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div
+                    style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h3>Grammar Lessons</h3>
                         <button id="add-grammar-lesson-btn" class="btn-primary btn-small">+ Add Lesson</button>
                     </div>
@@ -377,9 +383,11 @@
                 </div>
 
                 <!-- Units Section -->
-                <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 2rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3>Grammar Units (Sub-lessons)</h3>
+                <div
+                    style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 2rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Grammar Units</h3>
                         <button id="add-grammar-unit-btn" class="btn-primary btn-small">+ Add Unit</button>
                     </div>
                     <div class="filter-bar" style="margin-bottom: 1rem; display: flex; gap: 1rem;">
@@ -465,7 +473,7 @@
                         <input type="text" id="pattern-word" required>
                     </div>
                 </div>
-                
+
                 <div class="form-row">
                     <div class="input-group flex-1">
                         <label>POS (e.g., adj)</label>
@@ -485,12 +493,12 @@
                     <label>Example Sentence</label>
                     <textarea id="pattern-example" rows="2" required></textarea>
                 </div>
-                
+
                 <button type="submit" class="btn-primary">Save Word Pattern</button>
             </form>
         </div>
     </div>
-    
+
     <!-- Unit Modal -->
     <div id="unit-modal" class="modal">
         <div class="modal-content">
@@ -535,7 +543,7 @@
             <h3 id="vocab-modal-title">Add New Vocabulary</h3>
             <form id="vocab-form">
                 <input type="hidden" id="vocab-id">
-                
+
                 <div class="form-row">
                     <div class="input-group flex-1">
                         <label>Word</label>
@@ -587,7 +595,7 @@
             <h3 id="phrasal-modal-title">Add New Phrasal Verb</h3>
             <form id="phrasal-form">
                 <input type="hidden" id="phrasal-id">
-                
+
                 <div class="form-row">
                     <div class="input-group flex-1">
                         <label>Phrasal Verb</label>
@@ -628,7 +636,7 @@
             <h3 id="prep-modal-title">Add New Phrase</h3>
             <form id="prep-form">
                 <input type="hidden" id="prep-id">
-                
+
                 <div class="input-group">
                     <label>Phrase</label>
                     <input type="text" id="prep-word" required placeholder="e.g. for a long time">
@@ -663,7 +671,7 @@
             <h3 id="wordform-modal-title">Add Word Formation</h3>
             <form id="wordform-form">
                 <input type="hidden" id="wordform-id">
-                
+
                 <div class="input-group">
                     <label>Belongs to Unit</label>
                     <select id="wordform-unit-id" class="input-field" required>
@@ -674,21 +682,25 @@
                     <label>Root Word</label>
                     <input type="text" id="wordform-root" required placeholder="e.g. act">
                 </div>
-                
+
                 <div class="input-group">
                     <label>Overview Forms (e.g. pos: (verb), words: act ≠ overact)</label>
-                    <div id="wordform-overview-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div id="wordform-overview-container"
+                        style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
                     </div>
-                    <button type="button" id="add-overview-btn" class="btn-secondary btn-small">+ Add Overview Form</button>
+                    <button type="button" id="add-overview-btn" class="btn-secondary btn-small">+ Add Overview
+                        Form</button>
                 </div>
-                
+
                 <hr style="margin: 1rem 0; border: 0; border-top: 1px solid #ccc;">
 
                 <div class="input-group">
                     <label>Detailed Forms (Audios, Definitions, Examples)</label>
-                    <div id="wordform-forms-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div id="wordform-forms-container"
+                        style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
                     </div>
-                    <button type="button" id="add-wordform-btn" class="btn-secondary btn-small">+ Add Detailed Form</button>
+                    <button type="button" id="add-wordform-btn" class="btn-secondary btn-small">+ Add Detailed
+                        Form</button>
                 </div>
 
                 <button type="submit" class="btn-primary" style="margin-top: 1rem;">Save Word Formation</button>
@@ -703,7 +715,7 @@
             <h3 id="lexical-modal-title">Add Lexical Expansion</h3>
             <form id="lexical-form">
                 <input type="hidden" id="lexical-id">
-                
+
                 <div class="input-group">
                     <label>Belongs to Unit</label>
                     <select id="lexical-unit-id" class="input-field" required>
@@ -713,7 +725,8 @@
                 <div class="form-row">
                     <div class="input-group flex-1">
                         <label>Left Column Text</label>
-                        <textarea id="lexical-text-left" rows="4" placeholder="Enter tree structure or equations..."></textarea>
+                        <textarea id="lexical-text-left" rows="4"
+                            placeholder="Enter tree structure or equations..."></textarea>
                     </div>
                     <div class="input-group" style="width: 150px;">
                         <label>Alignment</label>
@@ -739,12 +752,13 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <hr style="margin: 1rem 0; border: 0; border-top: 1px solid #ccc;">
 
                 <div class="input-group">
                     <label>Vocabulary Words associated with this section</label>
-                    <div id="lexical-words-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div id="lexical-words-container"
+                        style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
                     </div>
                     <button type="button" id="add-lexical-word-btn" class="btn-secondary btn-small">+ Add Word</button>
                 </div>
@@ -770,7 +784,8 @@
                     <input type="number" id="grammar-cat-order" class="input-field" value="0">
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('grammar-cat-modal').style.display='none'">Cancel</button>
+                    <button type="button" class="btn-secondary"
+                        onclick="document.getElementById('grammar-cat-modal').style.display='none'">Cancel</button>
                     <button type="submit" class="btn-primary">Save Category</button>
                 </div>
             </form>
@@ -803,7 +818,8 @@
                     </div>
                     <div class="input-group flex-1">
                         <label>Author (Optional)</label>
-                        <input type="text" id="grammar-lesson-author" class="input-field" placeholder="e.g. Siêu Nhân Heo Hường">
+                        <input type="text" id="grammar-lesson-author" class="input-field"
+                            placeholder="e.g. Siêu Nhân Heo Hường">
                     </div>
                 </div>
                 <div class="input-group">
@@ -811,7 +827,8 @@
                     <textarea id="grammar-lesson-content" class="input-field tinymce-editor"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('grammar-lesson-modal').style.display='none'">Cancel</button>
+                    <button type="button" class="btn-secondary"
+                        onclick="document.getElementById('grammar-lesson-modal').style.display='none'">Cancel</button>
                     <button type="submit" class="btn-primary">Save Lesson</button>
                 </div>
             </form>
@@ -834,7 +851,8 @@
                     <input type="number" id="grammar-cat-order" class="input-field" value="0">
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('grammar-cat-modal').style.display='none'">Cancel</button>
+                    <button type="button" class="btn-secondary"
+                        onclick="document.getElementById('grammar-cat-modal').style.display='none'">Cancel</button>
                     <button type="submit" class="btn-primary">Save Category</button>
                 </div>
             </form>
@@ -867,7 +885,8 @@
                     </div>
                     <div class="input-group flex-1">
                         <label>Author (Optional)</label>
-                        <input type="text" id="grammar-lesson-author" class="input-field" placeholder="e.g. Siêu Nhân Heo Hường">
+                        <input type="text" id="grammar-lesson-author" class="input-field"
+                            placeholder="e.g. Siêu Nhân Heo Hường">
                     </div>
                 </div>
                 <div class="input-group">
@@ -875,7 +894,8 @@
                     <textarea id="grammar-lesson-content" class="input-field tinymce-editor"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('grammar-lesson-modal').style.display='none'">Cancel</button>
+                    <button type="button" class="btn-secondary"
+                        onclick="document.getElementById('grammar-lesson-modal').style.display='none'">Cancel</button>
                     <button type="submit" class="btn-primary">Save Lesson</button>
                 </div>
             </form>
@@ -914,7 +934,8 @@
                     </div>
                     <div class="input-group flex-1">
                         <label>Author (Optional)</label>
-                        <input type="text" id="grammar-unit-author" class="input-field" placeholder="e.g. Siêu Nhân Heo Hường">
+                        <input type="text" id="grammar-unit-author" class="input-field"
+                            placeholder="e.g. Siêu Nhân Heo Hường">
                     </div>
                 </div>
                 <div class="input-group">
@@ -922,7 +943,8 @@
                     <textarea id="grammar-unit-content" class="input-field tinymce-editor"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('grammar-unit-modal').style.display='none'">Cancel</button>
+                    <button type="button" class="btn-secondary"
+                        onclick="document.getElementById('grammar-unit-modal').style.display='none'">Cancel</button>
                     <button type="submit" class="btn-primary">Save Unit</button>
                 </div>
             </form>
