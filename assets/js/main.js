@@ -126,6 +126,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             .map(doc => ({ id: doc.id, ...doc.data() }))
                             .filter(v => v.unitId === unitId); // Filter words belonging to this Unit
             
+            vocabs.sort((a, b) => a.word.localeCompare(b.word));
+            
             vocabListContainer.innerHTML = '';
             
             if(vocabs.length === 0) {
@@ -189,6 +191,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             let phrasals = phrasalSnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
                             .filter(p => p.unitId === unitId);
+                            
+            phrasals.sort((a, b) => a.word.localeCompare(b.word));
             
             phrasalListContainer.innerHTML = '';
             
@@ -242,6 +246,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             let preps = prepSnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
                             .filter(p => p.unitId === unitId);
+                            
+            preps.sort((a, b) => a.word.localeCompare(b.word));
             
             prepListContainer.innerHTML = '';
             
@@ -294,6 +300,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             let wordforms = wfSnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
                             .filter(w => w.unitId === unitId);
+                            
+            wordforms.sort((a, b) => (a.rootWord || '').localeCompare(b.rootWord || ''));
             
             wfListContainer.innerHTML = '';
             
@@ -404,6 +412,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             let patterns = patternSnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
                             .filter(p => p.unitId === unitId);
+                            
+            patterns.sort((a, b) => a.word.localeCompare(b.word));
             
             patternListContainer.innerHTML = '';
             
@@ -499,6 +509,9 @@ window.toggleWf = function(id) {
                 }
 
                 lexicals.forEach(lex => {
+                    if (lex.words && lex.words.length > 0) {
+                        lex.words.sort((a, b) => a.word.localeCompare(b.word));
+                    }
                     let textLeftHtml = lex.textLeft ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1rem; text-align: ${lex.alignLeft || 'left'};">${lex.textLeft}</div>` : '';
                     let textRightHtml = lex.textRight ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1rem; text-align: ${lex.alignRight || 'left'};">${lex.textRight}</div>` : '';
                     
