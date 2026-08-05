@@ -291,80 +291,7 @@
                 </div>
             </div>
         
-            <!-- Grammar Tab Pane -->
-            <div id="tab-grammar" class="tab-pane" style="display: none;">
-                <div class="dashboard-header">
-                    <h2>Grammar Management</h2>
-                </div>
-                
-                <!-- Intro Section -->
-                <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <h3>Grammar Overview (Introduction)</h3>
-                    <form id="grammar-intro-form" style="margin-top: 1rem;">
-                        <div class="input-group">
-                            <label>Title</label>
-                            <input type="text" id="grammar-intro-title" class="input-field" value="English Grammar Overview">
-                        </div>
-                        <div class="input-group">
-                            <label>Description (Short)</label>
-                            <textarea id="grammar-intro-desc" class="input-field" rows="2"></textarea>
-                        </div>
-                        <div class="input-group">
-                            <label>Full Content (Read More)</label>
-                            <textarea id="grammar-intro-content" class="input-field tinymce-editor"></textarea>
-                        </div>
-                        <button type="submit" class="btn-primary">Save Introduction</button>
-                    </form>
-                </div>
 
-                <!-- Categories Section -->
-                <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3>Grammar Categories</h3>
-                        <button id="add-grammar-cat-btn" class="btn-primary btn-small">+ Add Category</button>
-                    </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Order</th>
-                                <th>Category Title</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="grammar-cat-list">
-                            <!-- JS populated -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Lessons Section -->
-                <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3>Grammar Lessons</h3>
-                        <button id="add-grammar-lesson-btn" class="btn-primary btn-small">+ Add Lesson</button>
-                    </div>
-                    <div class="filter-bar" style="margin-bottom: 1rem;">
-                        <select id="filter-grammar-cat" class="input-field">
-                            <option value="all">All Categories</option>
-                            <!-- JS populated -->
-                        </select>
-                    </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Order</th>
-                                <th>Category</th>
-                                <th>Lesson Title</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="grammar-lesson-list">
-                            <!-- JS populated -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        
             <!-- Grammar Tab Pane -->
             <div id="tab-grammar" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
@@ -413,6 +340,37 @@
                             </tr>
                         </thead>
                         <tbody id="grammar-lesson-list">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Units Section -->
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Grammar Units (Sub-lessons)</h3>
+                        <button id="add-grammar-unit-btn" class="btn-primary btn-small">+ Add Unit</button>
+                    </div>
+                    <div class="filter-bar" style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+                        <select id="filter-grammar-unit-cat" class="input-field" style="flex: 1;">
+                            <option value="all">All Categories</option>
+                            <!-- JS populated -->
+                        </select>
+                        <select id="filter-grammar-unit-les" class="input-field" style="flex: 1;">
+                            <option value="all">All Lessons</option>
+                            <!-- JS populated -->
+                        </select>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Lesson</th>
+                                <th>Unit Title</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="grammar-unit-list">
                             <!-- JS populated -->
                         </tbody>
                     </table>
@@ -843,7 +801,53 @@
             </form>
         </div>
     </div>
-</body>
 
+    <!-- Grammar Unit Modal -->
+    <div id="grammar-unit-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px; width: 90%;">
+            <span class="close-modal" data-target="grammar-unit-modal">&times;</span>
+            <h2 id="grammar-unit-modal-title">Add Unit</h2>
+            <form id="grammar-unit-form">
+                <input type="hidden" id="grammar-unit-id">
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Category (Filter only)</label>
+                        <select id="grammar-unit-category" class="input-field">
+                            <!-- JS populated -->
+                        </select>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Lesson</label>
+                        <select id="grammar-unit-lesson" class="input-field" required>
+                            <!-- JS populated -->
+                        </select>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Order</label>
+                        <input type="number" id="grammar-unit-order" class="input-field" value="0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Unit Title</label>
+                        <input type="text" id="grammar-unit-title" class="input-field" required>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Author (Optional)</label>
+                        <input type="text" id="grammar-unit-author" class="input-field" placeholder="e.g. Siêu Nhân Heo Hường">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Content</label>
+                    <textarea id="grammar-unit-content" class="input-field tinymce-editor"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('grammar-unit-modal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Unit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
 
 </html>

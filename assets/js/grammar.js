@@ -58,16 +58,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             let lessons = lesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             lessons.sort((a, b) => (a.order || 0) - (b.order || 0));
 
+            // Fetch Units
+            const uniSnap = await getDocs(collection(db, 'grammar_units'));
+            let units = uniSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            units.sort((a, b) => (a.order || 0) - (b.order || 0));
+
             let catsHtml = '';
             categories.forEach(cat => {
                 const catLessons = lessons.filter(l => l.categoryId === cat.id);
                 if (catLessons.length > 0) {
-                    let lesHtml = catLessons.map(l => `
-                        <a href="grammar_lesson.html?id=${l.id}" class="grammar-lesson-link" style="padding-left: 2rem; position: relative; border-bottom: none; margin-bottom: 0.5rem; padding-bottom: 0;">
-                            <span style="position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); color: #1a7a7f; font-size: 1.2rem;">•</span>
-                            <span class="lesson-title">${l.title}</span>
-                        </a>
-                    `).join('');
+                    let lesHtml = catLessons.map(l => {
+                        const lessonUnits = units.filter(u => u.lessonId === l.id);
+                        let uniHtml = lessonUnits.map(unit => `
+                            <a href="grammar_lesson.html?id=${unit.id}&type=unit" class="grammar-lesson-link" style="padding-left: 2rem; position: relative; border-bottom: none; margin-bottom: 0.5rem; padding-bottom: 0;">
+                                <span style="position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); color: #1a7a7f; font-size: 1.2rem;">•</span>
+                                <span class="lesson-title" style="font-size: 1.15rem;">${unit.title}</span>
+                            </a>
+                        `).join('');
+
+                        return `
+                        <div class="grammar-lesson-group" style="margin-bottom: 1.5rem;">
+                            <a href="grammar_lesson.html?id=${l.id}&type=lesson" class="grammar-lesson-link" style="padding-left: 0.5rem; border-bottom: none; margin-bottom: 0.5rem; padding-bottom: 0;">
+                                <span class="lesson-title" style="font-size: 1.25rem; font-family: 'Playfair Display', serif; color: #1a4d4f; font-weight: 600;">${l.title}</span>
+                            </a>
+                            <div class="grammar-lesson-units" style="margin-left: 1rem; border-left: 2px solid #eef2f6; padding-left: 0.5rem; margin-top: 0.5rem;">
+                                ${uniHtml}
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
                     
                     catsHtml += `
                         <div class="grammar-category">
@@ -113,13 +132,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     content = data.content || '';
                 }
             } else {
-                const lessonDocRef = doc(db, 'grammar_lessons', lessonId);
-                const lessonSnap = await getDoc(lessonDocRef);
-                if (lessonSnap.exists()) {
-                    const data = lessonSnap.data();
-                    title = data.title;
-                    authorHtml = data.author ? `<p class="lesson-author">Written By ${data.author}</p>` : '';
-                    content = data.content;
+                const type = urlParams.get('type');
+                if (type === 'unit') {
+                    const unitDocRef = doc(db, 'grammar_units', lessonId);
+                    const unitSnap = await getDoc(unitDocRef);
+                    if (unitSnap.exists()) {
+                        const data = unitSnap.data();
+                        title = data.title;
+                        authorHtml = data.author ? `<p class="lesson-author">Written By ${data.author}</p>` : '';
+                        content = data.content;
+                    }
+                } else {
+                    const lessonDocRef = doc(db, 'grammar_lessons', lessonId);
+                    const lessonSnap = await getDoc(lessonDocRef);
+                    if (lessonSnap.exists()) {
+                        const data = lessonSnap.data();
+                        title = data.title;
+                        authorHtml = data.author ? `<p class="lesson-author">Written By ${data.author}</p>` : '';
+                        content = data.content;
+                    }
                 }
             }
 

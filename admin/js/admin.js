@@ -1109,11 +1109,15 @@ window.deleteLexical = async (id) => {
 // State
 let grammarCategoriesData = [];
 let grammarLessonsData = [];
+let grammarUnitsData = [];
 
 // DOM Elements
 const grammarCatList = document.getElementById('grammar-cat-list');
 const grammarLessonList = document.getElementById('grammar-lesson-list');
+const grammarUnitList = document.getElementById('grammar-unit-list');
 const filterGrammarCat = document.getElementById('filter-grammar-cat');
+const filterGrammarUnitCat = document.getElementById('filter-grammar-unit-cat');
+const filterGrammarUnitLes = document.getElementById('filter-grammar-unit-les');
 
 const grammarCatModal = document.getElementById('grammar-cat-modal');
 const grammarCatForm = document.getElementById('grammar-cat-form');
@@ -1121,17 +1125,22 @@ const grammarCatForm = document.getElementById('grammar-cat-form');
 const grammarLessonModal = document.getElementById('grammar-lesson-modal');
 const grammarLessonForm = document.getElementById('grammar-lesson-form');
 
+const grammarUnitModal = document.getElementById('grammar-unit-modal');
+const grammarUnitForm = document.getElementById('grammar-unit-form');
+
 // Initialize TinyMCE
 let tinymceInitialized = false;
 function initTinyMCE() {
     if (tinymceInitialized || typeof tinymce === 'undefined') return;
     tinymce.init({
         selector: '.tinymce-editor',
-        plugins: 'lists link image table code help wordcount',
-        toolbar: 'undo redo | blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | table | removeformat | help',
-        menubar: false,
+        plugins: 'lists link image media table code help wordcount',
+        toolbar: 'undo redo | blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | removeformat | code | help',
+        menubar: true,
         height: 400,
-        promotion: false
+        promotion: false,
+        image_advtab: true,
+        media_live_embeds: true
     });
     tinymceInitialized = true;
 }
@@ -1160,7 +1169,13 @@ async function loadGrammarData() {
         const lesSnap = await getDocs(collection(db, 'grammar_lessons'));
         grammarLessonsData = lesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         
+        // Load Units
+        const uniSnap = await getDocs(collection(db, 'grammar_units'));
+        grammarUnitsData = uniSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
         renderGrammarLessons();
+        renderGrammarUnits();
+        updateGrammarUnitSelects();
     } catch (e) {
         console.error("Error loading Grammar Data:", e);
     }
@@ -1186,6 +1201,8 @@ function renderGrammarCategories() {
 function updateGrammarCatSelects() {
     const filterCat = document.getElementById('filter-grammar-cat');
     const lessonCat = document.getElementById('grammar-lesson-category');
+    const unitCatFilter = document.getElementById('filter-grammar-unit-cat');
+    const unitCat = document.getElementById('grammar-unit-category');
     
     if (filterCat) {
         const currentFilter = filterCat.value;
@@ -1204,6 +1221,53 @@ function updateGrammarCatSelects() {
         });
         if (currentLessonCat) lessonCat.value = currentLessonCat;
     }
+
+    if (unitCatFilter) {
+        const currentFilter = unitCatFilter.value;
+        unitCatFilter.innerHTML = '<option value="all">All Categories</option>';
+        grammarCategoriesData.forEach(cat => {
+            unitCatFilter.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
+        });
+        unitCatFilter.value = currentFilter || 'all';
+    }
+    
+    if (unitCat) {
+        const currentFilter = unitCat.value;
+        unitCat.innerHTML = '<option value="">-- Select to filter lessons --</option>';
+        grammarCategoriesData.forEach(cat => {
+            unitCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
+        });
+        unitCat.value = currentFilter || '';
+    }
+}
+
+function updateGrammarUnitSelects(selectedCat = null) {
+    const unitLesFilter = document.getElementById('filter-grammar-unit-les');
+    const unitLes = document.getElementById('grammar-unit-lesson');
+    
+    let filteredLessons = grammarLessonsData;
+    filteredLessons.sort((a,b) => (a.order || 0) - (b.order || 0));
+
+    if (unitLesFilter) {
+        const currentFilter = unitLesFilter.value;
+        unitLesFilter.innerHTML = '<option value="all">All Lessons</option>';
+        let filterCatId = document.getElementById('filter-grammar-unit-cat')?.value;
+        let lessonsForFilter = filterCatId && filterCatId !== 'all' ? filteredLessons.filter(l => l.categoryId === filterCatId) : filteredLessons;
+        lessonsForFilter.forEach(les => {
+            unitLesFilter.innerHTML += `<option value="${les.id}">${les.title}</option>`;
+        });
+        unitLesFilter.value = currentFilter || 'all';
+    }
+
+    if (unitLes) {
+        const currentLes = unitLes.value;
+        unitLes.innerHTML = '';
+        let lessonsForForm = selectedCat ? filteredLessons.filter(l => l.categoryId === selectedCat) : filteredLessons;
+        lessonsForForm.forEach(les => {
+            unitLes.innerHTML += `<option value="${les.id}">${les.title}</option>`;
+        });
+        if (currentLes) unitLes.value = currentLes;
+    }
 }
 
 function renderGrammarLessons() {
@@ -1215,7 +1279,6 @@ function renderGrammarLessons() {
         filtered = filtered.filter(l => l.categoryId === filterId);
     }
     
-    // Sort by order
     filtered.sort((a,b) => (a.order || 0) - (b.order || 0));
 
     grammarLessonList.innerHTML = '';
@@ -1235,8 +1298,56 @@ function renderGrammarLessons() {
     });
 }
 
+function renderGrammarUnits() {
+    if (!grammarUnitList) return;
+    const filterCatId = document.getElementById('filter-grammar-unit-cat')?.value || 'all';
+    const filterLesId = document.getElementById('filter-grammar-unit-les')?.value || 'all';
+    
+    let filtered = grammarUnitsData;
+    
+    if (filterLesId !== 'all') {
+        filtered = filtered.filter(u => u.lessonId === filterLesId);
+    } else if (filterCatId !== 'all') {
+        const allowedLessons = grammarLessonsData.filter(l => l.categoryId === filterCatId).map(l => l.id);
+        filtered = filtered.filter(u => allowedLessons.includes(u.lessonId));
+    }
+    
+    filtered.sort((a,b) => (a.order || 0) - (b.order || 0));
+
+    grammarUnitList.innerHTML = '';
+    filtered.forEach(unit => {
+        const lesson = grammarLessonsData.find(l => l.id === unit.lessonId);
+        const lessonName = lesson ? lesson.title : 'Unknown';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${unit.order || 0}</td>
+            <td><span class="badge" style="background: #eef2f6; color: #4a7578;">${lessonName}</span></td>
+            <td><strong>${unit.title}</strong></td>
+            <td>
+                <button class="btn-secondary btn-small" onclick="editGrammarUnit('${unit.id}')">Edit</button>
+                <button class="btn-secondary btn-danger btn-small" onclick="deleteGrammarUnit('${unit.id}')">Delete</button>
+            </td>
+        `;
+        grammarUnitList.appendChild(tr);
+    });
+}
+
 if (filterGrammarCat) {
     filterGrammarCat.addEventListener('change', renderGrammarLessons);
+}
+if (filterGrammarUnitCat) {
+    filterGrammarUnitCat.addEventListener('change', () => {
+        updateGrammarUnitSelects();
+        renderGrammarUnits();
+    });
+}
+if (filterGrammarUnitLes) {
+    filterGrammarUnitLes.addEventListener('change', renderGrammarUnits);
+}
+if (document.getElementById('grammar-unit-category')) {
+    document.getElementById('grammar-unit-category').addEventListener('change', (e) => {
+        updateGrammarUnitSelects(e.target.value);
+    });
 }
 
 // Category CRUD
@@ -1352,6 +1463,80 @@ window.editGrammarLesson = async function(id) {
     grammarLessonModal.style.display = 'flex';
 };
 
+// Unit CRUD
+if (document.getElementById('add-grammar-unit-btn')) {
+    document.getElementById('add-grammar-unit-btn').addEventListener('click', () => {
+        const lastLes = document.getElementById('grammar-unit-lesson').value;
+        const lastCat = document.getElementById('grammar-unit-category').value;
+        grammarUnitForm.reset();
+        if(lastLes) document.getElementById('grammar-unit-lesson').value = lastLes;
+        if(lastCat) document.getElementById('grammar-unit-category').value = lastCat;
+        document.getElementById('grammar-unit-id').value = '';
+        if (tinymce.get('grammar-unit-content')) {
+            tinymce.get('grammar-unit-content').setContent('');
+        }
+        document.getElementById('grammar-unit-modal-title').innerText = 'Add Unit';
+        grammarUnitModal.style.display = 'flex';
+    });
+}
+
+if (grammarUnitForm) {
+    grammarUnitForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('grammar-unit-id').value;
+        const lessonId = document.getElementById('grammar-unit-lesson').value;
+        const title = document.getElementById('grammar-unit-title').value.trim();
+        const author = document.getElementById('grammar-unit-author').value.trim();
+        const order = parseInt(document.getElementById('grammar-unit-order').value) || 0;
+        const content = tinymce.get('grammar-unit-content') ? tinymce.get('grammar-unit-content').getContent() : document.getElementById('grammar-unit-content').value;
+
+        if (!lessonId) {
+            alert("Please select a Lesson.");
+            return;
+        }
+
+        try {
+            if (id) {
+                await updateDoc(doc(db, "grammar_units", id), { lessonId, title, author, order, content });
+            } else {
+                await addDoc(collection(db, "grammar_units"), { lessonId, title, author, order, content });
+            }
+            grammarUnitModal.style.display = 'none';
+            loadGrammarData();
+        } catch (err) {
+            console.error(err);
+            alert("Error saving unit!");
+        }
+    });
+}
+
+window.editGrammarUnit = async function(id) {
+    const unit = grammarUnitsData.find(u => u.id === id);
+    if (!unit) return;
+    document.getElementById('grammar-unit-id').value = unit.id;
+    
+    // Find category from lesson to populate filter dropdown
+    const lesson = grammarLessonsData.find(l => l.id === unit.lessonId);
+    if (lesson) {
+        document.getElementById('grammar-unit-category').value = lesson.categoryId;
+        updateGrammarUnitSelects(lesson.categoryId);
+    }
+    
+    document.getElementById('grammar-unit-lesson').value = unit.lessonId;
+    document.getElementById('grammar-unit-title').value = unit.title;
+    document.getElementById('grammar-unit-author').value = unit.author || '';
+    document.getElementById('grammar-unit-order').value = unit.order || 0;
+    
+    if (tinymce.get('grammar-unit-content')) {
+        tinymce.get('grammar-unit-content').setContent(unit.content || '');
+    } else {
+        document.getElementById('grammar-unit-content').value = unit.content || '';
+    }
+    
+    document.getElementById('grammar-unit-modal-title').innerText = 'Edit Unit';
+    grammarUnitModal.style.display = 'flex';
+};
+
 window.deleteGrammarLesson = async function(id) {
     if (confirm("Are you sure you want to delete this lesson?")) {
         try {
@@ -1360,6 +1545,18 @@ window.deleteGrammarLesson = async function(id) {
         } catch (e) {
             console.error(e);
             alert("Error deleting lesson!");
+        }
+    }
+};
+
+window.deleteGrammarUnit = async function(id) {
+    if (confirm("Are you sure you want to delete this unit?")) {
+        try {
+            await deleteDoc(doc(db, "grammar_units", id));
+            loadGrammarData();
+        } catch (e) {
+            console.error(e);
+            alert("Error deleting unit!");
         }
     }
 };
