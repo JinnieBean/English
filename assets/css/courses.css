@@ -330,12 +330,12 @@
 .phrasal-word {
     font-family: var(--font-body);
     font-size: 2.2rem;
-    color: #0056b3;
+    color: var(--text-primary);
     font-weight: 500;
 }
 
 .phrasal-pron {
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     color: var(--text-primary);
     font-weight: 500;
 }
@@ -349,12 +349,12 @@
 }
 
 .phrasal-def {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
     color: var(--text-primary);
 }
 
 .phrasal-example {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     color: #6a8cba;
     font-style: italic;
 }
@@ -382,8 +382,8 @@
 
 .wf-root {
     font-family: var(--font-body);
-    font-size: 2.2rem;
-    color: #0056b3;
+    font-size: 2.8rem;
+    color: var(--text-primary);
     font-weight: 500;
     min-width: 120px;
 }
@@ -402,14 +402,14 @@
 }
 
 .wf-pos {
-    color: #0056b3;
-    font-size: 1.1rem;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
     min-width: 100px;
 }
 
 .wf-words {
-    color: #0056b3;
-    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-size: 1.4rem;
 }
 
 /* Detailed Forms Section */
@@ -439,9 +439,9 @@
 }
 
 .wf-form-title {
-    font-size: 1.8rem;
+    font-size: 2.8rem;
     font-weight: 500;
-    color: #0a4f54;
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
 }
 
@@ -474,13 +474,13 @@
 }
 
 .wf-def-line {
-    font-size: 1.1rem;
-    color: #0a4f54;
+    font-size: 1.4rem;
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
 }
 
 .wf-example-line {
-    font-size: 1.05rem;
+    font-size: 1.3rem;
     color: #6a8cba;
     font-style: italic;
     margin-bottom: 0.5rem;

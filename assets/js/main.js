@@ -487,11 +487,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 patternListContainer.innerHTML += `
                     <div class="phrasal-item" style="align-items: flex-start;">
                         <div class="phrasal-left" style="flex-direction: column; align-items: flex-start;">
-                            <div class="vocab-word-group" style="margin-bottom: 1rem;">
-                                <span class="vocab-word" style="font-size: 1.8rem;">${p.word}</span>
+                            <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: wrap;">
+                                <span class="phrasal-word">${p.word}</span>
                                 <span class="vocab-pos">${window.formatStandalonePos(p.pos)}</span>
                             </div>
-                            <div style="font-size: 1.1rem; color: #4a7578;">${p.pattern ? p.pattern.replace(/\n/g, '<br>') : ''}</div>
+                            <div style="font-size: 1.3rem; color: var(--text-primary); font-weight: 500;">${p.pattern ? p.pattern.replace(/\n/g, '<br>') : ''}</div>
                         </div>
                         <div class="phrasal-right">
                             <p class="phrasal-def">${p.def}</p>
