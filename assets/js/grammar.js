@@ -47,27 +47,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const overviewContainer = document.getElementById('grammar-overview-container');
     if (overviewContainer) {
         try {
-            // Fetch Intro
-            const introDocRef = doc(db, 'grammar_intro', 'main');
-            const introSnap = await getDoc(introDocRef);
-            let introHtml = '';
-            if (introSnap.exists()) {
-                const introData = introSnap.data();
-                introHtml = `
-                    <div class="grammar-intro">
-                        <h2 class="grammar-intro-title">${introData.title || 'English Grammar Overview'}</h2>
-                        <p class="grammar-intro-desc">${introData.description || ''}</p>
-                        ${introData.content ? `<a href="grammar_lesson.html?id=intro" class="grammar-read-more">Read More</a>` : ''}
-                    </div>
-                `;
-            } else {
-                introHtml = `
-                    <div class="grammar-intro">
-                        <h2 class="grammar-intro-title">English Grammar Overview</h2>
-                        <p class="grammar-intro-desc">Introduction to English Grammar.</p>
-                    </div>
-                `;
-            }
 
             // Fetch Categories
             const catSnap = await getDocs(collection(db, 'grammar_categories'));
@@ -84,9 +63,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const catLessons = lessons.filter(l => l.categoryId === cat.id);
                 if (catLessons.length > 0) {
                     let lesHtml = catLessons.map(l => `
-                        <a href="grammar_lesson.html?id=${l.id}" class="grammar-lesson-link">
+                        <a href="grammar_lesson.html?id=${l.id}" class="grammar-lesson-link" style="padding-left: 2rem; position: relative; border-bottom: none; margin-bottom: 0.5rem; padding-bottom: 0;">
+                            <span style="position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); color: #1a7a7f; font-size: 1.2rem;">•</span>
                             <span class="lesson-title">${l.title}</span>
-                            <span class="lesson-more">More</span>
                         </a>
                     `).join('');
                     
@@ -101,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            overviewContainer.innerHTML = introHtml + catsHtml;
+            overviewContainer.innerHTML = catsHtml;
 
         } catch (e) {
             console.error(e);

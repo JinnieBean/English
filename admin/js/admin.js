@@ -1111,7 +1111,6 @@ let grammarCategoriesData = [];
 let grammarLessonsData = [];
 
 // DOM Elements
-const grammarIntroForm = document.getElementById('grammar-intro-form');
 const grammarCatList = document.getElementById('grammar-cat-list');
 const grammarLessonList = document.getElementById('grammar-lesson-list');
 const filterGrammarCat = document.getElementById('filter-grammar-cat');
@@ -1149,20 +1148,6 @@ document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
 
 async function loadGrammarData() {
     try {
-        // Load Intro
-        const introDocRef = doc(db, 'grammar_intro', 'main');
-        const introSnap = await getDoc(introDocRef);
-        if (introSnap.exists()) {
-            const data = introSnap.data();
-            document.getElementById('grammar-intro-title').value = data.title || '';
-            document.getElementById('grammar-intro-desc').value = data.description || '';
-            if (tinymce.get('grammar-intro-content')) {
-                tinymce.get('grammar-intro-content').setContent(data.content || '');
-            } else {
-                document.getElementById('grammar-intro-content').value = data.content || '';
-            }
-        }
-
         // Load Categories
         const catSnap = await getDocs(collection(db, 'grammar_categories'));
         grammarCategoriesData = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1252,24 +1237,6 @@ function renderGrammarLessons() {
 
 if (filterGrammarCat) {
     filterGrammarCat.addEventListener('change', renderGrammarLessons);
-}
-
-// Intro Form
-if (grammarIntroForm) {
-    grammarIntroForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const title = document.getElementById('grammar-intro-title').value;
-        const description = document.getElementById('grammar-intro-desc').value;
-        const content = tinymce.get('grammar-intro-content') ? tinymce.get('grammar-intro-content').getContent() : document.getElementById('grammar-intro-content').value;
-        
-        try {
-            await setDoc(doc(db, "grammar_intro", "main"), { title, description, content });
-            alert("Introduction saved successfully!");
-        } catch (e) {
-            console.error(e);
-            alert("Error saving introduction!");
-        }
-    });
 }
 
 // Category CRUD
