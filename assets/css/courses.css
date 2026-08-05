@@ -206,18 +206,23 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    background: #f4fbf9;
+    padding: 0.5rem 1.5rem;
+    border-radius: 40px;
+    width: fit-content;
+    margin-top: 0.5rem;
 }
 
 .vocab-pronunciation {
     font-size: 1.3rem;
-    color: var(--text-primary);
+    color: #0a4f54;
     font-weight: 500;
     white-space: nowrap;
 }
 
 .vocab-audio-player {
-    height: 35px; 
-    max-width: 250px;
+    height: 30px; 
+    max-width: 200px;
     outline: none;
 }
 

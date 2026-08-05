@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             vocabs.forEach(v => {
                 // Handle Audio (if no link, hide source tag or show light error)
                 const audioHtml = v.audio 
-                    ? `<audio controls class="vocab-audio-player"><source src="${v.audio}" type="audio/mpeg"></audio>`
+                    ? `<audio controls preload="none" class="vocab-audio-player"><source src="${v.audio}" type="audio/mpeg"></audio>`
                     : `<span style="font-size: 0.8rem; color: #888; font-style: italic;">No audio</span>`;
 
                 vocabListContainer.innerHTML += `
@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 audiosHtml += `
                                     <div class="wf-audio-wrapper">
                                         <span class="wf-audio-pron">${a.pron}</span>
-                                        <audio controls src="${a.url}"></audio>
+                                        <audio controls preload="none" src="${a.url}"></audio>
                                     </div>
                                 `;
                             });

@@ -289,8 +289,10 @@ function populateUnitSelects() {
 }
 
 document.getElementById('add-vocab-btn').addEventListener('click', () => {
+    const lastUnit = document.getElementById('vocab-unit-id').value;
     document.getElementById('vocab-id').value = '';
     vocabForm.reset();
+    if(lastUnit) document.getElementById('vocab-unit-id').value = lastUnit;
     document.getElementById('vocab-modal-title').innerText = 'Add New Vocabulary';
     vocabModal.style.display = 'flex';
 });
@@ -391,9 +393,11 @@ const phrasalModal = document.getElementById('phrasal-modal');
 const phrasalForm = document.getElementById('phrasal-form');
 
 document.getElementById('add-phrasal-btn').addEventListener('click', () => {
+    const lastUnit = document.getElementById('phrasal-unit-id').value;
     document.getElementById('phrasal-id').value = '';
     phrasalForm.reset();
-    document.getElementById('phrasal-modal-title').innerText = 'Add New Phrasal Verb';
+    if(lastUnit) document.getElementById('phrasal-unit-id').value = lastUnit;
+    document.getElementById('phrasal-modal-title').innerText = 'Add Phrasal Verb';
     phrasalModal.style.display = 'flex';
 });
 
@@ -488,9 +492,11 @@ const prepModal = document.getElementById('prep-modal');
 const prepForm = document.getElementById('prep-form');
 
 document.getElementById('add-prep-btn').addEventListener('click', () => {
+    const lastUnit = document.getElementById('prep-unit-id').value;
     document.getElementById('prep-id').value = '';
     prepForm.reset();
-    document.getElementById('prep-modal-title').innerText = 'Add New Phrase';
+    if(lastUnit) document.getElementById('prep-unit-id').value = lastUnit;
+    document.getElementById('prep-modal-title').innerText = 'Add Phrase';
     prepModal.style.display = 'flex';
 });
 
@@ -681,8 +687,10 @@ document.getElementById('add-wordform-btn').addEventListener('click', () => {
 });
 
 document.getElementById('add-new-wordform-btn').addEventListener('click', () => {
+    const lastUnit = document.getElementById('wordform-unit-id').value;
     document.getElementById('wordform-id').value = '';
     wordformForm.reset();
+    if(lastUnit) document.getElementById('wordform-unit-id').value = lastUnit;
     
     wordformOverviewContainer.innerHTML = '';
     addOverviewRow(); // add at least 1 row default
@@ -833,8 +841,10 @@ const patternModal = document.getElementById('pattern-modal');
 const patternForm = document.getElementById('pattern-form');
 
 document.getElementById('add-pattern-btn').addEventListener('click', () => {
+    const lastUnit = document.getElementById('pattern-unit').value;
     document.getElementById('pattern-id').value = '';
     patternForm.reset();
+    if(lastUnit) document.getElementById('pattern-unit').value = lastUnit;
     document.getElementById('pattern-modal-title').innerText = 'Add New Word Pattern';
     patternModal.style.display = 'flex';
 });
@@ -979,8 +989,10 @@ if (document.getElementById('add-lexical-word-btn')) {
 
 if (document.getElementById('add-lexical-btn')) {
     document.getElementById('add-lexical-btn').addEventListener('click', () => {
+        const lastUnit = document.getElementById('lexical-unit-id').value;
         document.getElementById('lexical-id').value = '';
         lexicalForm.reset();
+        if(lastUnit) document.getElementById('lexical-unit-id').value = lastUnit;
         lexicalWordsContainer.innerHTML = '';
         addLexicalWordRow();
         document.getElementById('lexical-modal-title').innerText = 'Add Lexical Expansion';
@@ -1317,7 +1329,9 @@ window.deleteGrammarCat = async function(id) {
 // Lesson CRUD
 if (document.getElementById('add-grammar-lesson-btn')) {
     document.getElementById('add-grammar-lesson-btn').addEventListener('click', () => {
+        const lastCat = document.getElementById('grammar-lesson-category').value;
         grammarLessonForm.reset();
+        if(lastCat) document.getElementById('grammar-lesson-category').value = lastCat;
         document.getElementById('grammar-lesson-id').value = '';
         if (tinymce.get('grammar-lesson-content')) {
             tinymce.get('grammar-lesson-content').setContent('');
