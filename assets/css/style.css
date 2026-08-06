@@ -372,3 +372,24 @@ body {
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
+
+/* Footer */
+.site-footer {
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    margin-top: auto;
+}
+.site-footer h2 {
+    font-family: var(--font-heading);
+    color: var(--text-primary);
+    font-size: 2.2rem;
+    font-weight: 500;
+    margin-bottom: 0.8rem;
+    letter-spacing: 0.5px;
+}
+.site-footer p {
+    font-family: var(--font-heading);
+    font-style: italic;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
