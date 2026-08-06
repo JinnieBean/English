@@ -66,8 +66,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             let catsHtml = '';
             categories.forEach(cat => {
                 const catLessons = lessons.filter(l => l.categoryId === cat.id);
+                
+                let lesHtml = '';
                 if (catLessons.length > 0) {
-                    let lesHtml = catLessons.map(l => {
+                    lesHtml = catLessons.map(l => {
                         const lessonUnits = units.filter(u => u.lessonId === l.id);
                         let uniHtml = lessonUnits.map(unit => `
                             <a href="grammar_lesson.html?id=${unit.id}&type=unit" class="grammar-lesson-link" style="padding-left: 2rem; position: relative; border-bottom: none; margin-bottom: 0.5rem; padding-bottom: 0;">
@@ -87,16 +89,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         `;
                     }).join('');
-                    
-                    catsHtml += `
-                        <div class="grammar-category">
-                            <h3 class="grammar-category-title">${cat.title}</h3>
-                            <div class="grammar-category-lessons">
-                                ${lesHtml}
-                            </div>
-                        </div>
-                    `;
+                } else {
+                    lesHtml = '<div style="padding-left: 1rem; color: #888; font-style: italic;">No lessons available in this category.</div>';
                 }
+                
+                catsHtml += `
+                    <div class="grammar-category">
+                        <h3 class="grammar-category-title">${cat.title}</h3>
+                        <div class="grammar-category-lessons">
+                            ${lesHtml}
+                        </div>
+                    </div>
+                `;
             });
 
             overviewContainer.innerHTML = catsHtml;

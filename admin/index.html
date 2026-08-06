@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Thor's Notes</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/admin.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
     <script type="module" src="js/admin.js" defer></script>
 </head>
@@ -37,26 +37,31 @@
     <div id="dashboard-section" class="dashboard-layout" style="display: none;">
 
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <h3>Admin Panel</h3>
+        <aside class="sidebar" id="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <h3>Admin Panel</h3>
+                </div>
+                <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="Toggle Sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
             <ul class="sidebar-nav">
                 <div class="sidebar-section-title">Vocabulary</div>
-                <li class="nav-item active" data-tab="tab-books">Manage Books</li>
-                <li class="nav-item" data-tab="tab-units">Manage Units</li>
-                <li class="nav-item" data-tab="tab-vocab">Manage Vocabulary</li>
-                <li class="nav-item" data-tab="tab-phrasal">Manage Phrasal Verbs</li>
-                <li class="nav-item" data-tab="tab-prep">Manage Prepositional Phrases</li>
-                <li class="nav-item" data-tab="tab-wordform">Manage Word Formation</li>
-                <li class="nav-item" data-tab="tab-pattern">Manage Word Patterns</li>
-                <li class="nav-item" data-tab="tab-lexical">Manage Lexical Expansion</li>
+                <li class="nav-item active" data-tab="tab-books" title="Books"><i class="fas fa-book"></i><span class="nav-text">Books</span></li>
+                <li class="nav-item" data-tab="tab-units" title="Units"><i class="fas fa-layer-group"></i><span class="nav-text">Units</span></li>
+                <li class="nav-item" data-tab="tab-vocab" title="Vocabulary"><i class="fas fa-spell-check"></i><span class="nav-text">Vocabulary</span></li>
+                <li class="nav-item" data-tab="tab-phrasal" title="Phrasal Verbs"><i class="fas fa-comment-dots"></i><span class="nav-text">Phrasal Verbs</span></li>
+                <li class="nav-item" data-tab="tab-prep" title="Prepositional Phrases"><i class="fas fa-link"></i><span class="nav-text">Prepositional Phrases</span></li>
+                <li class="nav-item" data-tab="tab-wordform" title="Word Formation"><i class="fas fa-shapes"></i><span class="nav-text">Word Formation</span></li>
+                <li class="nav-item" data-tab="tab-pattern" title="Word Patterns"><i class="fas fa-project-diagram"></i><span class="nav-text">Word Patterns</span></li>
+                <li class="nav-item" data-tab="tab-lexical" title="Lexical Expansion"><i class="fas fa-expand-arrows-alt"></i><span class="nav-text">Lexical Expansion</span></li>
 
                 <div class="sidebar-section-title">Grammar</div>
-                <li class="nav-item" data-tab="tab-grammar">Manage Grammar</li>
+                <li class="nav-item" data-tab="tab-grammar" title="Grammar"><i class="fas fa-pen-nib"></i><span class="nav-text">Grammar</span></li>
             </ul>
             <div class="sidebar-footer">
-                <button id="logout-btn" class="btn-secondary">Logout</button>
+                <button id="logout-btn" title="Logout" class="btn-secondary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;"><i class="fas fa-sign-out-alt"></i><span class="nav-text">Logout</span></button>
             </div>
         </aside>
 
@@ -447,7 +452,7 @@
                 </div>
                 <div class="input-group">
                     <label>Order</label>
-                    <input type="number" id="book-order" value="1" required>
+                    <input type="number" id="book-order" value="1" required min="1">
                 </div>
                 <button type="submit" class="btn-primary">Save Book</button>
             </form>
@@ -518,7 +523,7 @@
                 </div>
                 <div class="input-group">
                     <label>Order (Number to sort by)</label>
-                    <input type="number" id="unit-order" value="1" required>
+                    <input type="number" id="unit-order" value="1" required min="1">
                 </div>
                 <div class="input-group">
                     <label>Enabled Sections</label>
@@ -781,11 +786,9 @@
                 </div>
                 <div class="input-group">
                     <label>Order</label>
-                    <input type="number" id="grammar-cat-order" class="input-field" value="0">
+                    <input type="number" id="grammar-cat-order" class="input-field" value="1" min="1">
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary"
-                        onclick="document.getElementById('grammar-cat-modal').style.display='none'">Cancel</button>
                     <button type="submit" class="btn-primary">Save Category</button>
                 </div>
             </form>
@@ -808,7 +811,7 @@
                     </div>
                     <div class="input-group flex-1">
                         <label>Order</label>
-                        <input type="number" id="grammar-lesson-order" class="input-field" value="0">
+                        <input type="number" id="grammar-lesson-order" class="input-field" value="1" min="1">
                     </div>
                 </div>
                 <div class="form-row">
@@ -816,86 +819,12 @@
                         <label>Lesson Title</label>
                         <input type="text" id="grammar-lesson-title" class="input-field" required>
                     </div>
-                    <div class="input-group flex-1">
-                        <label>Author (Optional)</label>
-                        <input type="text" id="grammar-lesson-author" class="input-field"
-                            placeholder="e.g. Siêu Nhân Heo Hường">
-                    </div>
                 </div>
                 <div class="input-group">
                     <label>Content</label>
                     <textarea id="grammar-lesson-content" class="input-field tinymce-editor"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary"
-                        onclick="document.getElementById('grammar-lesson-modal').style.display='none'">Cancel</button>
-                    <button type="submit" class="btn-primary">Save Lesson</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Grammar Category Modal -->
-    <div id="grammar-cat-modal" class="modal">
-        <div class="modal-content" style="max-width: 500px;">
-            <span class="close-modal" data-target="grammar-cat-modal">&times;</span>
-            <h2 id="grammar-cat-modal-title">Add Category</h2>
-            <form id="grammar-cat-form">
-                <input type="hidden" id="grammar-cat-id">
-                <div class="input-group">
-                    <label>Category Title</label>
-                    <input type="text" id="grammar-cat-title" class="input-field" required>
-                </div>
-                <div class="input-group">
-                    <label>Order</label>
-                    <input type="number" id="grammar-cat-order" class="input-field" value="0">
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary"
-                        onclick="document.getElementById('grammar-cat-modal').style.display='none'">Cancel</button>
-                    <button type="submit" class="btn-primary">Save Category</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Grammar Lesson Modal -->
-    <div id="grammar-lesson-modal" class="modal">
-        <div class="modal-content" style="max-width: 900px; width: 90%;">
-            <span class="close-modal" data-target="grammar-lesson-modal">&times;</span>
-            <h2 id="grammar-lesson-modal-title">Add Lesson</h2>
-            <form id="grammar-lesson-form">
-                <input type="hidden" id="grammar-lesson-id">
-                <div class="form-row">
-                    <div class="input-group flex-1">
-                        <label>Category</label>
-                        <select id="grammar-lesson-category" class="input-field" required>
-                            <!-- JS populated -->
-                        </select>
-                    </div>
-                    <div class="input-group flex-1">
-                        <label>Order</label>
-                        <input type="number" id="grammar-lesson-order" class="input-field" value="0">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="input-group flex-1">
-                        <label>Lesson Title</label>
-                        <input type="text" id="grammar-lesson-title" class="input-field" required>
-                    </div>
-                    <div class="input-group flex-1">
-                        <label>Author (Optional)</label>
-                        <input type="text" id="grammar-lesson-author" class="input-field"
-                            placeholder="e.g. Siêu Nhân Heo Hường">
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label>Content</label>
-                    <textarea id="grammar-lesson-content" class="input-field tinymce-editor"></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary"
-                        onclick="document.getElementById('grammar-lesson-modal').style.display='none'">Cancel</button>
                     <button type="submit" class="btn-primary">Save Lesson</button>
                 </div>
             </form>
@@ -924,7 +853,7 @@
                     </div>
                     <div class="input-group flex-1">
                         <label>Order</label>
-                        <input type="number" id="grammar-unit-order" class="input-field" value="0">
+                        <input type="number" id="grammar-unit-order" class="input-field" value="1" min="1">
                     </div>
                 </div>
                 <div class="form-row">
@@ -932,19 +861,12 @@
                         <label>Unit Title</label>
                         <input type="text" id="grammar-unit-title" class="input-field" required>
                     </div>
-                    <div class="input-group flex-1">
-                        <label>Author (Optional)</label>
-                        <input type="text" id="grammar-unit-author" class="input-field"
-                            placeholder="e.g. Siêu Nhân Heo Hường">
-                    </div>
                 </div>
                 <div class="input-group">
                     <label>Content</label>
                     <textarea id="grammar-unit-content" class="input-field tinymce-editor"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary"
-                        onclick="document.getElementById('grammar-unit-modal').style.display='none'">Cancel</button>
                     <button type="submit" class="btn-primary">Save Unit</button>
                 </div>
             </form>

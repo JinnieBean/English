@@ -24,7 +24,7 @@ body { font-family: var(--font-family); background-color: var(--bg-color); color
 
 /* Sidebar */
 .sidebar { width: 250px; background-color: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; }
-.sidebar-brand { padding: 2rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+
 .sidebar-nav { list-style: none; flex: 1; padding-top: 1rem; }
 .sidebar-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); padding: 1.5rem 1.5rem 0.5rem 1.5rem; font-weight: 600; }
 .nav-item { padding: 1rem 1.5rem; cursor: pointer; transition: background 0.2s; opacity: 0.8; }
@@ -65,3 +65,106 @@ body { font-family: var(--font-family); background-color: var(--bg-color); color
 .modal-large { max-width: 700px; }
 .close-modal { position: absolute; top: 1.2rem; right: 1.5rem; font-size: 1.5rem; cursor: pointer; }
 .modal h3 { margin-bottom: 1.5rem; color: var(--primary-color); }
+/* Sidebar Toggle & Sticky */
+
+/* Sidebar Toggle & Sticky */
+.sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    transition: width 0.3s ease;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.sidebar::-webkit-scrollbar { width: 0px; }
+.sidebar.collapsed {
+    width: 60px;
+}
+
+/* Sidebar Header Layout */
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    white-space: nowrap;
+    overflow: hidden;
+    min-height: 75px;
+}
+.sidebar-brand {
+    overflow: hidden;
+    transition: opacity 0.3s ease, width 0.3s ease;
+    width: 140px;
+    opacity: 1;
+}
+.sidebar-brand h3 {
+    margin: 0;
+    white-space: nowrap;
+}
+.sidebar.collapsed .sidebar-brand {
+    width: 0;
+    opacity: 0;
+}
+.sidebar-toggle-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0.2rem;
+}
+.sidebar.collapsed .sidebar-header {
+    padding: 1.5rem 0;
+    justify-content: center;
+}
+
+/* Section titles */
+.sidebar-section-title {
+    transition: opacity 0.3s ease, height 0.3s ease, padding 0.3s ease;
+}
+.sidebar.collapsed .sidebar-section-title {
+    opacity: 0;
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Nav items */
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.nav-item i {
+    width: 20px;
+    text-align: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.nav-text {
+    transition: opacity 0.3s ease;
+    opacity: 1;
+}
+.sidebar.collapsed .nav-text {
+    opacity: 0;
+    width: 0;
+    pointer-events: none;
+}
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 1rem 0;
+    gap: 0;
+}
+
+/* Footer */
+.sidebar.collapsed .sidebar-footer {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+}
+
+.sidebar-toggle-btn:focus { outline: none; }

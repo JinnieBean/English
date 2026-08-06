@@ -23,9 +23,38 @@ const loginForm = document.getElementById('login-form');
 const logoutBtn = document.getElementById('logout-btn');
 const loginError = document.getElementById('login-error');
 
+// Prevent negative numbers on all number inputs globally
+document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.type === 'number') {
+        if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+            e.preventDefault();
+        }
+    }
+});
+document.addEventListener('input', (e) => {
+    if (e.target && e.target.type === 'number') {
+        if (e.target.value !== '' && parseInt(e.target.value) < 1) {
+            e.target.value = 1;
+        }
+    }
+});
+
 // Tabs
 const navItems = document.querySelectorAll('.nav-item');
 const tabPanes = document.querySelectorAll('.tab-pane');
+
+// Sidebar Toggle
+const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+const adminSidebar = document.getElementById('admin-sidebar');
+if (sidebarToggleBtn && adminSidebar) {
+    if (localStorage.getItem('admin-sidebar-collapsed') === 'true') {
+        adminSidebar.classList.add('collapsed');
+    }
+    sidebarToggleBtn.addEventListener('click', () => {
+        adminSidebar.classList.toggle('collapsed');
+        localStorage.setItem('admin-sidebar-collapsed', adminSidebar.classList.contains('collapsed'));
+    });
+}
 
 // State
 let booksData = [];
@@ -1507,6 +1536,7 @@ if (document.getElementById('add-grammar-cat-btn')) {
     document.getElementById('add-grammar-cat-btn').addEventListener('click', () => {
         grammarCatForm.reset();
         document.getElementById('grammar-cat-id').value = '';
+        document.getElementById('grammar-cat-order').value = grammarCategoriesData.length > 0 ? Math.max(...grammarCategoriesData.map(c => c.order || 0)) + 1 : 1;
         document.getElementById('grammar-cat-modal-title').innerText = 'Add Category';
         grammarCatModal.style.display = 'flex';
     });
@@ -1563,6 +1593,7 @@ if (document.getElementById('add-grammar-lesson-btn')) {
         grammarLessonForm.reset();
         if(lastCat) document.getElementById('grammar-lesson-category').value = lastCat;
         document.getElementById('grammar-lesson-id').value = '';
+        document.getElementById('grammar-lesson-order').value = grammarLessonsData.length > 0 ? Math.max(...grammarLessonsData.map(l => l.order || 0)) + 1 : 1;
         if (tinymce.get('grammar-lesson-content')) {
             tinymce.get('grammar-lesson-content').setContent('');
         }
@@ -1624,6 +1655,7 @@ if (document.getElementById('add-grammar-unit-btn')) {
         if(lastLes) document.getElementById('grammar-unit-lesson').value = lastLes;
         if(lastCat) document.getElementById('grammar-unit-category').value = lastCat;
         document.getElementById('grammar-unit-id').value = '';
+        document.getElementById('grammar-unit-order').value = grammarUnitsData.length > 0 ? Math.max(...grammarUnitsData.map(u => u.order || 0)) + 1 : 1;
         if (tinymce.get('grammar-unit-content')) {
             tinymce.get('grammar-unit-content').setContent('');
         }
