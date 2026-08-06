@@ -1321,7 +1321,8 @@ function initTinyMCE() {
         height: 400,
         promotion: false,
         image_advtab: true,
-        media_live_embeds: true
+        media_live_embeds: true,
+        content_style: "@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap'); body { font-family: 'Urbanist', sans-serif; font-size: 1.15rem; line-height: 1.6; } h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', serif; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 600; }"
     });
     tinymceInitialized = true;
 }
@@ -1608,7 +1609,7 @@ if (grammarLessonForm) {
         const id = document.getElementById('grammar-lesson-id').value;
         const categoryId = document.getElementById('grammar-lesson-category').value;
         const title = document.getElementById('grammar-lesson-title').value.trim();
-        const author = document.getElementById('grammar-lesson-author').value.trim();
+        const author = '';
         const order = parseInt(document.getElementById('grammar-lesson-order').value) || 0;
         const content = tinymce.get('grammar-lesson-content') ? tinymce.get('grammar-lesson-content').getContent() : document.getElementById('grammar-lesson-content').value;
 
@@ -1633,7 +1634,6 @@ window.editGrammarLesson = async function(id) {
     document.getElementById('grammar-lesson-id').value = les.id;
     document.getElementById('grammar-lesson-category').value = les.categoryId;
     document.getElementById('grammar-lesson-title').value = les.title;
-    document.getElementById('grammar-lesson-author').value = les.author || '';
     document.getElementById('grammar-lesson-order').value = les.order || 0;
     
     if (tinymce.get('grammar-lesson-content')) {
@@ -1670,7 +1670,7 @@ if (grammarUnitForm) {
         const id = document.getElementById('grammar-unit-id').value;
         const lessonId = document.getElementById('grammar-unit-lesson').value;
         const title = document.getElementById('grammar-unit-title').value.trim();
-        const author = document.getElementById('grammar-unit-author').value.trim();
+        const author = '';
         const order = parseInt(document.getElementById('grammar-unit-order').value) || 0;
         const content = tinymce.get('grammar-unit-content') ? tinymce.get('grammar-unit-content').getContent() : document.getElementById('grammar-unit-content').value;
 
@@ -1708,7 +1708,6 @@ window.editGrammarUnit = async function(id) {
     
     document.getElementById('grammar-unit-lesson').value = unit.lessonId;
     document.getElementById('grammar-unit-title').value = unit.title;
-    document.getElementById('grammar-unit-author').value = unit.author || '';
     document.getElementById('grammar-unit-order').value = unit.order || 0;
     
     if (tinymce.get('grammar-unit-content')) {
