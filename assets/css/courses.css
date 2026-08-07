@@ -208,6 +208,7 @@
 .vocab-item {
     display: flex;
     gap: 2rem;
+    align-items: center;
 }
 
 .vocab-left {
@@ -317,7 +318,7 @@
 .phrasal-item {
     display: flex;
     gap: 2rem;
-    align-items: flex-start;
+    align-items: center;
 }
 
 .phrasal-left {
@@ -375,7 +376,7 @@
 
 .wf-main {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 3rem;
     margin-bottom: 0.5rem;
 }
@@ -429,6 +430,7 @@
     display: flex;
     gap: 3rem;
     margin-bottom: 2rem;
+    align-items: center;
 }
 
 .wf-form-left {

@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             patterns.forEach(p => {
                 patternListContainer.innerHTML += `
-                    <div class="phrasal-item" style="align-items: flex-start;">
+                    <div class="phrasal-item">
                         <div class="phrasal-left" style="flex-direction: column; align-items: flex-start;">
                             <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: wrap;">
                                 <span class="phrasal-word">${p.word}</span>
