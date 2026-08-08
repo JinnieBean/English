@@ -194,7 +194,8 @@
 .vocab-section-title {
     font-family: var(--font-heading);
     font-size: 1.8rem;
-    color: var(--text-primary);
+    color: #0056b3;
+    font-weight: 400;
     margin-bottom: 2rem;
 }
 
@@ -232,7 +233,7 @@
 .vocab-pos {
     font-size: 1.2rem;
     color: var(--text-secondary);
-    font-weight: 500;
+    font-weight: 400;
 }
 
 .vocab-audio-group {
@@ -305,6 +306,7 @@
     font-family: var(--font-heading);
     font-size: 2rem;
     color: #0056b3;
+    font-weight: 400;
     margin-bottom: 2.5rem;
 }
 

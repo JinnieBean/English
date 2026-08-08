@@ -1316,7 +1316,8 @@ function initTinyMCE() {
     tinymce.init({
         selector: '.tinymce-editor',
         plugins: 'lists link image media table code help wordcount',
-        toolbar: 'undo redo | blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | removeformat | code | help',
+        toolbar: 'undo redo | fontfamily fontsize blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | removeformat | code | help',
+        font_family_formats: 'Urbanist=Urbanist,sans-serif; Playfair Display=Playfair Display,serif; Andale Mono=andale mono,times; Arial=arial,helvetica,sans-serif; Comic Sans MS=comic sans ms,sans-serif; Courier New=courier new,courier; Georgia=georgia,palatino; Helvetica=helvetica; Impact=impact,chicago; Tahoma=tahoma,arial,helvetica,sans-serif; Times New Roman=times new roman,times; Trebuchet MS=trebuchet ms,geneva; Verdana=verdana,geneva',
         menubar: true,
         height: 400,
         promotion: false,
@@ -1327,12 +1328,15 @@ function initTinyMCE() {
     tinymceInitialized = true;
 }
 
-// Ensure TinyMCE is initialized when switching to Grammar tab
+// Ensure TinyMCE is initialized when switching to Grammar or Pronunciation tab
 document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
     item.addEventListener('click', () => {
         if (item.dataset.tab === 'tab-grammar') {
             initTinyMCE();
             loadGrammarData();
+        } else if (item.dataset.tab === 'tab-pronunciation') {
+            initTinyMCE();
+            if (typeof loadPronData === 'function') loadPronData(); // Assuming loadPronData is the function for Pronunciation
         }
     });
 });

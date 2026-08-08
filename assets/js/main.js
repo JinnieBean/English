@@ -20,6 +20,15 @@ window.formatStandalonePos = (pos) => {
     return clean ? `(${clean})` : '';
 };
 
+window.formatWordWithPos = (word) => {
+    if (!word) return '';
+    // Look for (v), (n), (adj) etc in the word itself and style it correctly.
+    // The regex matches optional parens around the POS
+    return word.replace(/\s*\(?(v|n|adj|adv|prep|conj|pron|det)\)?\s*$/gi, (match, p1) => {
+        return ` <span class="vocab-pos" style="font-weight: 400; font-size: 1.2rem; color: var(--text-secondary);">(${p1.toLowerCase()})</span>`;
+    });
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
     
     // Render dynamic Unit Detail Header (Book Title, Unit Title, Tab Menu)
@@ -229,7 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="vocab-item">
                             <div class="vocab-left">
                                 <div class="vocab-word-group">
-                                    <span class="vocab-word">${v.word}</span>
+                                    <span class="vocab-word">${window.formatWordWithPos(v.word)}</span>
                                     <span class="vocab-pos">${window.formatStandalonePos(v.pos)}</span>
                                 </div>
                                 <div class="vocab-audio-group">
@@ -375,8 +384,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             wordforms.forEach(w => {
                 const formatPos = (text) => {
                     if(!text) return '';
-                    return text.replace(/\b(v|n|adj|adv|prep|conj|pron|det)\b/gi, (match) => {
-                        return `<span class="vocab-pos">(${match.toLowerCase()})</span>`;
+                    return text.replace(/\s*\(?(v|n|adj|adv|prep|conj|pron|det)\)?\b/gi, (match, p1) => {
+                        return ` <span class="vocab-pos" style="font-weight: 400; font-size: 1.2rem; color: var(--text-secondary);">(${p1.toLowerCase()})</span>`;
                     });
                 };
                 
@@ -478,8 +487,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const formatPos = (text) => {
                 if(!text) return '';
-                return text.replace(/\b(v|n|adj|adv|prep|conj|pron|det)\b/gi, (match) => {
-                    return `<span class="vocab-pos">(${match.toLowerCase()})</span>`;
+                return text.replace(/\s*\(?(v|n|adj|adv|prep|conj|pron|det)\)?\b/gi, (match, p1) => {
+                    return ` <span class="vocab-pos" style="font-weight: 400; font-size: 1.2rem; color: var(--text-secondary);">(${p1.toLowerCase()})</span>`;
                 });
             };
 
@@ -488,7 +497,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="phrasal-item">
                         <div class="phrasal-left" style="flex-direction: column; align-items: flex-start;">
                             <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: wrap;">
-                                <span class="phrasal-word">${p.word}</span>
+                                <span class="phrasal-word">${window.formatWordWithPos(p.word)}</span>
                                 <span class="vocab-pos">${window.formatStandalonePos(p.pos)}</span>
                             </div>
                             <div style="font-size: 1.3rem; color: var(--text-primary); font-weight: 500;">${p.pattern ? p.pattern.replace(/\n/g, '<br>') : ''}</div>
@@ -567,10 +576,10 @@ window.toggleWf = function(id) {
                                 <div class="vocab-item">
                                     <div class="vocab-left">
                                         <div class="vocab-word-group">
-                                            <span class="vocab-word">${w.word}</span>
+                                            <span class="vocab-word">${window.formatWordWithPos(w.word)}</span>
                                             <span class="vocab-pos">${window.formatStandalonePos(w.pos)}</span>
                                         </div>
-                                        <div class="vocab-audio-group" style="align-items: flex-start; margin-top: 0.5rem;">
+                                        <div style="margin-top: 0.5rem;">
                                             <span class="vocab-pronunciation" style="white-space: pre-wrap; line-height: 1.6;">${w.pron}</span>
                                         </div>
                                     </div>
