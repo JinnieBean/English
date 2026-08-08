@@ -82,12 +82,12 @@ const closeBtns = document.querySelectorAll('.close-modal');
 closeBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
         const targetId = e.target.getAttribute('data-target');
-        document.getElementById(targetId).style.display = 'none';
+        document.getElementById(targetId).style.display = 'none'; window.closeTinyMCEPopups();
     });
 });
 window.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
-        e.target.style.display = 'none';
+        e.target.style.display = 'none'; window.closeTinyMCEPopups();
     }
 });
 
@@ -201,7 +201,7 @@ bookForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "books"), bookData);
         }
-        bookModal.style.display = 'none';
+        bookModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
     } catch (error) {
         console.error("Error saving book:", error);
@@ -321,7 +321,7 @@ unitForm.addEventListener('submit', async (e) => {
             // Create
             await addDoc(collection(db, "units"), unitData);
         }
-        unitModal.style.display = 'none';
+        unitModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
     } catch (error) {
         console.error("Error saving Unit:", error);
@@ -497,7 +497,7 @@ vocabForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "vocabularies"), newVocab);
         }
-        vocabModal.style.display = 'none';
+        vocabModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
     } catch (error) {
         console.error("Error saving vocabulary:", error);
@@ -599,7 +599,7 @@ phrasalForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "phrasal_verbs"), newPhrasal);
         }
-        phrasalModal.style.display = 'none';
+        phrasalModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
     } catch (error) {
         console.error("Error saving Phrasal Verb:", error);
@@ -697,7 +697,7 @@ prepForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "prep_phrases"), newPrep);
         }
-        prepModal.style.display = 'none';
+        prepModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
     } catch (error) {
         console.error("Error saving Phrase:", error);
@@ -936,7 +936,7 @@ wordformForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "word_formations"), newWf);
         }
-        wordformModal.style.display = 'none';
+        wordformModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
     } catch (error) {
         console.error("Error saving Word Formation:", error);
@@ -1048,7 +1048,7 @@ patternForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "word_patterns"), payload);
         }
-        patternModal.style.display = 'none';
+        patternModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
     } catch (error) {
         console.error("Error saving Word Pattern:", error);
@@ -1212,7 +1212,7 @@ if (lexicalForm) {
             } else {
                 await addDoc(collection(db, "lexical_expansions"), payload);
             }
-            lexicalModal.style.display = 'none';
+            lexicalModal.style.display = 'none'; window.closeTinyMCEPopups();
             await loadData();
         } catch (error) {
             console.error("Error saving Lexical Expansion:", error);
@@ -1603,7 +1603,7 @@ if (grammarCatForm) {
             } else {
                 await addDoc(collection(db, "grammar_categories"), { title, order });
             }
-            grammarCatModal.style.display = 'none';
+            grammarCatModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadGrammarData();
         } catch (err) {
             console.error(err);
@@ -1666,7 +1666,7 @@ if (grammarLessonForm) {
             } else {
                 await addDoc(collection(db, "grammar_lessons"), { categoryId, title, author, order, content });
             }
-            grammarLessonModal.style.display = 'none';
+            grammarLessonModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadGrammarData();
         } catch (err) {
             console.error(err);
@@ -1732,7 +1732,7 @@ if (grammarUnitForm) {
             } else {
                 await addDoc(collection(db, "grammar_units"), { lessonId, title, author, order, content });
             }
-            grammarUnitModal.style.display = 'none';
+            grammarUnitModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadGrammarData();
         } catch (err) {
             console.error(err);
@@ -1791,7 +1791,7 @@ window.deleteGrammarUnit = async function(id) {
     }
 };
 
-window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
+window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; window.closeTinyMCEPopups(); };
 
 
 // GRAMMAR MANAGEMENT LOGIC
@@ -2040,7 +2040,7 @@ if (pronunciationCatForm) {
             } else {
                 await addDoc(collection(db, "pronunciation_categories"), { title, order });
             }
-            pronunciationCatModal.style.display = 'none';
+            pronunciationCatModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadPronunciationData();
         } catch (err) {
             console.error(err);
@@ -2103,7 +2103,7 @@ if (pronunciationLessonForm) {
             } else {
                 await addDoc(collection(db, "pronunciation_lessons"), { categoryId, title, author, order, content });
             }
-            pronunciationLessonModal.style.display = 'none';
+            pronunciationLessonModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadPronunciationData();
         } catch (err) {
             console.error(err);
@@ -2169,7 +2169,7 @@ if (pronunciationUnitForm) {
             } else {
                 await addDoc(collection(db, "pronunciation_units"), { lessonId, title, author, order, content });
             }
-            pronunciationUnitModal.style.display = 'none';
+            pronunciationUnitModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadPronunciationData();
         } catch (err) {
             console.error(err);
@@ -2228,4 +2228,4 @@ window.deletePronunciationUnit = async function(id) {
     }
 };
 
-window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
+window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; window.closeTinyMCEPopups(); };
