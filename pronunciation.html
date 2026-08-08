@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grammar - Thor's Notes</title>
+    <title>Pronunciation - Thor's Notes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -12,21 +12,21 @@
         rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        .grammar-intro {
+        .pronunciation-intro {
             margin: 2rem 0 4rem;
         }
-        .grammar-intro-title {
+        .pronunciation-intro-title {
             font-family: 'Playfair Display', serif;
             color: #1a4d4f;
             font-size: 2rem;
             margin-bottom: 1rem;
         }
-        .grammar-intro-desc {
+        .pronunciation-intro-desc {
             font-size: 1.1rem;
             color: #333;
             margin-bottom: 1rem;
         }
-        .grammar-read-more {
+        .pronunciation-read-more {
             display: inline-block;
             background-color: #1a7a7f;
             color: white;
@@ -36,14 +36,14 @@
             font-size: 0.95rem;
             transition: background-color 0.3s;
         }
-        .grammar-read-more:hover {
+        .pronunciation-read-more:hover {
             background-color: #125e62;
         }
         
-        .grammar-category {
+        .pronunciation-category {
             margin-bottom: 3rem;
         }
-        .grammar-category-title {
+        .pronunciation-category-title {
             font-family: 'Playfair Display', serif;
             color: #1a4d4f;
             font-size: 1.8rem;
@@ -52,7 +52,7 @@
             padding-bottom: 0.5rem;
         }
         
-        .grammar-lesson-link {
+        .pronunciation-lesson-link {
             display: flex;
             align-items: center;
             justify-content: flex-start;
@@ -63,7 +63,7 @@
             border-bottom: 1px solid #eee;
             padding-bottom: 0.8rem;
         }
-        .grammar-lesson-link:hover .lesson-title {
+        .pronunciation-lesson-link:hover .lesson-title {
             color: #1a7a7f;
         }
         .lesson-title {
@@ -79,7 +79,7 @@
             color: #555;
             transition: all 0.2s;
         }
-        .grammar-lesson-link:hover .lesson-more {
+        .pronunciation-lesson-link:hover .lesson-more {
             background-color: #f0f0f0;
             border-color: #1a7a7f;
             color: #1a7a7f;
@@ -110,10 +110,10 @@
                     <a href="units.html" class="nav-link" title="Vocabulary">
                         <span class="icon">🔠</span> <span class="nav-link-text">Vocabulary</span>
                     </a>
-                    <a href="grammar.html" class="nav-link active" title="Grammar">
+                    <a href="grammar.html" class="nav-link" title="Grammar">
                         <span class="icon">⭕</span> <span class="nav-link-text">Grammar</span>
                     </a>
-                    <a href="pronunciation.html" class="nav-link" title="Pronunciation">
+                    <a href="pronunciation.html" class="nav-link active" title="Pronunciation">
                         <span class="icon">🗣️</span> <span class="nav-link-text">Pronunciation</span>
                     </a>
                 </div>
@@ -135,7 +135,7 @@
             </header>
 
             <main class="container">
-                <div id="grammar-overview-container">
+                <div id="pronunciation-overview-container">
                     <p style="padding: 1rem 0;">Loading data...</p>
                 </div>
             </main>
@@ -148,7 +148,7 @@
     </div>
 
     <!-- Firebase SDK (Version 9 - Modular approach) -->
-    <script type="module" src="assets/js/grammar.js"></script>
+    <script type="module" src="assets/js/pronunciation.js"></script>
 </body>
 
 </html>

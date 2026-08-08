@@ -57,7 +57,10 @@
                 <li class="nav-item" data-tab="tab-pattern" title="Word Patterns"><i class="fas fa-project-diagram"></i><span class="nav-text">Word Patterns</span></li>
                 <li class="nav-item" data-tab="tab-lexical" title="Lexical Expansion"><i class="fas fa-expand-arrows-alt"></i><span class="nav-text">Lexical Expansion</span></li>
 
-                <div class="sidebar-section-title">Grammar</div>
+                
+                <div class="sidebar-section-title">Pronunciation</div>
+                <li class="nav-item" data-tab="tab-pronunciation" title="Pronunciation"><i class="fas fa-volume-up"></i><span class="nav-text">Pronunciation</span></li>
+<div class="sidebar-section-title">Grammar</div>
                 <li class="nav-item" data-tab="tab-grammar" title="Grammar"><i class="fas fa-pen-nib"></i><span class="nav-text">Grammar</span></li>
             </ul>
             <div class="sidebar-footer">
@@ -415,6 +418,95 @@
                             </tr>
                         </thead>
                         <tbody id="grammar-unit-list">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <div id="tab-pronunciation" class="tab-pane" style="display: none;">
+                <div class="dashboard-header">
+                    <h2>Pronunciation Management</h2>
+                </div>
+
+                <!-- Categories Section -->
+                <div
+                    style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Pronunciation Categories</h3>
+                        <button id="add-pronunciation-cat-btn" class="btn-primary btn-small">+ Add Category</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Category Title</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pronunciation-cat-list">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Lessons Section -->
+                <div
+                    style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Pronunciation Lessons</h3>
+                        <button id="add-pronunciation-lesson-btn" class="btn-primary btn-small">+ Add Lesson</button>
+                    </div>
+                    <div class="filter-bar" style="margin-bottom: 1rem;">
+                        <select id="filter-pronunciation-cat" class="input-field">
+                            <option value="all">All Categories</option>
+                            <!-- JS populated -->
+                        </select>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Category</th>
+                                <th>Lesson Title</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pronunciation-lesson-list">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Units Section -->
+                <div
+                    style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 2rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Pronunciation Units</h3>
+                        <button id="add-pronunciation-unit-btn" class="btn-primary btn-small">+ Add Unit</button>
+                    </div>
+                    <div class="filter-bar" style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+                        <select id="filter-pronunciation-unit-cat" class="input-field" style="flex: 1;">
+                            <option value="all">All Categories</option>
+                            <!-- JS populated -->
+                        </select>
+                        <select id="filter-pronunciation-unit-les" class="input-field" style="flex: 1;">
+                            <option value="all">All Lessons</option>
+                            <!-- JS populated -->
+                        </select>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Lesson</th>
+                                <th>Unit Title</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pronunciation-unit-list">
                             <!-- JS populated -->
                         </tbody>
                     </table>

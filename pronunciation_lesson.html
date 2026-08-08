@@ -4,14 +4,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word Patterns - Thor's Notes</title>
+    <title>Pronunciation Lesson - Thor's Notes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/courses.css">
+    <style>
+        .lesson-header {
+            margin: 2rem 0 3rem;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 1.5rem;
+        }
+        .lesson-main-title {
+            font-family: 'Playfair Display', serif;
+            color: #1a4d4f;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .lesson-author {
+            font-size: 0.85rem;
+            color: #666;
+            font-style: italic;
+        }
+        .lesson-content {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #333;
+        }
+        
+        /* Styles for rich text content from TinyMCE */
+        .lesson-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+        .lesson-content table, .lesson-content th, .lesson-content td {
+            border: 1px solid #1a4d4f;
+        }
+        .lesson-content th, .lesson-content td {
+            padding: 0.8rem;
+            text-align: left;
+        }
+        .lesson-content th {
+            background-color: #f4f9f9;
+            font-family: 'Playfair Display', serif;
+            color: #1a4d4f;
+        }
+        .lesson-content p {
+            margin-bottom: 1rem;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #1a7a7f;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 
 <body>
@@ -27,20 +82,20 @@
                     <span class="icon">◀</span>
                 </button>
             </div>
-
+            
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <h3 class="nav-section-title">FOUNDATION</h3>
                     <a href="english.html" class="nav-link" title="Home">
                         <span class="icon">🏠</span> <span class="nav-link-text">Home</span>
                     </a>
-                    <a href="units.html" class="nav-link active" title="Vocabulary">
+                    <a href="units.html" class="nav-link" title="Vocabulary">
                         <span class="icon">🔠</span> <span class="nav-link-text">Vocabulary</span>
                     </a>
                     <a href="grammar.html" class="nav-link" title="Grammar">
                         <span class="icon">⭕</span> <span class="nav-link-text">Grammar</span>
                     </a>
-                    <a href="pronunciation.html" class="nav-link" title="Pronunciation">
+                    <a href="pronunciation.html" class="nav-link active" title="Pronunciation">
                         <span class="icon">🗣️</span> <span class="nav-link-text">Pronunciation</span>
                     </a>
                 </div>
@@ -62,27 +117,20 @@
             </header>
 
             <main class="container">
-                <div class="units-container">
-                    <div class="unit-detail-header" id="unit-detail-header-container">
-                        
-                        <h3 class="unit-detail-title" id="unit-detail-title">Loading...</h3>
-                        
-                    </div>
-                    <h3 class="section-title">Word patterns</h3>
-                    <div class="phrasal-list" id="pattern-list-container">
-                        <!-- Data will be loaded via JS -->
-                    </div>
+                <div id="pronunciation-lesson-container">
+                    <p style="padding: 1rem 0;">Loading data...</p>
                 </div>
             </main>
-        
+            
             <!-- Footer -->
             <footer class="site-footer">
                 <p>Made by Đậu nhỏ tung tăng</p>
             </footer>
-</div>
+        </div>
     </div>
 
-    <script type="module" src="assets/js/main.js"></script>
+    <!-- Firebase SDK (Version 9 - Modular approach) -->
+    <script type="module" src="assets/js/pronunciation.js"></script>
 </body>
 
 </html>
