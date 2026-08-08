@@ -1299,8 +1299,9 @@ function initTinyMCE() {
         selector: '.tinymce-editor',
         plugins: 'lists link image media table code help wordcount fullscreen',
         toolbar_sticky: false,
-        toolbar: 'undo redo | fontfamily fontsize blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | removeformat | code | fullscreen | help',
-        font_family_formats: 'Urbanist=Urbanist,sans-serif; Playfair Display=Playfair Display,serif; Roboto=Roboto,sans-serif; Open Sans="Open Sans",sans-serif; Lato=Lato,sans-serif; Montserrat=Montserrat,sans-serif; Oswald=Oswald,sans-serif; Arial=arial,helvetica,sans-serif; Comic Sans MS=comic sans ms,sans-serif; Courier New=courier new,courier; Georgia=georgia,palatino; Helvetica=helvetica; Impact=impact,chicago; Tahoma=tahoma,arial,helvetica,sans-serif; Times New Roman=times new roman,times; Trebuchet MS=trebuchet ms,geneva; Verdana=verdana,geneva',
+        toolbar_mode: 'wrap',
+        toolbar: 'fullscreen | undo redo | fontfamily fontsize blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | removeformat | code | help',
+        font_family_formats: 'Zeequada=Zeequada,sans-serif; Urbanist=Urbanist,sans-serif; Playfair Display=Playfair Display,serif; Roboto=Roboto,sans-serif; Open Sans="Open Sans",sans-serif; Lato=Lato,sans-serif; Montserrat=Montserrat,sans-serif; Oswald=Oswald,sans-serif; Arial=arial,helvetica,sans-serif; Comic Sans MS=comic sans ms,sans-serif; Courier New=courier new,courier; Georgia=georgia,palatino; Helvetica=helvetica; Impact=impact,chicago; Tahoma=tahoma,arial,helvetica,sans-serif; Times New Roman=times new roman,times; Trebuchet MS=trebuchet ms,geneva; Verdana=verdana,geneva',
         color_map: [
             "000000", "Black",
             "993300", "Burnt orange",
@@ -1349,7 +1350,7 @@ function initTinyMCE() {
         promotion: false,
         image_advtab: true,
         media_live_embeds: true,
-        content_style: "@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600;700&display=swap'); body { font-family: 'Urbanist', sans-serif; font-size: 1.15rem; line-height: 1.6; } h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', serif; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 600; }"
+        content_style: "@font-face { font-family: 'Zeequada'; src: url('../assets/fonts/Zeequada-Regular.otf'); } @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600;700&display=swap'); body { font-family: 'Urbanist', sans-serif; font-size: 1.15rem; line-height: 1.6; } h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', serif; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 600; }"
     });
     tinymceInitialized = true;
 }

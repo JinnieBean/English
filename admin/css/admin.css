@@ -168,3 +168,5 @@ body { font-family: var(--font-family); background-color: var(--bg-color); color
 }
 
 .sidebar-toggle-btn:focus { outline: none; }
+@font-face { font-family: 'Zeequada'; src: url('../../assets/fonts/Zeequada-Regular.otf'); }
+

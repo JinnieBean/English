@@ -428,3 +428,5 @@ body {
 .lesson-content i, .lesson-content em {
     font-style: italic;
 }
+@font-face { font-family: 'Zeequada'; src: url('../fonts/Zeequada-Regular.otf'); }
+
