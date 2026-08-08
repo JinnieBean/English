@@ -964,6 +964,103 @@
             </form>
         </div>
     </div>
+
+    <div id="pronunciation-cat-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal" data-target="pronunciation-cat-modal">&times;</span>
+            <h2 id="pronunciation-cat-modal-title">Add Category</h2>
+            <form id="pronunciation-cat-form">
+                <input type="hidden" id="pronunciation-cat-id">
+                <div class="input-group">
+                    <label>Category Title</label>
+                    <input type="text" id="pronunciation-cat-title" class="input-field" required>
+                </div>
+                <div class="input-group">
+                    <label>Order</label>
+                    <input type="number" id="pronunciation-cat-order" class="input-field" value="1" min="1">
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary">Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="pronunciation-lesson-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px; width: 90%;">
+            <span class="close-modal" data-target="pronunciation-lesson-modal">&times;</span>
+            <h2 id="pronunciation-lesson-modal-title">Add Lesson</h2>
+            <form id="pronunciation-lesson-form">
+                <input type="hidden" id="pronunciation-lesson-id">
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Category</label>
+                        <select id="pronunciation-lesson-category" class="input-field" required>
+                            <!-- JS populated -->
+                        </select>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Order</label>
+                        <input type="number" id="pronunciation-lesson-order" class="input-field" value="1" min="1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Lesson Title</label>
+                        <input type="text" id="pronunciation-lesson-title" class="input-field" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Content</label>
+                    <textarea id="pronunciation-lesson-content" class="input-field tinymce-editor"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary">Save Lesson</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="pronunciation-unit-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px; width: 90%;">
+            <span class="close-modal" data-target="pronunciation-unit-modal">&times;</span>
+            <h2 id="pronunciation-unit-modal-title">Add Unit</h2>
+            <form id="pronunciation-unit-form">
+                <input type="hidden" id="pronunciation-unit-id">
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Category (Filter only)</label>
+                        <select id="pronunciation-unit-category" class="input-field">
+                            <!-- JS populated -->
+                        </select>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Lesson</label>
+                        <select id="pronunciation-unit-lesson" class="input-field" required>
+                            <!-- JS populated -->
+                        </select>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Order</label>
+                        <input type="number" id="pronunciation-unit-order" class="input-field" value="1" min="1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Unit Title</label>
+                        <input type="text" id="pronunciation-unit-title" class="input-field" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Content</label>
+                    <textarea id="pronunciation-unit-content" class="input-field tinymce-editor"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary">Save Unit</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 
 </html>

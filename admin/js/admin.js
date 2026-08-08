@@ -1336,7 +1336,7 @@ document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
             loadGrammarData();
         } else if (item.dataset.tab === 'tab-pronunciation') {
             initTinyMCE();
-            if (typeof loadPronData === 'function') loadPronData(); // Assuming loadPronData is the function for Pronunciation
+            if (typeof loadPronunciationData === 'function') loadPronunciationData(); // Assuming loadPronData is the function for Pronunciation
         }
     });
 });
@@ -1741,6 +1741,443 @@ window.deleteGrammarUnit = async function(id) {
         try {
             await deleteDoc(doc(db, "grammar_units", id));
             loadGrammarData();
+        } catch (e) {
+            console.error(e);
+            alert("Error deleting unit!");
+        }
+    }
+};
+
+window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
+
+
+// GRAMMAR MANAGEMENT LOGIC
+// =========================================================
+
+// State
+let pronunciationCategoriesData = [];
+let pronunciationLessonsData = [];
+let pronunciationUnitsData = [];
+
+// DOM Elements
+const pronunciationCatList = document.getElementById('pronunciation-cat-list');
+const pronunciationLessonList = document.getElementById('pronunciation-lesson-list');
+const pronunciationUnitList = document.getElementById('pronunciation-unit-list');
+const filterPronunciationCat = document.getElementById('filter-pronunciation-cat');
+const filterPronunciationUnitCat = document.getElementById('filter-pronunciation-unit-cat');
+const filterPronunciationUnitLes = document.getElementById('filter-pronunciation-unit-les');
+
+const pronunciationCatModal = document.getElementById('pronunciation-cat-modal');
+const pronunciationCatForm = document.getElementById('pronunciation-cat-form');
+
+const pronunciationLessonModal = document.getElementById('pronunciation-lesson-modal');
+const pronunciationLessonForm = document.getElementById('pronunciation-lesson-form');
+
+const pronunciationUnitModal = document.getElementById('pronunciation-unit-modal');
+const pronunciationUnitForm = document.getElementById('pronunciation-unit-form');
+
+
+
+async function loadPronunciationData() {
+    try {
+        // Load Categories
+        const catSnap = await getDocs(collection(db, 'pronunciation_categories'));
+        pronunciationCategoriesData = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        pronunciationCategoriesData.sort((a,b) => (a.order || 0) - (b.order || 0));
+        
+        renderPronunciationCategories();
+        updatePronunciationCatSelects();
+
+        // Load Lessons
+        const lesSnap = await getDocs(collection(db, 'pronunciation_lessons'));
+        pronunciationLessonsData = lesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        // Load Units
+        const uniSnap = await getDocs(collection(db, 'pronunciation_units'));
+        pronunciationUnitsData = uniSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        renderPronunciationLessons();
+        renderPronunciationUnits();
+        updatePronunciationUnitSelects();
+    } catch (e) {
+        console.error("Error loading Pronunciation Data:", e);
+    }
+}
+
+function renderPronunciationCategories() {
+    if (!pronunciationCatList) return;
+    pronunciationCatList.innerHTML = '';
+    pronunciationCategoriesData.forEach(cat => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${cat.order || 0}</td>
+            <td><strong>${cat.title}</strong></td>
+            <td>
+                <button class="btn-secondary btn-small" onclick="editPronunciationCat('${cat.id}')">Edit</button>
+                <button class="btn-secondary btn-danger btn-small" onclick="deletePronunciationCat('${cat.id}')">Delete</button>
+            </td>
+        `;
+        pronunciationCatList.appendChild(tr);
+    });
+}
+
+function updatePronunciationCatSelects() {
+    const filterCat = document.getElementById('filter-pronunciation-cat');
+    const lessonCat = document.getElementById('pronunciation-lesson-category');
+    const unitCatFilter = document.getElementById('filter-pronunciation-unit-cat');
+    const unitCat = document.getElementById('pronunciation-unit-category');
+    
+    if (filterCat) {
+        const currentFilter = filterCat.value;
+        filterCat.innerHTML = '<option value="all">All Categories</option>';
+        pronunciationCategoriesData.forEach(cat => {
+            filterCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
+        });
+        filterCat.value = currentFilter || 'all';
+    }
+
+    if (lessonCat) {
+        const currentLessonCat = lessonCat.value;
+        lessonCat.innerHTML = '';
+        pronunciationCategoriesData.forEach(cat => {
+            lessonCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
+        });
+        if (currentLessonCat) lessonCat.value = currentLessonCat;
+    }
+
+    if (unitCatFilter) {
+        const currentFilter = unitCatFilter.value;
+        unitCatFilter.innerHTML = '<option value="all">All Categories</option>';
+        pronunciationCategoriesData.forEach(cat => {
+            unitCatFilter.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
+        });
+        unitCatFilter.value = currentFilter || 'all';
+    }
+    
+    if (unitCat) {
+        const currentFilter = unitCat.value;
+        unitCat.innerHTML = '<option value="">-- Select to filter lessons --</option>';
+        pronunciationCategoriesData.forEach(cat => {
+            unitCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
+        });
+        unitCat.value = currentFilter || '';
+    }
+}
+
+function updatePronunciationUnitSelects(selectedCat = null) {
+    const unitLesFilter = document.getElementById('filter-pronunciation-unit-les');
+    const unitLes = document.getElementById('pronunciation-unit-lesson');
+    
+    let filteredLessons = pronunciationLessonsData;
+    filteredLessons.sort((a,b) => (a.order || 0) - (b.order || 0));
+
+    if (unitLesFilter) {
+        const currentFilter = unitLesFilter.value;
+        unitLesFilter.innerHTML = '<option value="all">All Lessons</option>';
+        let filterCatId = document.getElementById('filter-pronunciation-unit-cat')?.value;
+        let lessonsForFilter = filterCatId && filterCatId !== 'all' ? filteredLessons.filter(l => l.categoryId === filterCatId) : filteredLessons;
+        lessonsForFilter.forEach(les => {
+            unitLesFilter.innerHTML += `<option value="${les.id}">${les.title}</option>`;
+        });
+        unitLesFilter.value = currentFilter || 'all';
+    }
+
+    if (unitLes) {
+        const currentLes = unitLes.value;
+        unitLes.innerHTML = '';
+        let lessonsForForm = selectedCat ? filteredLessons.filter(l => l.categoryId === selectedCat) : filteredLessons;
+        lessonsForForm.forEach(les => {
+            unitLes.innerHTML += `<option value="${les.id}">${les.title}</option>`;
+        });
+        if (currentLes) unitLes.value = currentLes;
+    }
+}
+
+function renderPronunciationLessons() {
+    if (!pronunciationLessonList) return;
+    const filterId = document.getElementById('filter-pronunciation-cat')?.value || 'all';
+    
+    let filtered = pronunciationLessonsData;
+    if (filterId !== 'all') {
+        filtered = filtered.filter(l => l.categoryId === filterId);
+    }
+    
+    filtered.sort((a,b) => (a.order || 0) - (b.order || 0));
+
+    pronunciationLessonList.innerHTML = '';
+    filtered.forEach(les => {
+        const catName = pronunciationCategoriesData.find(c => c.id === les.categoryId)?.title || 'Unknown';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${les.order || 0}</td>
+            <td><span class="badge">${catName}</span></td>
+            <td><strong>${les.title}</strong></td>
+            <td>
+                <button class="btn-secondary btn-small" onclick="editPronunciationLesson('${les.id}')">Edit</button>
+                <button class="btn-secondary btn-danger btn-small" onclick="deletePronunciationLesson('${les.id}')">Delete</button>
+            </td>
+        `;
+        pronunciationLessonList.appendChild(tr);
+    });
+}
+
+function renderPronunciationUnits() {
+    if (!pronunciationUnitList) return;
+    const filterCatId = document.getElementById('filter-pronunciation-unit-cat')?.value || 'all';
+    const filterLesId = document.getElementById('filter-pronunciation-unit-les')?.value || 'all';
+    
+    let filtered = pronunciationUnitsData;
+    
+    if (filterLesId !== 'all') {
+        filtered = filtered.filter(u => u.lessonId === filterLesId);
+    } else if (filterCatId !== 'all') {
+        const allowedLessons = pronunciationLessonsData.filter(l => l.categoryId === filterCatId).map(l => l.id);
+        filtered = filtered.filter(u => allowedLessons.includes(u.lessonId));
+    }
+    
+    filtered.sort((a,b) => (a.order || 0) - (b.order || 0));
+
+    pronunciationUnitList.innerHTML = '';
+    filtered.forEach(unit => {
+        const lesson = pronunciationLessonsData.find(l => l.id === unit.lessonId);
+        const lessonName = lesson ? lesson.title : 'Unknown';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${unit.order || 0}</td>
+            <td><span class="badge" style="background: #eef2f6; color: #4a7578;">${lessonName}</span></td>
+            <td><strong>${unit.title}</strong></td>
+            <td>
+                <button class="btn-secondary btn-small" onclick="editPronunciationUnit('${unit.id}')">Edit</button>
+                <button class="btn-secondary btn-danger btn-small" onclick="deletePronunciationUnit('${unit.id}')">Delete</button>
+            </td>
+        `;
+        pronunciationUnitList.appendChild(tr);
+    });
+}
+
+if (filterPronunciationCat) {
+    filterPronunciationCat.addEventListener('change', renderPronunciationLessons);
+}
+if (filterPronunciationUnitCat) {
+    filterPronunciationUnitCat.addEventListener('change', () => {
+        updatePronunciationUnitSelects();
+        renderPronunciationUnits();
+    });
+}
+if (filterPronunciationUnitLes) {
+    filterPronunciationUnitLes.addEventListener('change', renderPronunciationUnits);
+}
+if (document.getElementById('pronunciation-unit-category')) {
+    document.getElementById('pronunciation-unit-category').addEventListener('change', (e) => {
+        updatePronunciationUnitSelects(e.target.value);
+    });
+}
+
+// Category CRUD
+if (document.getElementById('add-pronunciation-cat-btn')) {
+    document.getElementById('add-pronunciation-cat-btn').addEventListener('click', () => {
+        pronunciationCatForm.reset();
+        document.getElementById('pronunciation-cat-id').value = '';
+        document.getElementById('pronunciation-cat-order').value = pronunciationCategoriesData.length > 0 ? Math.max(...pronunciationCategoriesData.map(c => c.order || 0)) + 1 : 1;
+        document.getElementById('pronunciation-cat-modal-title').innerText = 'Add Category';
+        pronunciationCatModal.style.display = 'flex';
+    });
+}
+
+if (pronunciationCatForm) {
+    pronunciationCatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('pronunciation-cat-id').value;
+        const title = document.getElementById('pronunciation-cat-title').value.trim();
+        const order = parseInt(document.getElementById('pronunciation-cat-order').value) || 0;
+
+        try {
+            if (id) {
+                await updateDoc(doc(db, "pronunciation_categories", id), { title, order });
+            } else {
+                await addDoc(collection(db, "pronunciation_categories"), { title, order });
+            }
+            pronunciationCatModal.style.display = 'none';
+            loadPronunciationData();
+        } catch (err) {
+            console.error(err);
+            alert("Error saving category!");
+        }
+    });
+}
+
+window.editPronunciationCat = function(id) {
+    const cat = pronunciationCategoriesData.find(c => c.id === id);
+    if (!cat) return;
+    document.getElementById('pronunciation-cat-id').value = cat.id;
+    document.getElementById('pronunciation-cat-title').value = cat.title;
+    document.getElementById('pronunciation-cat-order').value = cat.order || 0;
+    document.getElementById('pronunciation-cat-modal-title').innerText = 'Edit Category';
+    pronunciationCatModal.style.display = 'flex';
+};
+
+window.deletePronunciationCat = async function(id) {
+    if (confirm("Are you sure you want to delete this category? Lessons in this category might be orphaned.")) {
+        try {
+            await deleteDoc(doc(db, "pronunciation_categories", id));
+            loadPronunciationData();
+        } catch (e) {
+            console.error(e);
+            alert("Error deleting category!");
+        }
+    }
+};
+
+// Lesson CRUD
+if (document.getElementById('add-pronunciation-lesson-btn')) {
+    document.getElementById('add-pronunciation-lesson-btn').addEventListener('click', () => {
+        const lastCat = document.getElementById('pronunciation-lesson-category').value;
+        pronunciationLessonForm.reset();
+        if(lastCat) document.getElementById('pronunciation-lesson-category').value = lastCat;
+        document.getElementById('pronunciation-lesson-id').value = '';
+        document.getElementById('pronunciation-lesson-order').value = pronunciationLessonsData.length > 0 ? Math.max(...pronunciationLessonsData.map(l => l.order || 0)) + 1 : 1;
+        if (tinymce.get('pronunciation-lesson-content')) {
+            tinymce.get('pronunciation-lesson-content').setContent('');
+        }
+        document.getElementById('pronunciation-lesson-modal-title').innerText = 'Add Lesson';
+        pronunciationLessonModal.style.display = 'flex';
+    });
+}
+
+if (pronunciationLessonForm) {
+    pronunciationLessonForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('pronunciation-lesson-id').value;
+        const categoryId = document.getElementById('pronunciation-lesson-category').value;
+        const title = document.getElementById('pronunciation-lesson-title').value.trim();
+        const author = '';
+        const order = parseInt(document.getElementById('pronunciation-lesson-order').value) || 0;
+        const content = tinymce.get('pronunciation-lesson-content') ? tinymce.get('pronunciation-lesson-content').getContent() : document.getElementById('pronunciation-lesson-content').value;
+
+        try {
+            if (id) {
+                await updateDoc(doc(db, "pronunciation_lessons", id), { categoryId, title, author, order, content });
+            } else {
+                await addDoc(collection(db, "pronunciation_lessons"), { categoryId, title, author, order, content });
+            }
+            pronunciationLessonModal.style.display = 'none';
+            loadPronunciationData();
+        } catch (err) {
+            console.error(err);
+            alert("Error saving lesson!");
+        }
+    });
+}
+
+window.editPronunciationLesson = async function(id) {
+    const les = pronunciationLessonsData.find(l => l.id === id);
+    if (!les) return;
+    document.getElementById('pronunciation-lesson-id').value = les.id;
+    document.getElementById('pronunciation-lesson-category').value = les.categoryId;
+    document.getElementById('pronunciation-lesson-title').value = les.title;
+    document.getElementById('pronunciation-lesson-order').value = les.order || 0;
+    
+    if (tinymce.get('pronunciation-lesson-content')) {
+        tinymce.get('pronunciation-lesson-content').setContent(les.content || '');
+    } else {
+        document.getElementById('pronunciation-lesson-content').value = les.content || '';
+    }
+    
+    document.getElementById('pronunciation-lesson-modal-title').innerText = 'Edit Lesson';
+    pronunciationLessonModal.style.display = 'flex';
+};
+
+// Unit CRUD
+if (document.getElementById('add-pronunciation-unit-btn')) {
+    document.getElementById('add-pronunciation-unit-btn').addEventListener('click', () => {
+        const lastLes = document.getElementById('pronunciation-unit-lesson').value;
+        const lastCat = document.getElementById('pronunciation-unit-category').value;
+        pronunciationUnitForm.reset();
+        if(lastLes) document.getElementById('pronunciation-unit-lesson').value = lastLes;
+        if(lastCat) document.getElementById('pronunciation-unit-category').value = lastCat;
+        document.getElementById('pronunciation-unit-id').value = '';
+        document.getElementById('pronunciation-unit-order').value = pronunciationUnitsData.length > 0 ? Math.max(...pronunciationUnitsData.map(u => u.order || 0)) + 1 : 1;
+        if (tinymce.get('pronunciation-unit-content')) {
+            tinymce.get('pronunciation-unit-content').setContent('');
+        }
+        document.getElementById('pronunciation-unit-modal-title').innerText = 'Add Unit';
+        pronunciationUnitModal.style.display = 'flex';
+    });
+}
+
+if (pronunciationUnitForm) {
+    pronunciationUnitForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('pronunciation-unit-id').value;
+        const lessonId = document.getElementById('pronunciation-unit-lesson').value;
+        const title = document.getElementById('pronunciation-unit-title').value.trim();
+        const author = '';
+        const order = parseInt(document.getElementById('pronunciation-unit-order').value) || 0;
+        const content = tinymce.get('pronunciation-unit-content') ? tinymce.get('pronunciation-unit-content').getContent() : document.getElementById('pronunciation-unit-content').value;
+
+        if (!lessonId) {
+            alert("Please select a Lesson.");
+            return;
+        }
+
+        try {
+            if (id) {
+                await updateDoc(doc(db, "pronunciation_units", id), { lessonId, title, author, order, content });
+            } else {
+                await addDoc(collection(db, "pronunciation_units"), { lessonId, title, author, order, content });
+            }
+            pronunciationUnitModal.style.display = 'none';
+            loadPronunciationData();
+        } catch (err) {
+            console.error(err);
+            alert("Error saving unit!");
+        }
+    });
+}
+
+window.editPronunciationUnit = async function(id) {
+    const unit = pronunciationUnitsData.find(u => u.id === id);
+    if (!unit) return;
+    document.getElementById('pronunciation-unit-id').value = unit.id;
+    
+    // Find category from lesson to populate filter dropdown
+    const lesson = pronunciationLessonsData.find(l => l.id === unit.lessonId);
+    if (lesson) {
+        document.getElementById('pronunciation-unit-category').value = lesson.categoryId;
+        updatePronunciationUnitSelects(lesson.categoryId);
+    }
+    
+    document.getElementById('pronunciation-unit-lesson').value = unit.lessonId;
+    document.getElementById('pronunciation-unit-title').value = unit.title;
+    document.getElementById('pronunciation-unit-order').value = unit.order || 0;
+    
+    if (tinymce.get('pronunciation-unit-content')) {
+        tinymce.get('pronunciation-unit-content').setContent(unit.content || '');
+    } else {
+        document.getElementById('pronunciation-unit-content').value = unit.content || '';
+    }
+    
+    document.getElementById('pronunciation-unit-modal-title').innerText = 'Edit Unit';
+    pronunciationUnitModal.style.display = 'flex';
+};
+
+window.deletePronunciationLesson = async function(id) {
+    if (confirm("Are you sure you want to delete this lesson?")) {
+        try {
+            await deleteDoc(doc(db, "pronunciation_lessons", id));
+            loadPronunciationData();
+        } catch (e) {
+            console.error(e);
+            alert("Error deleting lesson!");
+        }
+    }
+};
+
+window.deletePronunciationUnit = async function(id) {
+    if (confirm("Are you sure you want to delete this unit?")) {
+        try {
+            await deleteDoc(doc(db, "pronunciation_units", id));
+            loadPronunciationData();
         } catch (e) {
             console.error(e);
             alert("Error deleting unit!");
