@@ -11,6 +11,21 @@ const firebaseConfig = {
     appId: "1:1048895043926:web:06c3c04a722e2f3f647ef7"
 };
 
+window.closeTinyMCEPopups = function() {
+    try {
+        if (typeof tinymce !== 'undefined' && tinymce.editors) {
+            Array.from(tinymce.editors).forEach(ed => {
+                if (ed && ed.fire) ed.fire('blur');
+            });
+            document.querySelectorAll('.tox-tinymce-aux').forEach(aux => {
+                aux.innerHTML = '';
+            });
+        }
+    } catch (e) {
+        console.warn('Silent error in closeTinyMCEPopups:', e);
+    }
+};
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -203,10 +218,7 @@ bookForm.addEventListener('submit', async (e) => {
         }
         bookModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
-    } catch (error) {
-        console.error("Error saving book:", error);
-        alert("Failed to save book.");
-    }
+    } catch (error) { console.error(error); alert("Failed to save book.: " + (error.message || error)); }
 });
 
 function renderBooks() {
@@ -252,10 +264,7 @@ window.deleteBook = async (id) => {
         try {
             await deleteDoc(doc(db, "books", id));
             await loadData();
-        } catch (error) {
-            console.error("Error deleting book:", error);
-            alert("Failed to delete book.");
-        }
+        } catch (error) { console.error(error); alert("Failed to delete book.: " + (error.message || error)); }
     }
 };
 
@@ -323,10 +332,7 @@ unitForm.addEventListener('submit', async (e) => {
         }
         unitModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
-    } catch (error) {
-        console.error("Error saving Unit:", error);
-        alert("Error saving Unit!");
-    }
+    } catch (error) { console.error(error); alert("Error saving Unit!: " + (error.message || error)); }
 });
 
 document.getElementById('search-unit')?.addEventListener('input', renderUnits);
@@ -499,10 +505,7 @@ vocabForm.addEventListener('submit', async (e) => {
         }
         vocabModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
-    } catch (error) {
-        console.error("Error saving vocabulary:", error);
-        alert("Error saving vocabulary!");
-    }
+    } catch (error) { console.error(error); alert("Error saving vocabulary!: " + (error.message || error)); }
 });
 
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
@@ -601,10 +604,7 @@ phrasalForm.addEventListener('submit', async (e) => {
         }
         phrasalModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
-    } catch (error) {
-        console.error("Error saving Phrasal Verb:", error);
-        alert("Error saving Phrasal Verb!");
-    }
+    } catch (error) { console.error(error); alert("Error saving Phrasal Verb!: " + (error.message || error)); }
 });
 
 document.getElementById('filter-unit-select-phrasal').addEventListener('change', renderPhrasal);
@@ -699,10 +699,7 @@ prepForm.addEventListener('submit', async (e) => {
         }
         prepModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
-    } catch (error) {
-        console.error("Error saving Phrase:", error);
-        alert("Error saving Phrase!");
-    }
+    } catch (error) { console.error(error); alert("Error saving Phrase!: " + (error.message || error)); }
 });
 
 document.getElementById('filter-unit-select-prep').addEventListener('change', renderPrep);
@@ -938,10 +935,7 @@ wordformForm.addEventListener('submit', async (e) => {
         }
         wordformModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
-    } catch (error) {
-        console.error("Error saving Word Formation:", error);
-        alert("Error saving Word Formation!");
-    }
+    } catch (error) { console.error(error); alert("Error saving Word Formation!: " + (error.message || error)); }
 });
 
 document.getElementById('filter-unit-select-wordform').addEventListener('change', renderWordform);
@@ -1050,10 +1044,7 @@ patternForm.addEventListener('submit', async (e) => {
         }
         patternModal.style.display = 'none'; window.closeTinyMCEPopups();
         await loadData();
-    } catch (error) {
-        console.error("Error saving Word Pattern:", error);
-        alert("Error saving Word Pattern!");
-    }
+    } catch (error) { console.error(error); alert("Error saving Word Pattern!: " + (error.message || error)); }
 });
 
 document.getElementById('filter-unit-select-pattern').addEventListener('change', renderPattern);
@@ -1113,10 +1104,7 @@ window.deletePattern = async (id) => {
         try {
             await deleteDoc(doc(db, "word_patterns", id));
             await loadData();
-        } catch (error) {
-            console.error("Error deleting Pattern:", error);
-            alert("Error deleting!");
-        }
+        } catch (error) { console.error(error); alert("Error deleting!: " + (error.message || error)); }
     }
 };
 
@@ -1214,10 +1202,7 @@ if (lexicalForm) {
             }
             lexicalModal.style.display = 'none'; window.closeTinyMCEPopups();
             await loadData();
-        } catch (error) {
-            console.error("Error saving Lexical Expansion:", error);
-            alert("Error saving Lexical Expansion!");
-        }
+        } catch (error) { console.error(error); alert("Error saving Lexical Expansion!: " + (error.message || error)); }
     });
 }
 
@@ -1275,10 +1260,7 @@ window.deleteLexical = async (id) => {
         try {
             await deleteDoc(doc(db, "lexical_expansions", id));
             await loadData();
-        } catch (error) {
-            console.error("Error deleting Lexical Expansion:", error);
-            alert("Error deleting!");
-        }
+        } catch (error) { console.error(error); alert("Error deleting!: " + (error.message || error)); }
     }
 };
 
@@ -1606,10 +1588,7 @@ if (grammarCatForm) {
             }
             grammarCatModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadGrammarData();
-        } catch (err) {
-            console.error(err);
-            alert("Error saving category!");
-        }
+        } catch (err) { console.error(err); alert("Error saving category!: " + (err.message || err)); }
     });
 }
 
@@ -1669,10 +1648,7 @@ if (grammarLessonForm) {
             }
             grammarLessonModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadGrammarData();
-        } catch (err) {
-            console.error(err);
-            alert("Error saving lesson!");
-        }
+        } catch (err) { console.error(err); alert("Error saving lesson!: " + (err.message || err)); }
     });
 }
 
@@ -1735,10 +1711,7 @@ if (grammarUnitForm) {
             }
             grammarUnitModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadGrammarData();
-        } catch (err) {
-            console.error(err);
-            alert("Error saving unit!");
-        }
+        } catch (err) { console.error(err); alert("Error saving unit!: " + (err.message || err)); }
     });
 }
 
@@ -2043,10 +2016,7 @@ if (pronunciationCatForm) {
             }
             pronunciationCatModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadPronunciationData();
-        } catch (err) {
-            console.error(err);
-            alert("Error saving category!");
-        }
+        } catch (err) { console.error(err); alert("Error saving category!: " + (err.message || err)); }
     });
 }
 
@@ -2106,10 +2076,7 @@ if (pronunciationLessonForm) {
             }
             pronunciationLessonModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadPronunciationData();
-        } catch (err) {
-            console.error(err);
-            alert("Error saving lesson!");
-        }
+        } catch (err) { console.error(err); alert("Error saving lesson!: " + (err.message || err)); }
     });
 }
 
@@ -2172,10 +2139,7 @@ if (pronunciationUnitForm) {
             }
             pronunciationUnitModal.style.display = 'none'; window.closeTinyMCEPopups();
             loadPronunciationData();
-        } catch (err) {
-            console.error(err);
-            alert("Error saving unit!");
-        }
+        } catch (err) { console.error(err); alert("Error saving unit!: " + (err.message || err)); }
     });
 }
 
