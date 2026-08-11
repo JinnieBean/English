@@ -104,8 +104,8 @@ body {
 }
 
 .note-image {
-    width: 240px;
-    height: 240px;
+    width: 310px;
+    height: 310px;
     border-radius: 50%;
     background-color: var(--card-bg);
     display: flex;
@@ -291,6 +291,14 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
 /* Hide the collapse button when sidebar is collapsed — logo icon handles expand */
 .sidebar.collapsed .sidebar-toggle {
     display: none;
+}
+
+/* Center the brand container (snowflake) in collapsed state */
+.sidebar.collapsed .sidebar-brand-container {
+    flex: none;
+    width: 100%;
+    justify-content: center;
+    gap: 0;
 }
 
 .sidebar.collapsed .nav-section-title {
