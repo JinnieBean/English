@@ -55,24 +55,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Sidebar Toggle
-    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarToggle = document.getElementById('sidebar-toggle-expanded');
+    const sidebarBrandContainer = document.querySelector('.sidebar-brand-container');
     const sidebar = document.querySelector('.sidebar');
-    if (sidebarToggle && sidebar) {
-        // Restore state from localStorage
+    
+    if (sidebar) {
+        // Apply collapsed class immediately (no-transition to avoid flash)
+        // The html.sidebar-will-collapse CSS pre-collapses via inline script in <head>
         if (localStorage.getItem('sidebar-collapsed') === 'true') {
-            sidebar.classList.add('collapsed');
-            // Temporarily disable transition to prevent flash animation on load
-            sidebar.style.transition = 'none';
-            setTimeout(() => {
-                sidebar.style.transition = '';
-            }, 100);
+            sidebar.classList.add('collapsed', 'no-transition');
         }
+        // Remove the pre-collapse class from <html> and re-enable transitions
+        document.documentElement.classList.remove('sidebar-will-collapse');
+        setTimeout(() => {
+            sidebar.classList.remove('no-transition');
+        }, 50);
 
-        sidebarToggle.addEventListener('click', () => {
+        const toggleSidebar = () => {
             sidebar.classList.toggle('collapsed');
-            // Save state to localStorage
             localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
-        });
+        };
+
+        if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+        
+        // When sidebar is collapsed, clicking the logo area expands it
+        if (sidebarBrandContainer) {
+            sidebarBrandContainer.addEventListener('click', (e) => {
+                if (sidebar.classList.contains('collapsed')) {
+                    e.preventDefault();
+                    toggleSidebar();
+                }
+            });
+        }
     }
 
     // Mobile Sidebar Toggle

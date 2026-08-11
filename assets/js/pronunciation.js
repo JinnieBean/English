@@ -14,19 +14,33 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Sidebar Toggle Logic (copied from main.js)
-    const sidebarToggle = document.getElementById('sidebar-toggle');
+    // Sidebar Toggle Logic
+    const sidebarToggle = document.getElementById('sidebar-toggle-expanded');
+    const sidebarBrandContainer = document.querySelector('.sidebar-brand-container');
     const sidebar = document.querySelector('.sidebar');
-    if (sidebarToggle && sidebar) {
+    
+    if (sidebar) {
         if (localStorage.getItem('sidebar-collapsed') === 'true') {
-            sidebar.style.transition = 'none';
-            sidebar.classList.add('collapsed');
-            setTimeout(() => sidebar.style.transition = '', 50);
+            sidebar.classList.add('collapsed', 'no-transition');
         }
-        sidebarToggle.addEventListener('click', () => {
+        document.documentElement.classList.remove('sidebar-will-collapse');
+        setTimeout(() => sidebar.classList.remove('no-transition'), 50);
+        
+        const toggleSidebar = () => {
             sidebar.classList.toggle('collapsed');
             localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
-        });
+        };
+
+        if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+        
+        if (sidebarBrandContainer) {
+            sidebarBrandContainer.addEventListener('click', (e) => {
+                if (sidebar.classList.contains('collapsed')) {
+                    e.preventDefault();
+                    toggleSidebar();
+                }
+            });
+        }
     }
 
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
