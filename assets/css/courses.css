@@ -10,11 +10,19 @@
     padding: 2rem 0;
 }
 
+/* Glassmorphism book cover (#17) */
 .book-cover {
     flex: 0 0 350px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    border-radius: 4px;
+    box-shadow: var(--shadow-md, 0 10px 30px rgba(0,0,0,0.15));
+    border-radius: 12px;
     overflow: hidden;
+    border: 1px solid var(--glass-border, rgba(255,255,255,0.4));
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.book-cover:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg, 0 16px 40px rgba(0,0,0,0.2));
 }
 
 .book-cover img {
@@ -50,20 +58,23 @@
     margin-bottom: 2.5rem;
 }
 
+/* Gradient button (#16) */
 .btn-learn-more {
     display: inline-block;
-    background-color: #0d7078;
+    background: linear-gradient(135deg, var(--accent-color, #0d7078), var(--accent-dark, #074d53));
     color: #fff;
     padding: 0.8rem 2.5rem;
     border-radius: 30px;
     text-decoration: none;
     font-size: 1.2rem;
     font-weight: 400;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(13, 112, 120, 0.3);
 }
 
 .btn-learn-more:hover {
-    background-color: #074d53;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(13, 112, 120, 0.45);
 }
 
 /* Units Page */
@@ -85,39 +96,57 @@
     flex-direction: column;
 }
 
+/* Hover effect unit-item (#18) */
 .unit-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 0;
+    padding: 1.5rem 0.75rem;
     border-bottom: 1px solid var(--line-color);
+    border-radius: 8px;
+    transition: background-color 0.2s ease, transform 0.2s ease, padding-left 0.2s ease;
+}
+
+.unit-item:hover {
+    background-color: var(--nav-hover-bg, #f7fafc);
+    padding-left: 1.25rem;
 }
 
 .unit-item:last-child {
-    border-bottom: 1px solid var(--line-color); /* Kept for bottom line in design */
+    border-bottom: 1px solid var(--line-color);
 }
 
 .unit-name {
     font-family: var(--font-heading);
-    font-size: 2.2rem;
+    font-size: var(--text-3xl, 2.2rem);
     font-weight: 700;
     color: var(--text-primary);
+    transition: color 0.2s ease;
 }
 
+.unit-item:hover .unit-name {
+    color: var(--accent-color, #0d7078);
+}
+
+/* Gradient btn-more (#16) */
 .btn-more {
     display: inline-block;
-    padding: 0.2rem 1.2rem;
-    border: 1px solid var(--text-primary);
+    padding: 0.3rem 1.2rem;
+    border: 1.5px solid var(--text-primary);
     border-radius: 20px;
     text-decoration: none;
     color: var(--text-primary);
-    font-size: 0.9rem;
-    transition: all 0.2s;
+    font-size: var(--text-sm, 0.9rem);
+    transition: all 0.25s ease;
+    font-weight: 500;
 }
 
 .btn-more:hover {
-    background-color: var(--text-primary);
+    background: linear-gradient(135deg, var(--accent-color, #0d7078), var(--accent-dark, #074d53));
     color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(13, 112, 120, 0.3);
+    transform: translateY(-1px);
 }
 
 .unit-submenu {
@@ -129,17 +158,20 @@
 .unit-submenu-link {
     display: inline-block;
     padding: 0.3rem 1.2rem;
-    border: 1px solid var(--text-primary);
+    border: 1.5px solid var(--text-primary);
     border-radius: 20px;
     text-decoration: none;
     color: var(--text-primary);
-    font-size: 0.9rem;
-    transition: all 0.2s;
+    font-size: var(--text-sm, 0.9rem);
+    transition: all 0.25s ease;
+    font-weight: 500;
 }
 
 .unit-submenu-link:hover {
-    background-color: var(--text-primary);
+    background: linear-gradient(135deg, var(--accent-color, #0d7078), var(--accent-dark, #074d53));
     color: #fff;
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(13,112,120,0.3);
 }
 
 /* Unit Detail Page */
@@ -174,16 +206,19 @@
 .unit-tab-btn {
     padding: 0.5rem 1.5rem;
     border-radius: 40px;
-    border: 1px solid var(--text-primary);
+    border: 1.5px solid var(--text-primary);
     color: var(--text-primary);
     text-decoration: none;
     font-weight: 500;
-    transition: all 0.3s;
+    transition: all 0.25s ease;
 }
 
 .unit-tab-btn:hover, .unit-tab-btn.active {
-    background: var(--text-primary);
+    background: linear-gradient(135deg, var(--accent-color, #0d7078), var(--accent-dark, #074d53));
     color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(13,112,120,0.3);
+    transform: translateY(-1px);
 }
 
 .unit-detail-meta {
@@ -194,8 +229,8 @@
 
 .vocab-section-title {
     font-family: var(--font-heading);
-    font-size: 1.8rem;
-    color: #0056b3;
+    font-size: var(--text-3xl, 1.8rem);
+    color: var(--accent-color, #0d7078);
     font-weight: 400;
     margin-bottom: 2rem;
 }
@@ -240,25 +275,21 @@
 .vocab-audio-group {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    background: #f4fbf9;
-    padding: 0.5rem 1.5rem;
-    border-radius: 40px;
+    gap: 0.8rem;
     width: fit-content;
     margin-top: 0.5rem;
 }
 
 .vocab-pronunciation {
-    font-size: 1.3rem;
-    color: #0a4f54;
+    font-size: var(--text-xl, 1.3rem);
+    color: var(--text-primary);
     font-weight: 500;
     white-space: nowrap;
 }
 
+/* Hide native audio - replaced by custom player (#13) */
 .vocab-audio-player {
-    height: 30px; 
-    max-width: 200px;
-    outline: none;
+    display: none;
 }
 
 .vocab-right {
@@ -305,8 +336,8 @@
 /* Phrasal Verbs Section */
 .section-title {
     font-family: var(--font-heading);
-    font-size: 2rem;
-    color: #0056b3;
+    font-size: var(--text-3xl, 2rem);
+    color: var(--accent-color, #0d7078);
     font-weight: 400;
     margin-bottom: 2.5rem;
 }

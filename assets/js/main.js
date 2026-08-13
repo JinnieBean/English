@@ -106,10 +106,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Index Page Stats (#8)
+    const statVocab = document.getElementById('stat-vocab');
+    const statUnits = document.getElementById('stat-units');
+    const statGrammar = document.getElementById('stat-grammar');
+    if (statVocab || statUnits || statGrammar) {
+        try {
+            const [vocabSnap, unitsSnap, grammarSnap] = await Promise.all([
+                getDocs(collection(db, 'vocabularies')),
+                getDocs(collection(db, 'units')),
+                getDocs(collection(db, 'grammar_lessons'))
+            ]);
+            if (window.updateIndexStats) {
+                window.updateIndexStats(vocabSnap.size, unitsSnap.size, grammarSnap.size);
+            }
+        } catch(e) {
+            // Stats non-critical, fail silently
+            if (statVocab) statVocab.textContent = '–';
+            if (statUnits) statUnits.textContent = '–';
+            if (statGrammar) statGrammar.textContent = '–';
+        }
+    }
+
     // Books Page: Load Books list
     const booksListContainer = document.getElementById('books-list-container');
     if (booksListContainer) {
         booksListContainer.innerHTML = '<p style="padding: 1rem 0;">Loading books...</p>';
+
         try {
             const booksSnapshot = await getDocs(collection(db, "books"));
             let books = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -168,8 +191,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             units.sort((a,b) => (a.order||0) - (b.order||0)); // Sort by order
             
-            unitsListContainer.innerHTML = ''; // Remove loading text
-            
+            unitsListContainer.innerHTML = '';
+
             if(units.length === 0) {
                 unitsListContainer.innerHTML = '<p style="padding: 1rem 0;">No units have been created for this book yet.</p>';
             } else {
@@ -185,19 +208,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                             { id: 'pattern', name: 'Word Patterns', url: 'unit_pattern.html' },
                             { id: 'lexical', name: 'Lexical Expansion', url: 'unit_lexical.html' }
                         ];
-                        
+
                         sectionMap.forEach(sec => {
                             if (unit.sections.includes(sec.id)) {
                                 sectionsHtml += `<a href="${sec.url}?id=${unit.id}" class="unit-tab-btn">${sec.name}</a>`;
                             }
                         });
                     } else {
-                        // Fallback to vocab if sections array is missing/empty
                         sectionsHtml = `<a href="unit_detail.html?id=${unit.id}" class="unit-tab-btn">Vocabulary</a>`;
                     }
 
                     unitsHtml += `
-                        <div class="unit-item" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
+                        <div class="unit-item reveal" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
                             <span class="unit-name">${unit.title}</span>
                             <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
                                 ${sectionsHtml}
@@ -206,6 +228,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                 });
                 unitsListContainer.innerHTML = unitsHtml;
+
+                // Re-init reveal animations after dynamic content
+                requestAnimationFrame(() => {
+                    if (typeof window.initRevealAnimations === 'function') window.initRevealAnimations();
+                    else document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+                });
             }
         } catch(e) {
             console.error(e);
@@ -237,19 +265,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             vocabs.sort((a, b) => a.word.localeCompare(b.word));
             
             vocabListContainer.innerHTML = '';
-            
-            if(vocabs.length === 0) {
-                vocabListContainer.innerHTML = '<p>This unit has no vocabulary yet.</p>';
-            } else {
+
+            // Inject Search Bar (#15)
+            const searchContainer = document.createElement('div');
+            searchContainer.className = 'vocab-search-container';
+            searchContainer.style.marginBottom = '1.5rem';
+            searchContainer.innerHTML = `
+                <input type="text" id="vocab-search-input" placeholder="Search vocabulary..." 
+                    style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 30px; border: 1px solid var(--line-color); 
+                    background: var(--card-bg); color: var(--text-primary); font-family: var(--font-body); 
+                    outline: none; transition: border-color 0.2s; box-shadow: var(--shadow-sm);">
+            `;
+            vocabListContainer.parentNode.insertBefore(searchContainer, vocabListContainer);
+
+            const renderVocabList = (filteredVocabs) => {
+                if(filteredVocabs.length === 0) {
+                    vocabListContainer.innerHTML = '<p>No vocabulary found.</p>';
+                    return;
+                }
+                
                 let vocabHtml = '';
-                vocabs.forEach(v => {
-                    // Handle Audio (if no link, hide source tag or show light error)
-                    const audioHtml = v.audio 
-                        ? `<audio controls preload="none" class="vocab-audio-player"><source src="${v.audio}" type="audio/mpeg"></audio>`
-                        : `<span style="font-size: 0.8rem; color: #888; font-style: italic;">No audio</span>`;
+                filteredVocabs.forEach(v => {
+                    // Build audio: use custom player (#13) if available
+                    const audioHtml = window.buildCustomAudioPlayer
+                        ? window.buildCustomAudioPlayer(v.audio)
+                        : (v.audio
+                            ? `<audio controls preload="none" class="vocab-audio-player"><source src="${v.audio}" type="audio/mpeg"></audio>`
+                            : `<span style="font-size: 0.8rem; color: #888; font-style: italic;">No audio</span>`);
 
                     vocabHtml += `
-                        <div class="vocab-item">
+                        <div class="vocab-item reveal">
                             <div class="vocab-left">
                                 <div class="vocab-word-group">
                                     <span class="vocab-word">${window.formatWordWithPos(v.word)}</span>
@@ -262,13 +307,80 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="vocab-right">
                                 <p class="vocab-def">${v.def}</p>
-                                <p class="vocab-example">${v.example}</p>
+                                <p class="vocab-example" data-word="${(v.word||'').replace(/\s*\([^)]*\)\s*$/g,'').trim()}">${v.example}</p>
                             </div>
                         </div>
                     `;
                 });
                 vocabListContainer.innerHTML = vocabHtml;
+
+                // After render: apply highlight + reveal animations (#9, #14)
+                requestAnimationFrame(() => {
+                    document.querySelectorAll('.vocab-example[data-word]').forEach(el => {
+                        if (window.highlightWordInExample) {
+                            window.highlightWordInExample(el, el.dataset.word);
+                        }
+                    });
+                    // Re-init reveal for dynamically added elements
+                    if (window.initRevealAnimations) window.initRevealAnimations();
+                    else document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+                });
+            };
+
+            // Initial render
+            renderVocabList(vocabs);
+
+            // Search filtering
+            const searchInput = document.getElementById('vocab-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase().trim();
+                    if (!term) {
+                        renderVocabList(vocabs);
+                        return;
+                    }
+                    const filtered = vocabs.filter(v => 
+                        (v.word || '').toLowerCase().includes(term) || 
+                        (v.def || '').toLowerCase().includes(term)
+                    );
+                    renderVocabList(filtered);
+                });
             }
+
+                // Inject flashcard button (#10)
+                const flashcardBtn = document.createElement('button');
+                flashcardBtn.id = 'flashcard-toggle-btn';
+                flashcardBtn.className = 'flashcard-toggle-btn';
+                flashcardBtn.innerHTML = '🃏 Flashcard Practice';
+                const titleEl = document.querySelector('.vocab-section-title');
+                if (titleEl) {
+                    titleEl.style.display = 'flex';
+                    titleEl.style.alignItems = 'center';
+                    titleEl.style.gap = '1rem';
+                    titleEl.appendChild(flashcardBtn);
+                }
+
+                // Flashcard overlay HTML (injected once)
+                if (!document.getElementById('flashcard-overlay')) {
+                    document.body.insertAdjacentHTML('beforeend', `
+                        <div class="flashcard-overlay" id="flashcard-overlay">
+                            <div class="flashcard-modal">
+                                <button class="flashcard-close" id="flashcard-close" aria-label="Close">&times;</button>
+                                <div class="flashcard-counter" id="fc-counter">1 / 1</div>
+                                <div class="flashcard-progress-bar">
+                                    <div class="flashcard-progress-fill" id="fc-progress-fill" style="width:0%"></div>
+                                </div>
+                                <div class="flashcard-card" id="flashcard-card-area"></div>
+                                <div class="flashcard-actions">
+                                    <button class="fc-btn fc-btn-prev" id="fc-prev">← Prev</button>
+                                    <button class="fc-btn fc-btn-next" id="fc-next">Next →</button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+
+                if (window.initFlashcard) window.initFlashcard(vocabs);
         } catch(e) {
             console.error(e);
             vocabListContainer.innerHTML = '<p style="color: red;">Error loading vocabulary.</p>';
