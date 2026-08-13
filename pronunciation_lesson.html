@@ -14,24 +14,24 @@
     <style>
         .lesson-header {
             margin: 2rem 0 3rem;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid var(--line-color);
             padding-bottom: 1.5rem;
         }
         .lesson-main-title {
             font-family: 'Playfair Display', serif;
-            color: #1a4d4f;
+            color: var(--accent-color);
             font-size: 2.5rem;
             margin-bottom: 0.5rem;
         }
         .lesson-author {
             font-size: 0.85rem;
-            color: #666;
+            color: var(--text-secondary);
             font-style: italic;
         }
         .lesson-content {
             font-size: 1.05rem;
             line-height: 1.7;
-            color: #333;
+            color: var(--text-primary);
         }
         
         /* Styles for rich text content from TinyMCE */
@@ -41,16 +41,16 @@
             margin-bottom: 1.5rem;
         }
         .lesson-content table, .lesson-content th, .lesson-content td {
-            border: 1px solid #1a4d4f;
+            border: 1px solid var(--line-color);
         }
         .lesson-content th, .lesson-content td {
             padding: 0.8rem;
             text-align: left;
         }
         .lesson-content th {
-            background-color: #f4f9f9;
+            background-color: var(--nav-active-bg);
             font-family: 'Playfair Display', serif;
-            color: #1a4d4f;
+            color: var(--accent-color);
         }
         .lesson-content p {
             margin-bottom: 1rem;
@@ -59,7 +59,7 @@
         .back-link {
             display: inline-block;
             margin-bottom: 1rem;
-            color: #1a7a7f;
+            color: var(--accent-color);
             text-decoration: none;
             font-size: 0.95rem;
         }
@@ -72,6 +72,9 @@
         (function() {
             if (localStorage.getItem('sidebar-collapsed') === 'true') {
                 document.documentElement.classList.add('sidebar-will-collapse');
+            }
+            if (localStorage.getItem('theme-dark') === 'true') {
+                document.documentElement.setAttribute('data-theme', 'dark');
             }
         })();
     </script>

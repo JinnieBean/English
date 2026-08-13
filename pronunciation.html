@@ -17,18 +17,18 @@
         }
         .pronunciation-intro-title {
             font-family: 'Playfair Display', serif;
-            color: #1a4d4f;
+            color: var(--accent-color);
             font-size: 2rem;
             margin-bottom: 1rem;
         }
         .pronunciation-intro-desc {
             font-size: 1.1rem;
-            color: #333;
+            color: var(--text-primary);
             margin-bottom: 1rem;
         }
         .pronunciation-read-more {
             display: inline-block;
-            background-color: #1a7a7f;
+            background-color: var(--accent-color);
             color: white;
             padding: 0.5rem 1.5rem;
             border-radius: 20px;
@@ -37,7 +37,7 @@
             transition: background-color 0.3s;
         }
         .pronunciation-read-more:hover {
-            background-color: #125e62;
+            background-color: var(--accent-dark);
         }
         
         .pronunciation-category {
@@ -45,10 +45,10 @@
         }
         .pronunciation-category-title {
             font-family: 'Playfair Display', serif;
-            color: #1a4d4f;
+            color: var(--accent-color);
             font-size: 1.8rem;
             margin-bottom: 1.5rem;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid var(--line-color);
             padding-bottom: 0.5rem;
         }
         
@@ -59,12 +59,12 @@
             gap: 1rem;
             margin-bottom: 1rem;
             text-decoration: none;
-            color: #333;
-            border-bottom: 1px solid #eee;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--line-color);
             padding-bottom: 0.8rem;
         }
         .pronunciation-lesson-link:hover .lesson-title {
-            color: #1a7a7f;
+            color: var(--accent-color);
         }
         .lesson-title {
             font-family: 'Playfair Display', serif;
@@ -73,16 +73,16 @@
         }
         .lesson-more {
             font-size: 0.85rem;
-            border: 1px solid #888;
+            border: 1px solid var(--text-secondary);
             border-radius: 12px;
             padding: 0.1rem 0.6rem;
-            color: #555;
+            color: var(--text-secondary);
             transition: all 0.2s;
         }
         .pronunciation-lesson-link:hover .lesson-more {
-            background-color: #f0f0f0;
-            border-color: #1a7a7f;
-            color: #1a7a7f;
+            background-color: var(--nav-hover-bg);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
         }
     </style>
     <script>
@@ -90,6 +90,9 @@
         (function() {
             if (localStorage.getItem('sidebar-collapsed') === 'true') {
                 document.documentElement.classList.add('sidebar-will-collapse');
+            }
+            if (localStorage.getItem('theme-dark') === 'true') {
+                document.documentElement.setAttribute('data-theme', 'dark');
             }
         })();
     </script>
