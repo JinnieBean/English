@@ -638,12 +638,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             patterns.forEach(p => {
                 patternListContainer.innerHTML += `
                     <div class="phrasal-item">
-                        <div class="phrasal-left" style="flex-direction: column; align-items: flex-start;">
-                            <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: wrap;">
+                        <div class="phrasal-left pattern-left" style="flex-direction: column; align-items: flex-start;">
+                            <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: nowrap; white-space: nowrap;">
                                 <span class="phrasal-word">${window.formatWordWithPos(p.word)}</span>
                                 <span class="vocab-pos">${window.formatStandalonePos(p.pos)}</span>
                             </div>
-                            <div style="font-size: 1.3rem; color: var(--text-primary); font-weight: 500;">${p.pattern ? p.pattern.replace(/\n/g, '<br>') : ''}</div>
+                            <div style="font-size: 1.3rem; color: var(--text-primary); font-weight: normal; font-style: italic;">${p.pattern ? p.pattern.replace(/\n/g, '<br>') : ''}</div>
                         </div>
                         <div class="phrasal-right">
                             <p class="phrasal-def">${p.def}</p>
@@ -705,7 +705,7 @@ window.toggleWf = function(id) {
                     let topSectionHtml = '';
                     if(textLeftHtml || textRightHtml) {
                         topSectionHtml = `
-                            <div style="display: flex; gap: 2rem; margin-bottom: 2rem; color: #4a7578;">
+                            <div style="display: flex; gap: 2rem; margin-bottom: 2rem; color: #4a7578; font-style: italic; font-weight: normal;">
                                 ${textLeftHtml}
                                 ${textRightHtml}
                             </div>
@@ -723,7 +723,7 @@ window.toggleWf = function(id) {
                                             <span class="vocab-pos">${window.formatStandalonePos(w.pos)}</span>
                                         </div>
                                         <div style="margin-top: 0.5rem;">
-                                            <span class="vocab-pronunciation" style="white-space: pre-wrap; line-height: 1.6;">${w.pron}</span>
+                                            <span class="vocab-pronunciation" style="white-space: pre-wrap; line-height: 1.6; font-style: italic; font-weight: normal;">${w.pron}</span>
                                         </div>
                                     </div>
                                     <div class="vocab-right">

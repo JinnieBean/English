@@ -341,3 +341,17 @@ body.modal-open { overflow: hidden; }
 [data-theme="dark"] .data-table tbody tr:nth-child(even) {
     background-color: var(--sidebar-bg);
 }
+
+[data-theme="dark"] .modal-content h2,
+[data-theme="dark"] .modal-content label {
+    color: var(--text-primary);
+}
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="url"],
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-primary);
+}
