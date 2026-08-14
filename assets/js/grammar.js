@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <a href="grammar_lesson.html?id=${l.id}&type=lesson" class="grammar-lesson-link" style="padding-left: 0.5rem; border-bottom: none; margin-bottom: 0.5rem; padding-bottom: 0;">
                                 <span class="lesson-title" style="font-size: 1.25rem; font-family: 'Playfair Display', serif; color: #1a4d4f; font-weight: 600;">${l.title}</span>
                             </a>
-                            <div class="grammar-lesson-units" style="margin-left: 1rem; border-left: 2px solid #eef2f6; padding-left: 0.5rem; margin-top: 0.5rem;">
+                            <div class="grammar-lesson-units" style="margin-left: 1rem;  padding-left: 0.5rem; margin-top: 0.5rem;">
                                 ${uniHtml}
                             </div>
                         </div>
