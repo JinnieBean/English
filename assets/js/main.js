@@ -818,8 +818,8 @@ lexicalListContainer.innerHTML = '';
                     if (lex.words && lex.words.length > 0) {
                         lex.words.sort((a, b) => a.word.localeCompare(b.word));
                     }
-                    let textLeftHtml = lex.textLeft ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1rem; text-align: ${lex.alignLeft || 'left'};">${lex.textLeft}</div>` : '';
-                    let textRightHtml = lex.textRight ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1rem; text-align: ${lex.alignRight || 'left'};">${lex.textRight}</div>` : '';
+                    let textLeftHtml = lex.textLeft ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1.6rem; text-align: ${lex.alignLeft || 'left'};">${lex.textLeft}</div>` : '';
+                    let textRightHtml = lex.textRight ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1.6rem; text-align: ${lex.alignRight || 'left'};">${lex.textRight}</div>` : '';
                     
                     let topSectionHtml = '';
                     if(textLeftHtml || textRightHtml) {
