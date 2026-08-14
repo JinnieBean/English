@@ -72,6 +72,67 @@ if (sidebarToggleBtn && adminSidebar) {
 }
 
 // State
+
+const paginationState = {
+    vocab: { page: 1, limit: 50, maxPage: 1 },
+    phrasal: { page: 1, limit: 50, maxPage: 1 },
+    prep: { page: 1, limit: 50, maxPage: 1 },
+    wordform: { page: 1, limit: 50, maxPage: 1 },
+    pattern: { page: 1, limit: 50, maxPage: 1 },
+    lexical: { page: 1, limit: 50, maxPage: 1 }
+};
+
+function addPaginationControls() {
+    const tabs = ['vocab', 'phrasal', 'prep', 'wordform', 'pattern', 'lexical'];
+    tabs.forEach(tab => {
+        const tableContainer = document.querySelector(`#tab-${tab} .table-container`);
+        if (tableContainer && !document.getElementById(`pagination-${tab}`)) {
+            const pag = document.createElement('div');
+            pag.className = 'pagination-controls';
+            pag.id = `pagination-${tab}`;
+            pag.style = "display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; font-size: 0.9rem; color: #555;";
+            pag.innerHTML = `
+                <div class="pagination-info" id="pag-info-${tab}">Showing 0 - 0 of 0</div>
+                <div class="pagination-buttons" style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button class="btn-secondary btn-small" id="pag-prev-${tab}" style="padding: 0.2rem 0.5rem;">&lt; Prev</button>
+                    <span id="pag-page-${tab}" style="font-weight: 500;">Page 1</span>
+                    <button class="btn-secondary btn-small" id="pag-next-${tab}" style="padding: 0.2rem 0.5rem;">Next &gt;</button>
+                </div>
+                <div class="pagination-limit">
+                    <select id="pag-limit-${tab}" class="input-field" style="padding: 0.2rem; margin:0; width: auto;">
+                        <option value="20">20 per page</option>
+                        <option value="50" selected>50 per page</option>
+                        <option value="100">100 per page</option>
+                        <option value="999999">All</option>
+                    </select>
+                </div>
+            `;
+            tableContainer.parentElement.appendChild(pag);
+            
+            document.getElementById(`pag-prev-${tab}`).addEventListener('click', () => {
+                if (paginationState[tab].page > 1) {
+                    paginationState[tab].page--;
+                    const renderFn = tab === 'wordform' ? 'renderWordform' : `render${tab.charAt(0).toUpperCase() + tab.slice(1)}`;
+                    window[renderFn]();
+                }
+            });
+            document.getElementById(`pag-next-${tab}`).addEventListener('click', () => {
+                if (paginationState[tab].page < paginationState[tab].maxPage) {
+                    paginationState[tab].page++;
+                    const renderFn = tab === 'wordform' ? 'renderWordform' : `render${tab.charAt(0).toUpperCase() + tab.slice(1)}`;
+                    window[renderFn]();
+                }
+            });
+            document.getElementById(`pag-limit-${tab}`).addEventListener('change', (e) => {
+                paginationState[tab].limit = parseInt(e.target.value);
+                paginationState[tab].page = 1;
+                const renderFn = tab === 'wordform' ? 'renderWordform' : `render${tab.charAt(0).toUpperCase() + tab.slice(1)}`;
+                window[renderFn]();
+            });
+        }
+    });
+}
+
 let booksData = [];
 let unitsData = [];
 let vocabData = [];
@@ -556,7 +617,10 @@ vocabForm.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
-document.getElementById('search-vocab').addEventListener('input', renderVocab);
+document.getElementById('search-vocab').addEventListener('input', () => {
+        if (paginationState['vocab']) paginationState['vocab'].page = 1;
+        renderVocab();
+    });
 document.getElementById('sort-vocab').addEventListener('change', renderVocab);
 
 function renderVocab() {
@@ -573,6 +637,27 @@ function renderVocab() {
         filteredVocab.sort((a, b) => a.word.localeCompare(b.word));
     } else if (sortValue === 'za') {
         filteredVocab.sort((a, b) => b.word.localeCompare(a.word));
+    }
+    
+    
+    const state = paginationState['vocab'];
+    if (state) {
+        state.maxPage = Math.ceil(filteredVocab.length / state.limit) || 1;
+        if (state.page > state.maxPage) state.page = state.maxPage;
+        const startIdx = (state.page - 1) * state.limit;
+        const endIdx = startIdx + state.limit;
+
+        const infoEl = document.getElementById('pag-info-vocab');
+        const pageEl = document.getElementById('pag-page-vocab');
+        const prevBtn = document.getElementById('pag-prev-vocab');
+        const nextBtn = document.getElementById('pag-next-vocab');
+        
+        if (infoEl) infoEl.innerText = `Showing ${ filteredVocab.length > 0 ? startIdx + 1 : 0 } - ${Math.min(endIdx, filteredVocab.length)} of ${ filteredVocab.length }`;
+        if (pageEl) pageEl.innerText = `Page ${state.page} / ${state.maxPage}`;
+        if (prevBtn) prevBtn.disabled = state.page === 1;
+        if (nextBtn) nextBtn.disabled = state.page === state.maxPage;
+
+        filteredVocab = filteredVocab.slice(startIdx, endIdx);
     }
     
     filteredVocab.forEach(v => {
@@ -657,7 +742,10 @@ phrasalForm.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('filter-unit-select-phrasal').addEventListener('change', renderPhrasal);
-document.getElementById('search-phrasal').addEventListener('input', renderPhrasal);
+document.getElementById('search-phrasal').addEventListener('input', () => {
+        if (paginationState['phrasal']) paginationState['phrasal'].page = 1;
+        renderPhrasal();
+    });
 document.getElementById('sort-phrasal').addEventListener('change', renderPhrasal);
 
 function renderPhrasal() {
@@ -674,6 +762,27 @@ function renderPhrasal() {
         filteredPhrasal.sort((a, b) => a.word.localeCompare(b.word));
     } else if (sortValue === 'za') {
         filteredPhrasal.sort((a, b) => b.word.localeCompare(a.word));
+    }
+    
+    
+    const state = paginationState['phrasal'];
+    if (state) {
+        state.maxPage = Math.ceil(filteredPhrasal.length / state.limit) || 1;
+        if (state.page > state.maxPage) state.page = state.maxPage;
+        const startIdx = (state.page - 1) * state.limit;
+        const endIdx = startIdx + state.limit;
+
+        const infoEl = document.getElementById('pag-info-phrasal');
+        const pageEl = document.getElementById('pag-page-phrasal');
+        const prevBtn = document.getElementById('pag-prev-phrasal');
+        const nextBtn = document.getElementById('pag-next-phrasal');
+        
+        if (infoEl) infoEl.innerText = `Showing ${ filteredPhrasal.length > 0 ? startIdx + 1 : 0 } - ${Math.min(endIdx, filteredPhrasal.length)} of ${ filteredPhrasal.length }`;
+        if (pageEl) pageEl.innerText = `Page ${state.page} / ${state.maxPage}`;
+        if (prevBtn) prevBtn.disabled = state.page === 1;
+        if (nextBtn) nextBtn.disabled = state.page === state.maxPage;
+
+        filteredPhrasal = filteredPhrasal.slice(startIdx, endIdx);
     }
     
     filteredPhrasal.forEach(p => {
@@ -754,7 +863,10 @@ prepForm.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('filter-unit-select-prep').addEventListener('change', renderPrep);
-document.getElementById('search-prep').addEventListener('input', renderPrep);
+document.getElementById('search-prep').addEventListener('input', () => {
+        if (paginationState['prep']) paginationState['prep'].page = 1;
+        renderPrep();
+    });
 document.getElementById('sort-prep').addEventListener('change', renderPrep);
 
 function renderPrep() {
@@ -771,6 +883,27 @@ function renderPrep() {
         filteredPrep.sort((a, b) => a.word.localeCompare(b.word));
     } else if (sortValue === 'za') {
         filteredPrep.sort((a, b) => b.word.localeCompare(a.word));
+    }
+    
+    
+    const state = paginationState['prep'];
+    if (state) {
+        state.maxPage = Math.ceil(filteredPrep.length / state.limit) || 1;
+        if (state.page > state.maxPage) state.page = state.maxPage;
+        const startIdx = (state.page - 1) * state.limit;
+        const endIdx = startIdx + state.limit;
+
+        const infoEl = document.getElementById('pag-info-prep');
+        const pageEl = document.getElementById('pag-page-prep');
+        const prevBtn = document.getElementById('pag-prev-prep');
+        const nextBtn = document.getElementById('pag-next-prep');
+        
+        if (infoEl) infoEl.innerText = `Showing ${ filteredPrep.length > 0 ? startIdx + 1 : 0 } - ${Math.min(endIdx, filteredPrep.length)} of ${ filteredPrep.length }`;
+        if (pageEl) pageEl.innerText = `Page ${state.page} / ${state.maxPage}`;
+        if (prevBtn) prevBtn.disabled = state.page === 1;
+        if (nextBtn) nextBtn.disabled = state.page === state.maxPage;
+
+        filteredPrep = filteredPrep.slice(startIdx, endIdx);
     }
     
     filteredPrep.forEach(p => {
@@ -992,7 +1125,10 @@ wordformForm.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('filter-unit-select-wordform').addEventListener('change', renderWordform);
-document.getElementById('search-wordform').addEventListener('input', renderWordform);
+document.getElementById('search-wordform').addEventListener('input', () => {
+        if (paginationState['wordform']) paginationState['wordform'].page = 1;
+        renderWordform();
+    });
 document.getElementById('sort-wordform').addEventListener('change', renderWordform);
 
 function renderWordform() {
@@ -1009,6 +1145,27 @@ function renderWordform() {
         filteredWf.sort((a, b) => a.rootWord.localeCompare(b.rootWord));
     } else if (sortValue === 'za') {
         filteredWf.sort((a, b) => b.rootWord.localeCompare(a.rootWord));
+    }
+    
+    
+    const state = paginationState['wordform'];
+    if (state) {
+        state.maxPage = Math.ceil(filteredWf.length / state.limit) || 1;
+        if (state.page > state.maxPage) state.page = state.maxPage;
+        const startIdx = (state.page - 1) * state.limit;
+        const endIdx = startIdx + state.limit;
+
+        const infoEl = document.getElementById('pag-info-wordform');
+        const pageEl = document.getElementById('pag-page-wordform');
+        const prevBtn = document.getElementById('pag-prev-wordform');
+        const nextBtn = document.getElementById('pag-next-wordform');
+        
+        if (infoEl) infoEl.innerText = `Showing ${ filteredWf.length > 0 ? startIdx + 1 : 0 } - ${Math.min(endIdx, filteredWf.length)} of ${ filteredWf.length }`;
+        if (pageEl) pageEl.innerText = `Page ${state.page} / ${state.maxPage}`;
+        if (prevBtn) prevBtn.disabled = state.page === 1;
+        if (nextBtn) nextBtn.disabled = state.page === state.maxPage;
+
+        filteredWf = filteredWf.slice(startIdx, endIdx);
     }
     
     filteredWf.forEach(w => {
@@ -1103,7 +1260,10 @@ patternForm.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('filter-unit-select-pattern').addEventListener('change', renderPattern);
-document.getElementById('search-pattern').addEventListener('input', renderPattern);
+document.getElementById('search-pattern').addEventListener('input', () => {
+        if (paginationState['pattern']) paginationState['pattern'].page = 1;
+        renderPattern();
+    });
 document.getElementById('sort-pattern').addEventListener('change', renderPattern);
 
 function renderPattern() {
@@ -2271,3 +2431,24 @@ window.deletePronunciationUnit = async function(id) {
 };
 
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; window.closeTinyMCEPopups(); };
+
+
+function updateDashboardStats() {
+    const elBooks = document.getElementById('stat-books');
+    const elUnits = document.getElementById('stat-units');
+    const elVocab = document.getElementById('stat-vocab');
+    const elGrammar = document.getElementById('stat-grammar');
+    
+    if (elBooks) elBooks.innerText = (typeof booksData !== 'undefined') ? booksData.length : 0;
+    if (elUnits) elUnits.innerText = (typeof unitsData !== 'undefined') ? unitsData.length : 0;
+    if (elVocab) elVocab.innerText = (typeof vocabData !== 'undefined') ? vocabData.length : 0;
+    if (elGrammar) elGrammar.innerText = (typeof grammarLessonsData !== 'undefined') ? grammarLessonsData.length : 0;
+}
+
+
+window.renderVocab = renderVocab;
+window.renderPhrasal = renderPhrasal;
+window.renderPrep = renderPrep;
+window.renderWordform = renderWordform;
+window.renderPattern = renderPattern;
+window.renderLexical = renderLexical;
