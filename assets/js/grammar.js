@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 
                 catsHtml += `
-                    <div class="grammar-category">
+                    <div class="grammar-category reveal">
                         <h3 class="grammar-category-title">${cat.title}</h3>
                         <div class="grammar-category-lessons">
                             ${lesHtml}
@@ -131,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             overviewContainer.innerHTML = catsHtml;
+            if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
 
         } catch (e) {
             console.error(e);

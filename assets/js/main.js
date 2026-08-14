@@ -161,10 +161,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 booksListContainer.innerHTML = '<p style="padding: 1rem 0;">No books have been created yet.</p>';
             } else {
                 let booksHtml = '';
-                books.forEach(book => {
-                    booksHtml += `
-                        <div class="book-container">
-                            <div class="book-cover">
+                  books.forEach(book => {
+                      booksHtml += `
+                          <div class="book-container reveal">
+                              <div class="book-cover">
                                 <img src="${book.image || 'assets/images/book_cover.png'}" alt="${book.title}" loading="lazy" decoding="async">
                             </div>
                             <div class="book-details">
@@ -175,9 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                     `;
-                });
-                booksListContainer.innerHTML = booksHtml;
-            }
+                  });
+                  booksListContainer.innerHTML = booksHtml;
+                  if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
+              }
         } catch(e) {
             console.error(e);
             booksListContainer.innerHTML = '<p style="color: red; padding: 1rem 0;">Error loading data.</p>';
