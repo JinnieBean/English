@@ -334,3 +334,10 @@ body.modal-open { overflow: hidden; }
 [data-theme="dark"] .btn-secondary:hover {
     background-color: var(--sidebar-hover);
 }
+
+[data-theme="dark"] .data-table tbody tr {
+    background-color: var(--card-bg);
+}
+[data-theme="dark"] .data-table tbody tr:nth-child(even) {
+    background-color: var(--sidebar-bg);
+}

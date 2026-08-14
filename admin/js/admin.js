@@ -278,6 +278,7 @@ async function loadData() {
         renderUnits();
         populateBookSelects();
         populateUnitSelects();
+        addPaginationControls();
         renderVocab();
         renderPhrasal();
         renderPrep();
@@ -285,7 +286,7 @@ async function loadData() {
         renderPattern();
         renderLexical();
         updateDashboardStats();
-        addPaginationControls();
+        
     } catch (error) {
         console.error("Error loading data:", error);
         window.showToast("Cannot load data from Database: " + (error.message || error), 'error');
@@ -621,6 +622,7 @@ vocabForm.addEventListener('submit', async (e) => {
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
 document.getElementById('search-vocab').addEventListener('input', () => {
         if (paginationState['vocab']) paginationState['vocab'].page = 1;
+        addPaginationControls();
         renderVocab();
     });
 document.getElementById('sort-vocab').addEventListener('change', renderVocab);

@@ -89,7 +89,19 @@
             </header>
 
             <main class="container">
-                <div class="units-container">                    <div id="breadcrumb-container" data-crumbs='[{"label":"Home","href":"english.html"},{"label":"Vocabulary","href":"units.html"},{"label":"Unit","href":"#"}]'></div>
+                <div class="units-container">                    <div class="unit-subnav" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--line-color); flex-wrap: nowrap; -webkit-overflow-scrolling: touch;"><a href="#" class="subnav-link" data-target="unit_detail.html" style="padding: 0.5rem 1rem; border: 1px solid; border-radius: 20px; text-decoration: none; white-space: nowrap; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; background: var(--card-bg); color: var(--text-secondary); border-color: var(--line-color);">Vocabulary</a><a href="#" class="subnav-link" data-target="unit_phrasal.html" style="padding: 0.5rem 1rem; border: 1px solid; border-radius: 20px; text-decoration: none; white-space: nowrap; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; background: var(--card-bg); color: var(--text-secondary); border-color: var(--line-color);">Phrasal Verbs</a><a href="#" class="subnav-link" data-target="unit_prep.html" style="padding: 0.5rem 1rem; border: 1px solid; border-radius: 20px; text-decoration: none; white-space: nowrap; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; background: var(--accent-color); color: white; border-color: var(--accent-color);">Prepositional Phrases</a><a href="#" class="subnav-link" data-target="unit_wordform.html" style="padding: 0.5rem 1rem; border: 1px solid; border-radius: 20px; text-decoration: none; white-space: nowrap; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; background: var(--card-bg); color: var(--text-secondary); border-color: var(--line-color);">Word Formation</a><a href="#" class="subnav-link" data-target="unit_pattern.html" style="padding: 0.5rem 1rem; border: 1px solid; border-radius: 20px; text-decoration: none; white-space: nowrap; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; background: var(--card-bg); color: var(--text-secondary); border-color: var(--line-color);">Word Patterns</a><a href="#" class="subnav-link" data-target="unit_lexical.html" style="padding: 0.5rem 1rem; border: 1px solid; border-radius: 20px; text-decoration: none; white-space: nowrap; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; background: var(--card-bg); color: var(--text-secondary); border-color: var(--line-color);">Lexical Expansion</a></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const unitId = urlParams.get('id');
+            if (unitId) {
+                document.querySelectorAll('.subnav-link').forEach(link => {
+                    link.href = link.getAttribute('data-target') + '?id=' + unitId;
+                });
+            }
+        });
+    </script>
+    
                     <div class="unit-detail-header" id="unit-detail-header-container">
                         
                         <h3 class="unit-detail-title" id="unit-detail-title">Loading...</h3>
