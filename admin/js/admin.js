@@ -93,18 +93,60 @@ navItems.forEach(item => {
 });
 
 // Modals
+window.isModalDirty = false;
+document.addEventListener('input', (e) => {
+    if (e.target.closest('.modal')) window.isModalDirty = true;
+});
+document.addEventListener('change', (e) => {
+    if (e.target.closest('.modal')) window.isModalDirty = true;
+});
+
 const closeBtns = document.querySelectorAll('.close-modal');
 closeBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
+        if (window.isModalDirty) {
+            if (!confirm("You have unsaved changes. Are you sure you want to close?")) return;
+        }
         const targetId = e.target.getAttribute('data-target');
-        document.getElementById(targetId).style.display = 'none'; window.closeTinyMCEPopups();
+        const modal = document.getElementById(targetId);
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+        window.closeTinyMCEPopups();
+        window.isModalDirty = false;
     });
 });
-window.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        e.target.style.display = 'none'; window.closeTinyMCEPopups();
-    }
-});
+// window click to close modal disabled
+// window.addEventListener('click', (e) => { ... });
+
+window.showToast = function(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    
+    let icon = '';
+    if (type === 'success') icon = '<i class="fas fa-check-circle" style="color: #4caf50;"></i>';
+    else if (type === 'error') icon = '<i class="fas fa-exclamation-circle" style="color: #d32f2f;"></i>';
+    else icon = '<i class="fas fa-info-circle" style="color: #2196f3;"></i>';
+    
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            ${icon}
+            <span class="toast-message">${message}</span>
+        </div>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+};
 
 // --- Auth Logic ---
 onAuthStateChanged(auth, (user) => {
@@ -183,7 +225,7 @@ async function loadData() {
         renderLexical();
     } catch (error) {
         console.error("Error loading data:", error);
-        alert("Cannot load data from Database: " + (error.message || error));
+        window.showToast("Cannot load data from Database: " + (error.message || error), 'error');
     }
 }
 
@@ -196,7 +238,7 @@ document.getElementById('add-book-btn').addEventListener('click', () => {
     bookForm.reset();
     document.getElementById('book-order').value = booksData.length > 0 ? Math.max(...booksData.map(b => b.order || 0)) + 1 : 1;
     document.getElementById('book-modal-title').innerText = 'Add New Book';
-    bookModal.style.display = 'flex';
+    bookModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
 
 bookForm.addEventListener('submit', async (e) => {
@@ -216,9 +258,10 @@ bookForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "books"), bookData);
         }
-        bookModal.style.display = 'none'; window.closeTinyMCEPopups();
+        bookModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
         await loadData();
-    } catch (error) { console.error(error); alert("Failed to save book.: " + (error.message || error)); }
+        window.showToast('Saved!', 'success');
+    } catch (error) { console.error(error); window.showToast("Failed to save book.: " + (error.message || error), 'error'); }
 });
 
 function renderBooks() {
@@ -255,7 +298,7 @@ window.editBook = (id) => {
         document.getElementById('book-order').value = b.order || 1;
         
         document.getElementById('book-modal-title').innerText = 'Edit Book';
-        bookModal.style.display = 'flex';
+        bookModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     }
 };
 
@@ -264,7 +307,8 @@ window.deleteBook = async (id) => {
         try {
             await deleteDoc(doc(db, "books", id));
             await loadData();
-        } catch (error) { console.error(error); alert("Failed to delete book.: " + (error.message || error)); }
+            window.showToast('Deleted!', 'success');
+        } catch (error) { console.error(error); window.showToast("Failed to delete book.: " + (error.message || error), 'error'); }
     }
 };
 
@@ -305,7 +349,7 @@ document.getElementById('add-unit-btn').addEventListener('click', () => {
     if(lastSelectedBookId) document.getElementById('unit-book').value = lastSelectedBookId;
     document.getElementById('unit-order').value = unitsData.length > 0 ? Math.max(...unitsData.map(u => u.order || 0)) + 1 : 1;
     document.getElementById('unit-modal-title').innerText = 'Add New Unit';
-    unitModal.style.display = 'flex';
+    unitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
 
 unitForm.addEventListener('submit', async (e) => {
@@ -330,9 +374,10 @@ unitForm.addEventListener('submit', async (e) => {
             // Create
             await addDoc(collection(db, "units"), unitData);
         }
-        unitModal.style.display = 'none'; window.closeTinyMCEPopups();
+        unitModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
         await loadData();
-    } catch (error) { console.error(error); alert("Error saving Unit!: " + (error.message || error)); }
+        window.showToast('Saved!', 'success');
+    } catch (error) { console.error(error); window.showToast("Error saving Unit!: " + (error.message || error), 'error'); }
 });
 
 document.getElementById('search-unit')?.addEventListener('input', renderUnits);
@@ -395,7 +440,7 @@ window.editUnit = (id) => {
         }
 
         document.getElementById('unit-modal-title').innerText = 'Edit Unit';
-        unitModal.style.display = 'flex';
+        unitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     }
 };
 
@@ -404,6 +449,7 @@ window.deleteUnit = async (id) => {
         try {
             await deleteDoc(doc(db, "units", id));
             await loadData();
+            window.showToast('Deleted!', 'success');
         } catch (error) {
             console.error("Error deleting Unit:", error);
         }
@@ -481,7 +527,7 @@ document.getElementById('add-vocab-btn').addEventListener('click', () => {
     vocabForm.reset();
     if(lastUnit) document.getElementById('vocab-unit-id').value = lastUnit;
     document.getElementById('vocab-modal-title').innerText = 'Add New Vocabulary';
-    vocabModal.style.display = 'flex';
+    vocabModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
 
 vocabForm.addEventListener('submit', async (e) => {
@@ -503,9 +549,10 @@ vocabForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "vocabularies"), newVocab);
         }
-        vocabModal.style.display = 'none'; window.closeTinyMCEPopups();
+        vocabModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
         await loadData();
-    } catch (error) { console.error(error); alert("Error saving vocabulary!: " + (error.message || error)); }
+        window.showToast('Saved!', 'success');
+    } catch (error) { console.error(error); window.showToast("Error saving vocabulary!: " + (error.message || error), 'error'); }
 });
 
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
@@ -557,7 +604,7 @@ window.editVocab = (id) => {
         document.getElementById('vocab-def').value = v.def;
         document.getElementById('vocab-example').value = v.example;
         document.getElementById('vocab-modal-title').innerText = 'Edit Vocabulary';
-        vocabModal.style.display = 'flex';
+        vocabModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     }
 };
 
@@ -566,6 +613,7 @@ window.deleteVocab = async (id) => {
         try {
             await deleteDoc(doc(db, "vocabularies", id));
             await loadData();
+            window.showToast('Deleted!', 'success');
         } catch (error) {
             console.error("Error deleting vocabulary:", error);
         }
@@ -582,7 +630,7 @@ document.getElementById('add-phrasal-btn').addEventListener('click', () => {
     phrasalForm.reset();
     if(lastUnit) document.getElementById('phrasal-unit-id').value = lastUnit;
     document.getElementById('phrasal-modal-title').innerText = 'Add Phrasal Verb';
-    phrasalModal.style.display = 'flex';
+    phrasalModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
 
 phrasalForm.addEventListener('submit', async (e) => {
@@ -602,9 +650,10 @@ phrasalForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "phrasal_verbs"), newPhrasal);
         }
-        phrasalModal.style.display = 'none'; window.closeTinyMCEPopups();
+        phrasalModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
         await loadData();
-    } catch (error) { console.error(error); alert("Error saving Phrasal Verb!: " + (error.message || error)); }
+        window.showToast('Saved!', 'success');
+    } catch (error) { console.error(error); window.showToast("Error saving Phrasal Verb!: " + (error.message || error), 'error'); }
 });
 
 document.getElementById('filter-unit-select-phrasal').addEventListener('change', renderPhrasal);
@@ -653,7 +702,7 @@ window.editPhrasal = (id) => {
         document.getElementById('phrasal-def').value = p.def;
         document.getElementById('phrasal-example').value = p.example;
         document.getElementById('phrasal-modal-title').innerText = 'Edit Phrasal Verb';
-        phrasalModal.style.display = 'flex';
+        phrasalModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     }
 };
 
@@ -662,6 +711,7 @@ window.deletePhrasal = async (id) => {
         try {
             await deleteDoc(doc(db, "phrasal_verbs", id));
             await loadData();
+            window.showToast('Deleted!', 'success');
         } catch (error) {
             console.error("Error deleting Phrasal Verb:", error);
         }
@@ -678,7 +728,7 @@ document.getElementById('add-prep-btn').addEventListener('click', () => {
     prepForm.reset();
     if(lastUnit) document.getElementById('prep-unit-id').value = lastUnit;
     document.getElementById('prep-modal-title').innerText = 'Add Phrase';
-    prepModal.style.display = 'flex';
+    prepModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
 
 prepForm.addEventListener('submit', async (e) => {
@@ -697,9 +747,10 @@ prepForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "prep_phrases"), newPrep);
         }
-        prepModal.style.display = 'none'; window.closeTinyMCEPopups();
+        prepModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
         await loadData();
-    } catch (error) { console.error(error); alert("Error saving Phrase!: " + (error.message || error)); }
+        window.showToast('Saved!', 'success');
+    } catch (error) { console.error(error); window.showToast("Error saving Phrase!: " + (error.message || error), 'error'); }
 });
 
 document.getElementById('filter-unit-select-prep').addEventListener('change', renderPrep);
@@ -746,7 +797,7 @@ window.editPrep = (id) => {
         document.getElementById('prep-def').value = p.def;
         document.getElementById('prep-example').value = p.example;
         document.getElementById('prep-modal-title').innerText = 'Edit Phrase';
-        prepModal.style.display = 'flex';
+        prepModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     }
 };
 
@@ -755,6 +806,7 @@ window.deletePrep = async (id) => {
         try {
             await deleteDoc(doc(db, "prep_phrases", id));
             await loadData();
+            window.showToast('Deleted!', 'success');
         } catch (error) {
             console.error("Error deleting Phrase:", error);
         }
@@ -877,7 +929,7 @@ document.getElementById('add-new-wordform-btn').addEventListener('click', () => 
     addWordformRow(); // add at least 1 row default
     
     document.getElementById('wordform-modal-title').innerText = 'Add Word Formation';
-    wordformModal.style.display = 'flex';
+    wordformModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
 
 wordformForm.addEventListener('submit', async (e) => {
@@ -933,9 +985,10 @@ wordformForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "word_formations"), newWf);
         }
-        wordformModal.style.display = 'none'; window.closeTinyMCEPopups();
+        wordformModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
         await loadData();
-    } catch (error) { console.error(error); alert("Error saving Word Formation!: " + (error.message || error)); }
+        window.showToast('Saved!', 'success');
+    } catch (error) { console.error(error); window.showToast("Error saving Word Formation!: " + (error.message || error), 'error'); }
 });
 
 document.getElementById('filter-unit-select-wordform').addEventListener('change', renderWordform);
@@ -995,7 +1048,7 @@ window.editWordform = (id) => {
         }
 
         document.getElementById('wordform-modal-title').innerText = 'Edit Word Formation';
-        wordformModal.style.display = 'flex';
+        wordformModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     }
 };
 
@@ -1004,6 +1057,7 @@ window.deleteWordform = async (id) => {
         try {
             await deleteDoc(doc(db, "word_formations", id));
             await loadData();
+            window.showToast('Deleted!', 'success');
         } catch (error) {
             console.error("Error deleting Word formation:", error);
         }
@@ -1021,7 +1075,7 @@ document.getElementById('add-pattern-btn').addEventListener('click', () => {
     patternForm.reset();
     if(lastUnit) document.getElementById('pattern-unit').value = lastUnit;
     document.getElementById('pattern-modal-title').innerText = 'Add New Word Pattern';
-    patternModal.style.display = 'flex';
+    patternModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
 
 patternForm.addEventListener('submit', async (e) => {
@@ -1042,9 +1096,10 @@ patternForm.addEventListener('submit', async (e) => {
         } else {
             await addDoc(collection(db, "word_patterns"), payload);
         }
-        patternModal.style.display = 'none'; window.closeTinyMCEPopups();
+        patternModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
         await loadData();
-    } catch (error) { console.error(error); alert("Error saving Word Pattern!: " + (error.message || error)); }
+        window.showToast('Saved!', 'success');
+    } catch (error) { console.error(error); window.showToast("Error saving Word Pattern!: " + (error.message || error), 'error'); }
 });
 
 document.getElementById('filter-unit-select-pattern').addEventListener('change', renderPattern);
@@ -1095,7 +1150,7 @@ window.editPattern = (id) => {
         document.getElementById('pattern-example').value = p.example;
         
         document.getElementById('pattern-modal-title').innerText = 'Edit Word Pattern';
-        patternModal.style.display = 'flex';
+        patternModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     }
 };
 
@@ -1104,7 +1159,8 @@ window.deletePattern = async (id) => {
         try {
             await deleteDoc(doc(db, "word_patterns", id));
             await loadData();
-        } catch (error) { console.error(error); alert("Error deleting!: " + (error.message || error)); }
+            window.showToast('Deleted!', 'success');
+        } catch (error) { console.error(error); window.showToast("Error deleting!: " + (error.message || error), 'error'); }
     }
 };
 
@@ -1165,7 +1221,7 @@ if (document.getElementById('add-lexical-btn')) {
         lexicalWordsContainer.innerHTML = '';
         addLexicalWordRow();
         document.getElementById('lexical-modal-title').innerText = 'Add Lexical Expansion';
-        lexicalModal.style.display = 'flex';
+        lexicalModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     });
 }
 
@@ -1200,9 +1256,10 @@ if (lexicalForm) {
             } else {
                 await addDoc(collection(db, "lexical_expansions"), payload);
             }
-            lexicalModal.style.display = 'none'; window.closeTinyMCEPopups();
+            lexicalModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
             await loadData();
-        } catch (error) { console.error(error); alert("Error saving Lexical Expansion!: " + (error.message || error)); }
+        window.showToast('Saved!', 'success');
+        } catch (error) { console.error(error); window.showToast("Error saving Lexical Expansion!: " + (error.message || error), 'error'); }
     });
 }
 
@@ -1251,7 +1308,7 @@ window.editLexical = (id) => {
         }
 
         document.getElementById('lexical-modal-title').innerText = 'Edit Lexical Expansion';
-        lexicalModal.style.display = 'flex';
+        lexicalModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     }
 };
 
@@ -1260,7 +1317,8 @@ window.deleteLexical = async (id) => {
         try {
             await deleteDoc(doc(db, "lexical_expansions", id));
             await loadData();
-        } catch (error) { console.error(error); alert("Error deleting!: " + (error.message || error)); }
+            window.showToast('Deleted!', 'success');
+        } catch (error) { console.error(error); window.showToast("Error deleting!: " + (error.message || error), 'error'); }
     }
 };
 
@@ -1301,6 +1359,7 @@ function initTinyMCE() {
         toolbar_sticky: false,
         toolbar_mode: 'wrap',
         toolbar: 'fullscreen | undo redo | fontfamily fontsize blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | removeformat | code | help',
+        font_size_formats: '10pt 12pt 14pt 16pt 18pt 20pt 22pt 24pt 26pt 28pt 30pt 32pt 34pt 36pt',
         font_family_formats: 'Zeequada=Zeequada,sans-serif; Urbanist=Urbanist,sans-serif; Playfair Display=Playfair Display,serif; Roboto=Roboto,sans-serif; Open Sans="Open Sans",sans-serif; Lato=Lato,sans-serif; Montserrat=Montserrat,sans-serif; Oswald=Oswald,sans-serif; Arial=arial,helvetica,sans-serif; Comic Sans MS=comic sans ms,sans-serif; Courier New=courier new,courier; Georgia=georgia,palatino; Helvetica=helvetica; Impact=impact,chicago; Tahoma=tahoma,arial,helvetica,sans-serif; Times New Roman=times new roman,times; Trebuchet MS=trebuchet ms,geneva; Verdana=verdana,geneva',
         color_map: [
             "000000", "Black",
@@ -1350,7 +1409,12 @@ function initTinyMCE() {
         promotion: false,
         image_advtab: true,
         media_live_embeds: true,
-        content_style: "@font-face { font-family: 'Zeequada'; src: url('../assets/fonts/Zeequada-Regular.otf'); } @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600;700&display=swap'); body { font-family: 'Urbanist', sans-serif; font-size: 1.15rem; line-height: 1.6; } h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', serif; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 600; }"
+        content_style: "@font-face { font-family: 'Zeequada'; src: url('../assets/fonts/Zeequada-Regular.otf'); } @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600;700&display=swap'); body { font-family: 'Urbanist', sans-serif; font-size: 1.15rem; line-height: 1.6; } h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', serif; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 600; }",
+        setup: function (editor) {
+            editor.on('change keyup', function () {
+                window.isModalDirty = true;
+            });
+        }
     });
     tinymceInitialized = true;
 }
@@ -1570,7 +1634,7 @@ if (document.getElementById('add-grammar-cat-btn')) {
         document.getElementById('grammar-cat-id').value = '';
         document.getElementById('grammar-cat-order').value = grammarCategoriesData.length > 0 ? Math.max(...grammarCategoriesData.map(c => c.order || 0)) + 1 : 1;
         document.getElementById('grammar-cat-modal-title').innerText = 'Add Category';
-        grammarCatModal.style.display = 'flex';
+        grammarCatModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     });
 }
 
@@ -1587,9 +1651,10 @@ if (grammarCatForm) {
             } else {
                 await addDoc(collection(db, "grammar_categories"), { title, order });
             }
-            grammarCatModal.style.display = 'none'; window.closeTinyMCEPopups();
+            grammarCatModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
             loadGrammarData();
-        } catch (err) { console.error(err); alert("Error saving category!: " + (err.message || err)); }
+            window.showToast('Saved!', 'success');
+        } catch (err) { console.error(err); window.showToast("Error saving category!: " + (err.message || err), 'error'); }
     });
 }
 
@@ -1600,7 +1665,7 @@ window.editGrammarCat = function(id) {
     document.getElementById('grammar-cat-title').value = cat.title;
     document.getElementById('grammar-cat-order').value = cat.order || 0;
     document.getElementById('grammar-cat-modal-title').innerText = 'Edit Category';
-    grammarCatModal.style.display = 'flex';
+    grammarCatModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 };
 
 window.deleteGrammarCat = async function(id) {
@@ -1608,9 +1673,10 @@ window.deleteGrammarCat = async function(id) {
         try {
             await deleteDoc(doc(db, "grammar_categories", id));
             loadGrammarData();
+            window.showToast('Deleted!', 'success');
         } catch (e) {
             console.error(e);
-            alert("Error deleting category!");
+            window.showToast("Error deleting category!", 'error');
         }
     }
 };
@@ -1627,7 +1693,7 @@ if (document.getElementById('add-grammar-lesson-btn')) {
             tinymce.get('grammar-lesson-content').setContent('');
         }
         document.getElementById('grammar-lesson-modal-title').innerText = 'Add Lesson';
-        grammarLessonModal.style.display = 'flex';
+        grammarLessonModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     });
 }
 
@@ -1647,9 +1713,10 @@ if (grammarLessonForm) {
             } else {
                 await addDoc(collection(db, "grammar_lessons"), { categoryId, title, author, order, content });
             }
-            grammarLessonModal.style.display = 'none'; window.closeTinyMCEPopups();
+            grammarLessonModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
             loadGrammarData();
-        } catch (err) { console.error(err); alert("Error saving lesson!: " + (err.message || err)); }
+            window.showToast('Saved!', 'success');
+        } catch (err) { console.error(err); window.showToast("Error saving lesson!: " + (err.message || err), 'error'); }
     });
 }
 
@@ -1668,7 +1735,7 @@ window.editGrammarLesson = async function(id) {
     }
     
     document.getElementById('grammar-lesson-modal-title').innerText = 'Edit Lesson';
-    grammarLessonModal.style.display = 'flex';
+    grammarLessonModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 };
 
 // Unit CRUD
@@ -1685,7 +1752,7 @@ if (document.getElementById('add-grammar-unit-btn')) {
             tinymce.get('grammar-unit-content').setContent('');
         }
         document.getElementById('grammar-unit-modal-title').innerText = 'Add Unit';
-        grammarUnitModal.style.display = 'flex';
+        grammarUnitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     });
 }
 
@@ -1700,7 +1767,7 @@ if (grammarUnitForm) {
         const content = tinymce.get('grammar-unit-content') ? tinymce.get('grammar-unit-content').getContent() : document.getElementById('grammar-unit-content').value;
 
         if (!lessonId) {
-            alert("Please select a Lesson.");
+            window.showToast("Please select a Lesson.", 'error');
             return;
         }
 
@@ -1710,9 +1777,10 @@ if (grammarUnitForm) {
             } else {
                 await addDoc(collection(db, "grammar_units"), { lessonId, title, author, order, content });
             }
-            grammarUnitModal.style.display = 'none'; window.closeTinyMCEPopups();
+            grammarUnitModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
             loadGrammarData();
-        } catch (err) { console.error(err); alert("Error saving unit!: " + (err.message || err)); }
+            window.showToast('Saved!', 'success');
+        } catch (err) { console.error(err); window.showToast("Error saving unit!: " + (err.message || err), 'error'); }
     });
 }
 
@@ -1739,7 +1807,7 @@ window.editGrammarUnit = async function(id) {
     }
     
     document.getElementById('grammar-unit-modal-title').innerText = 'Edit Unit';
-    grammarUnitModal.style.display = 'flex';
+    grammarUnitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 };
 
 window.deleteGrammarLesson = async function(id) {
@@ -1747,9 +1815,10 @@ window.deleteGrammarLesson = async function(id) {
         try {
             await deleteDoc(doc(db, "grammar_lessons", id));
             loadGrammarData();
+            window.showToast('Deleted!', 'success');
         } catch (e) {
             console.error(e);
-            alert("Error deleting lesson!");
+            window.showToast("Error deleting lesson!", 'error');
         }
     }
 };
@@ -1759,9 +1828,10 @@ window.deleteGrammarUnit = async function(id) {
         try {
             await deleteDoc(doc(db, "grammar_units", id));
             loadGrammarData();
+            window.showToast('Deleted!', 'success');
         } catch (e) {
             console.error(e);
-            alert("Error deleting unit!");
+            window.showToast("Error deleting unit!", 'error');
         }
     }
 };
@@ -1998,7 +2068,7 @@ if (document.getElementById('add-pronunciation-cat-btn')) {
         document.getElementById('pronunciation-cat-id').value = '';
         document.getElementById('pronunciation-cat-order').value = pronunciationCategoriesData.length > 0 ? Math.max(...pronunciationCategoriesData.map(c => c.order || 0)) + 1 : 1;
         document.getElementById('pronunciation-cat-modal-title').innerText = 'Add Category';
-        pronunciationCatModal.style.display = 'flex';
+        pronunciationCatModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     });
 }
 
@@ -2015,9 +2085,10 @@ if (pronunciationCatForm) {
             } else {
                 await addDoc(collection(db, "pronunciation_categories"), { title, order });
             }
-            pronunciationCatModal.style.display = 'none'; window.closeTinyMCEPopups();
+            pronunciationCatModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
             loadPronunciationData();
-        } catch (err) { console.error(err); alert("Error saving category!: " + (err.message || err)); }
+            window.showToast('Saved!', 'success');
+        } catch (err) { console.error(err); window.showToast("Error saving category!: " + (err.message || err), 'error'); }
     });
 }
 
@@ -2028,7 +2099,7 @@ window.editPronunciationCat = function(id) {
     document.getElementById('pronunciation-cat-title').value = cat.title;
     document.getElementById('pronunciation-cat-order').value = cat.order || 0;
     document.getElementById('pronunciation-cat-modal-title').innerText = 'Edit Category';
-    pronunciationCatModal.style.display = 'flex';
+    pronunciationCatModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 };
 
 window.deletePronunciationCat = async function(id) {
@@ -2036,9 +2107,10 @@ window.deletePronunciationCat = async function(id) {
         try {
             await deleteDoc(doc(db, "pronunciation_categories", id));
             loadPronunciationData();
+            window.showToast('Deleted!', 'success');
         } catch (e) {
             console.error(e);
-            alert("Error deleting category!");
+            window.showToast("Error deleting category!", 'error');
         }
     }
 };
@@ -2055,7 +2127,7 @@ if (document.getElementById('add-pronunciation-lesson-btn')) {
             tinymce.get('pronunciation-lesson-content').setContent('');
         }
         document.getElementById('pronunciation-lesson-modal-title').innerText = 'Add Lesson';
-        pronunciationLessonModal.style.display = 'flex';
+        pronunciationLessonModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     });
 }
 
@@ -2075,9 +2147,10 @@ if (pronunciationLessonForm) {
             } else {
                 await addDoc(collection(db, "pronunciation_lessons"), { categoryId, title, author, order, content });
             }
-            pronunciationLessonModal.style.display = 'none'; window.closeTinyMCEPopups();
+            pronunciationLessonModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
             loadPronunciationData();
-        } catch (err) { console.error(err); alert("Error saving lesson!: " + (err.message || err)); }
+            window.showToast('Saved!', 'success');
+        } catch (err) { console.error(err); window.showToast("Error saving lesson!: " + (err.message || err), 'error'); }
     });
 }
 
@@ -2096,7 +2169,7 @@ window.editPronunciationLesson = async function(id) {
     }
     
     document.getElementById('pronunciation-lesson-modal-title').innerText = 'Edit Lesson';
-    pronunciationLessonModal.style.display = 'flex';
+    pronunciationLessonModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 };
 
 // Unit CRUD
@@ -2113,7 +2186,7 @@ if (document.getElementById('add-pronunciation-unit-btn')) {
             tinymce.get('pronunciation-unit-content').setContent('');
         }
         document.getElementById('pronunciation-unit-modal-title').innerText = 'Add Unit';
-        pronunciationUnitModal.style.display = 'flex';
+        pronunciationUnitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
     });
 }
 
@@ -2128,7 +2201,7 @@ if (pronunciationUnitForm) {
         const content = tinymce.get('pronunciation-unit-content') ? tinymce.get('pronunciation-unit-content').getContent() : document.getElementById('pronunciation-unit-content').value;
 
         if (!lessonId) {
-            alert("Please select a Lesson.");
+            window.showToast("Please select a Lesson.", 'error');
             return;
         }
 
@@ -2138,9 +2211,10 @@ if (pronunciationUnitForm) {
             } else {
                 await addDoc(collection(db, "pronunciation_units"), { lessonId, title, author, order, content });
             }
-            pronunciationUnitModal.style.display = 'none'; window.closeTinyMCEPopups();
+            pronunciationUnitModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
             loadPronunciationData();
-        } catch (err) { console.error(err); alert("Error saving unit!: " + (err.message || err)); }
+            window.showToast('Saved!', 'success');
+        } catch (err) { console.error(err); window.showToast("Error saving unit!: " + (err.message || err), 'error'); }
     });
 }
 
@@ -2167,7 +2241,7 @@ window.editPronunciationUnit = async function(id) {
     }
     
     document.getElementById('pronunciation-unit-modal-title').innerText = 'Edit Unit';
-    pronunciationUnitModal.style.display = 'flex';
+    pronunciationUnitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 };
 
 window.deletePronunciationLesson = async function(id) {
@@ -2175,9 +2249,10 @@ window.deletePronunciationLesson = async function(id) {
         try {
             await deleteDoc(doc(db, "pronunciation_lessons", id));
             loadPronunciationData();
+            window.showToast('Deleted!', 'success');
         } catch (e) {
             console.error(e);
-            alert("Error deleting lesson!");
+            window.showToast("Error deleting lesson!", 'error');
         }
     }
 };
@@ -2187,9 +2262,10 @@ window.deletePronunciationUnit = async function(id) {
         try {
             await deleteDoc(doc(db, "pronunciation_units", id));
             loadPronunciationData();
+            window.showToast('Deleted!', 'success');
         } catch (e) {
             console.error(e);
-            alert("Error deleting unit!");
+            window.showToast("Error deleting unit!", 'error');
         }
     }
 };

@@ -24,7 +24,7 @@ window.formatWordWithPos = (word) => {
     if (!word) return '';
     // Look for (v), (n), (adj) etc in the word itself and style it correctly.
     // The regex matches optional parens around the POS
-    return word.replace(/\s*\(?(v|n|adj|adv|prep|conj|pron|det)\)?\s*$/gi, (match, p1) => {
+    return word.replace(/\s*\(?\b(v|n|adj|adv|prep|conj|pron|det)\b\)?\s*$/gi, (match, p1) => {
         return ` <span class="vocab-pos" style="font-weight: 400; font-size: 1.2rem; color: var(--text-secondary);">(${p1.toLowerCase()})</span>`;
     });
 };
@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             wordforms.forEach(w => {
                 const formatPos = (text) => {
                     if(!text) return '';
-                    return text.replace(/\s*\(?(v|n|adj|adv|prep|conj|pron|det)\)?\b/gi, (match, p1) => {
+                    return text.replace(/\s*\(?\b(v|n|adj|adv|prep|conj|pron|det)\b\)?/gi, (match, p1) => {
                         return ` <span class="vocab-pos" style="font-weight: 400; font-size: 1.2rem; color: var(--text-secondary);">(${p1.toLowerCase()})</span>`;
                     });
                 };
@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const formatPos = (text) => {
                 if(!text) return '';
-                return text.replace(/\s*\(?(v|n|adj|adv|prep|conj|pron|det)\)?\b/gi, (match, p1) => {
+                return text.replace(/\s*\(?\b(v|n|adj|adv|prep|conj|pron|det)\b\)?/gi, (match, p1) => {
                     return ` <span class="vocab-pos" style="font-weight: 400; font-size: 1.2rem; color: var(--text-secondary);">(${p1.toLowerCase()})</span>`;
                 });
             };
