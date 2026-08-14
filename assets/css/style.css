@@ -1384,3 +1384,33 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
         flex: 0 0 45% !important; min-width: 0;
     }
 }
+
+
+
+
+
+/* Aggressive alignment fix for Vocab, Phrasal, Pattern, Wordform */
+@media (min-width: 769px) {
+    .vocab-left, .phrasal-left, .pattern-left, .wf-form-left {
+        flex: 0 0 45% !important;
+        width: 45% !important;
+        max-width: 45% !important;
+        min-width: 45% !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .vocab-word-group {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+    .vocab-word, .phrasal-word, .wf-form-title {
+        white-space: nowrap !important;
+    }
+    .vocab-pos {
+        white-space: nowrap !important;
+        display: inline-block !important;
+    }
+}

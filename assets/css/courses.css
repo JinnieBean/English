@@ -248,9 +248,7 @@
     align-items: center;
 }
 
-.vocab-left {
-    flex: 0 0 450px;
-}
+
 
 .vocab-word-group {
     display: flex;
@@ -467,8 +465,7 @@
     align-items: center;
 }
 
-.wf-form-left {
-    flex: 0 0 320px;
+.wf-form-left { 
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -537,4 +534,9 @@
         flex-direction: column;
         gap: 1rem;
     }
+}
+
+/* Enable newlines for definitions and examples */
+.vocab-def, .vocab-example, .phrasal-def, .phrasal-example, .wf-def-line, .wf-example-line {
+    white-space: pre-wrap;
 }
