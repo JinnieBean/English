@@ -284,6 +284,8 @@ async function loadData() {
         renderWordform();
         renderPattern();
         renderLexical();
+        updateDashboardStats();
+        addPaginationControls();
     } catch (error) {
         console.error("Error loading data:", error);
         window.showToast("Cannot load data from Database: " + (error.message || error), 'error');
@@ -1612,6 +1614,7 @@ async function loadGrammarData() {
 
         renderGrammarLessons();
         renderGrammarUnits();
+        updateDashboardStats();
         updateGrammarUnitSelects();
     } catch (e) {
         console.error("Error loading Grammar Data:", e);
@@ -1776,6 +1779,7 @@ if (filterGrammarUnitCat) {
     filterGrammarUnitCat.addEventListener('change', () => {
         updateGrammarUnitSelects();
         renderGrammarUnits();
+        updateDashboardStats();
     });
 }
 if (filterGrammarUnitLes) {
@@ -2452,3 +2456,19 @@ window.renderPrep = renderPrep;
 window.renderWordform = renderWordform;
 window.renderPattern = renderPattern;
 window.renderLexical = renderLexical;
+
+
+// Dark mode logic
+const dmBtn = document.getElementById('admin-dark-mode-btn');
+if (dmBtn) {
+    dmBtn.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.setItem('admin-theme-dark', 'false');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('admin-theme-dark', 'true');
+        }
+    });
+}
