@@ -442,7 +442,7 @@ phrasalListContainer.innerHTML = '';
 
             filteredList.forEach(p => {
                 phrasalListContainer.innerHTML += `
-                    <div class="phrasal-item">
+                    <div class="phrasal-item reveal">
                         <div class="phrasal-left">
                             <div class="phrasal-word">${p.word}</div>
                             <div class="phrasal-pron">${p.pron}</div>
@@ -455,6 +455,7 @@ phrasalListContainer.innerHTML = '';
                 `;
             });
 
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
             };
 
             renderPhrasalList(phrasals);
@@ -515,7 +516,7 @@ prepListContainer.innerHTML = '';
 
             filteredList.forEach(p => {
                 prepListContainer.innerHTML += `
-                    <div class="phrasal-item">
+                    <div class="phrasal-item reveal">
                         <div class="phrasal-left">
                             <div class="phrasal-word">${p.word}</div>
                         </div>
@@ -527,6 +528,7 @@ prepListContainer.innerHTML = '';
                 `;
             });
 
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
             };
 
             renderPrepList(preps);
@@ -642,7 +644,7 @@ wfListContainer.innerHTML = '';
                     });
                 }
                 wfListContainer.innerHTML += `
-                    <div class="wf-item">
+                    <div class="wf-item reveal">
                         <div class="wf-main">
                             <div class="wf-root">${w.rootWord}</div>
                             <div class="wf-overview-list">
@@ -657,6 +659,7 @@ wfListContainer.innerHTML = '';
                 `;
             });
 
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
             };
 
             renderWfList(wordforms);
@@ -724,7 +727,7 @@ patternListContainer.innerHTML = '';
 
             filteredList.forEach(p => {
                 patternListContainer.innerHTML += `
-                    <div class="phrasal-item">
+                    <div class="phrasal-item reveal">
                         <div class="phrasal-left pattern-left" style="flex-direction: column; align-items: flex-start;">
                             <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: nowrap; white-space: nowrap;">
                                 <span class="phrasal-word">${window.formatWordWithPos(p.word)}</span>
@@ -740,6 +743,7 @@ patternListContainer.innerHTML = '';
                 `;
             });
 
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
             };
 
             renderPatternList(patterns);
@@ -830,7 +834,7 @@ lexicalListContainer.innerHTML = '';
                     if(lex.words && lex.words.length > 0) {
                         lex.words.forEach(w => {
                             wordsHtml += `
-                                <div class="vocab-item">
+                                <div class="vocab-item reveal">
                                     <div class="vocab-left">
                                         <div class="vocab-word-group">
                                             <span class="vocab-word">${window.formatWordWithPos(w.word)}</span>
@@ -857,6 +861,7 @@ lexicalListContainer.innerHTML = '';
                     `;
                 });
     
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
             };
 
             renderLexicalList(lexicals);
