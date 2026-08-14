@@ -66,6 +66,12 @@
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
 }
 
+/* Override inline colors from TinyMCE in dark mode */
+[data-theme="dark"] .lesson-content * {
+    color: var(--text-primary) !important;
+    background-color: transparent !important;
+}
+
 /* =========================================
    GLOBAL RESET
    ========================================= */

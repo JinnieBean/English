@@ -31,6 +31,23 @@ window.formatWordWithPos = (word) => {
 
 document.addEventListener('DOMContentLoaded', async () => {
     
+    // Random Slogans for Homepage
+    const quoteContainer = document.querySelector('.index-quote blockquote');
+    if (quoteContainer) {
+        const slogans = [
+            { text: "The limits of my language mean the limits of my world.", author: "Ludwig Wittgenstein" },
+            { text: "To have another language is to possess a second soul.", author: "Charlemagne" },
+            { text: "Language is the road map of a culture. It tells you where its people come from and where they are going.", author: "Rita Mae Brown" },
+            { text: "Those who know nothing of foreign languages know nothing of their own.", author: "Johann Wolfgang von Goethe" },
+            { text: "A different language is a different vision of life.", author: "Federico Fellini" },
+            { text: "Learning another language is not only learning different words for the same things, but learning another way to think about things.", author: "Flora Lewis" },
+            { text: "One language sets you in a corridor for life. Two languages open every door along the way.", author: "Frank Smith" },
+            { text: "With languages, you are at home anywhere.", author: "Edmund de Waal" }
+        ];
+        const randomSlogan = slogans[Math.floor(Math.random() * slogans.length)];
+        quoteContainer.innerHTML = `"${randomSlogan.text}"\n                          <cite>— ${randomSlogan.author}</cite>`;
+    }
+    
     // Render dynamic Unit Detail Header (Book Title, Unit Title, Tab Menu)
     const headerContainer = document.getElementById('unit-detail-header-container');
     if (headerContainer) {
