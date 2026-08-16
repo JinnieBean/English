@@ -437,6 +437,13 @@ body {
     display: flex;
 }
 
+.sidebar-brand-logo {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 6px;
+}
+
 /* FIX #4: Sidebar brand text color — use teal instead of blue */
 .sidebar-brand-text {
     font-family: var(--font-body);
