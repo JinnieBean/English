@@ -1199,7 +1199,7 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
 }
 
 /* =========================================
-   TABLE OF CONTENTS (TOC)
+   LESSON LAYOUT
    ========================================= */
 .lesson-layout {
     display: flex;
@@ -1210,54 +1210,6 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
 .lesson-content-area {
     flex: 1;
     min-width: 0;
-}
-.lesson-toc-area {
-    width: 280px;
-    flex-shrink: 0;
-}
-.toc-sticky {
-    position: sticky;
-    top: 2rem;
-    background: var(--card-bg, #ffffff);
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1));
-    border: 1px solid var(--sidebar-border, #eef2f6);
-    max-height: calc(100vh - 4rem);
-    overflow-y: auto;
-}
-.toc-sticky h4 {
-    font-family: var(--font-heading);
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
-    color: var(--accent-color, #1a7a7f);
-}
-.toc-list {
-    list-style: none;
-    padding-left: 0;
-}
-.toc-list li {
-    margin-bottom: 0.5rem;
-}
-.toc-list li a {
-    color: var(--text-secondary, #64748b);
-    text-decoration: none;
-    font-size: 0.95rem;
-    display: block;
-    line-height: 1.4;
-    transition: color 0.2s;
-}
-.toc-list li a:hover, .toc-list li a.active {
-    color: var(--accent-color, #1a7a7f);
-    font-weight: 600;
-}
-.toc-list li.toc-h3 {
-    padding-left: 1rem;
-    font-size: 0.85rem;
-}
-@media (max-width: 1024px) {
-    .lesson-toc-area { display: none; }
-    .lesson-layout { display: block; }
 }
 
 /* =========================================
