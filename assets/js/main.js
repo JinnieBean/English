@@ -815,16 +815,13 @@ lexicalListContainer.innerHTML = '';
                 }
 
                 filteredList.forEach(lex => {
-                    if (lex.words && lex.words.length > 0) {
-                        lex.words.sort((a, b) => a.word.localeCompare(b.word));
-                    }
                     let textLeftHtml = lex.textLeft ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1.6rem; text-align: ${lex.alignLeft || 'left'};">${lex.textLeft}</div>` : '';
                     let textRightHtml = lex.textRight ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1.6rem; text-align: ${lex.alignRight || 'left'};">${lex.textRight}</div>` : '';
                     
                     let topSectionHtml = '';
                     if(textLeftHtml || textRightHtml) {
                         topSectionHtml = `
-                            <div style="display: flex; gap: 2rem; margin-bottom: 2rem; color: #4a7578; font-style: italic; font-weight: normal;">
+                            <div style="display: flex; gap: 2rem; margin-bottom: 2rem; width: 100%; color: #4a7578; font-style: italic; font-weight: normal;">
                                 ${textLeftHtml}
                                 ${textRightHtml}
                             </div>
@@ -855,9 +852,14 @@ lexicalListContainer.innerHTML = '';
                     }
                     
                     lexicalListContainer.innerHTML += `
-                        <div style="margin-bottom: 4rem;">
+                        <div class="wf-item reveal" style="margin-bottom: 3rem; width: 100%;">
                             ${topSectionHtml}
-                            ${wordsHtml}
+                            <div class="wf-toggle" id="wf-toggle-${lex.id}" onclick="window.toggleWf('${lex.id}')">▶</div>
+                            <div class="wf-forms collapsed" id="wf-forms-${lex.id}">
+                                <div style="display: flex; flex-direction: column; gap: 3rem; width: 100%;">
+                                    ${wordsHtml}
+                                </div>
+                            </div>
                         </div>
                     `;
                 });
