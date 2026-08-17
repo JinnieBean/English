@@ -1,0 +1,92 @@
+/* grammar-styles.css — extracted from grammar.html inline styles (#3) */
+
+.grammar-intro {
+    margin: 2rem 0 4rem;
+}
+
+.grammar-intro-title {
+    font-family: var(--font-heading, 'Playfair Display', serif);
+    color: var(--text-primary, #1a4d4f);
+    font-size: var(--text-3xl, 2rem);
+    margin-bottom: 1rem;
+}
+
+.grammar-intro-desc {
+    font-size: var(--text-lg, 1.1rem);
+    color: var(--text-primary, #333);
+    margin-bottom: 1rem;
+}
+
+.grammar-read-more {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent-color, #1a7a7f), var(--accent-dark, #125e62));
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: var(--text-base, 0.95rem);
+    transition: all 0.25s ease;
+    box-shadow: 0 3px 10px rgba(26, 122, 127, 0.3);
+}
+
+.grammar-read-more:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(26, 122, 127, 0.4);
+}
+
+.grammar-category {
+    margin-bottom: 3rem;
+}
+
+.grammar-category-title {
+    font-family: var(--font-heading, 'Playfair Display', serif);
+    color: var(--text-primary, #1a4d4f);
+    font-size: var(--text-3xl, 1.8rem);
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--line-color, #ddd);
+    padding-bottom: 0.5rem;
+}
+
+.grammar-lesson-link {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    text-decoration: none;
+    color: var(--nav-text, #333);
+    border-bottom: 1px solid var(--line-color, #eee);
+    padding-bottom: 0.8rem;
+    border-radius: 6px;
+    transition: background-color 0.2s ease, padding-left 0.2s ease;
+}
+
+.grammar-lesson-link:hover {
+    background-color: var(--nav-hover-bg, #f7fafc);
+    padding-left: 0.5rem;
+}
+
+.grammar-lesson-link:hover .lesson-title {
+    color: var(--accent-color, #1a7a7f);
+}
+
+.lesson-title {
+    font-family: var(--font-heading, 'Playfair Display', serif);
+    font-size: var(--text-xl, 1.3rem);
+    transition: color 0.2s;
+}
+
+.lesson-more {
+    font-size: var(--text-sm, 0.85rem);
+    border: 1px solid var(--text-secondary, #888);
+    border-radius: 12px;
+    padding: 0.1rem 0.6rem;
+    color: var(--text-secondary, #555);
+    transition: all 0.2s;
+}
+
+.grammar-lesson-link:hover .lesson-more {
+    background: linear-gradient(135deg, var(--accent-color, #1a7a7f), var(--accent-dark, #125e62));
+    border-color: transparent;
+    color: white;
+}

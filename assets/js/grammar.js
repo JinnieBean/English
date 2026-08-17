@@ -59,7 +59,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Grammar Overview Page Logic
     const overviewContainer = document.getElementById('grammar-overview-container');
-    if (overviewContainer) {
+        if (overviewContainer) {
+        overviewContainer.innerHTML = Array(3).fill(`
+            <div class="grammar-category" style="margin-bottom: 3rem;">
+                <div class="skeleton skeleton-title"></div>
+                <div style="margin-bottom: 1.5rem;">
+                    <div class="skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-text short"></div>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <div class="skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-text short"></div>
+                </div>
+            </div>
+        `).join('');
         try {
 
             // Fetch Categories
@@ -97,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <a href="grammar_lesson.html?id=${l.id}&type=lesson" class="grammar-lesson-link" style="padding-left: 0.5rem; border-bottom: none; margin-bottom: 0.5rem; padding-bottom: 0;">
                                 <span class="lesson-title" style="font-size: 1.25rem; font-family: 'Playfair Display', serif; color: #1a4d4f; font-weight: 600;">${l.title}</span>
                             </a>
-                            <div class="grammar-lesson-units" style="margin-left: 1rem; border-left: 2px solid #eef2f6; padding-left: 0.5rem; margin-top: 0.5rem;">
+                            <div class="grammar-lesson-units" style="margin-left: 1rem;  padding-left: 0.5rem; margin-top: 0.5rem;">
                                 ${uniHtml}
                             </div>
                         </div>
@@ -108,7 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 
                 catsHtml += `
-                    <div class="grammar-category">
+                    <div class="grammar-category reveal">
                         <h3 class="grammar-category-title">${cat.title}</h3>
                         <div class="grammar-category-lessons">
                             ${lesHtml}
@@ -118,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             overviewContainer.innerHTML = catsHtml;
+            if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
 
         } catch (e) {
             console.error(e);

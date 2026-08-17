@@ -7,12 +7,20 @@
     <title>Admin - Thor's Notes</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        if (localStorage.getItem('admin-theme-dark') === 'true') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
     <link rel="stylesheet" href="css/admin.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
     <script type="module" src="js/admin.js" defer></script>
 </head>
 
 <body>
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
     <!-- Login Screen -->
     <div id="login-section" class="auth-container">
         <div class="auth-box">
@@ -47,8 +55,9 @@
                 </button>
             </div>
             <ul class="sidebar-nav">
+                <li class="nav-item active" data-tab="tab-dashboard" title="Dashboard"><i class="fas fa-chart-line"></i><span class="nav-text">Dashboard</span></li>
                 <div class="sidebar-section-title">Vocabulary</div>
-                <li class="nav-item active" data-tab="tab-books" title="Books"><i class="fas fa-book"></i><span class="nav-text">Books</span></li>
+                <li class="nav-item" data-tab="tab-books" title="Books"><i class="fas fa-book"></i><span class="nav-text">Books</span></li>
                 <li class="nav-item" data-tab="tab-units" title="Units"><i class="fas fa-layer-group"></i><span class="nav-text">Units</span></li>
                 <li class="nav-item" data-tab="tab-vocab" title="Vocabulary"><i class="fas fa-spell-check"></i><span class="nav-text">Vocabulary</span></li>
                 <li class="nav-item" data-tab="tab-phrasal" title="Phrasal Verbs"><i class="fas fa-comment-dots"></i><span class="nav-text">Phrasal Verbs</span></li>
@@ -58,12 +67,15 @@
                 <li class="nav-item" data-tab="tab-lexical" title="Lexical Expansion"><i class="fas fa-expand-arrows-alt"></i><span class="nav-text">Lexical Expansion</span></li>
 
                 
+                <div class="sidebar-section-title">Grammar</div>
+                <li class="nav-item" data-tab="tab-grammar" title="Grammar"><i class="fas fa-pen-nib"></i><span class="nav-text">Grammar</span></li>
                 <div class="sidebar-section-title">Pronunciation</div>
                 <li class="nav-item" data-tab="tab-pronunciation" title="Pronunciation"><i class="fas fa-volume-up"></i><span class="nav-text">Pronunciation</span></li>
-<div class="sidebar-section-title">Grammar</div>
-                <li class="nav-item" data-tab="tab-grammar" title="Grammar"><i class="fas fa-pen-nib"></i><span class="nav-text">Grammar</span></li>
             </ul>
             <div class="sidebar-footer">
+                  <button id="admin-dark-mode-btn" class="btn-secondary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                      <i class="fas fa-moon" id="admin-dm-icon"></i><span class="nav-text">Dark Mode</span>
+                  </button>
                 <button id="logout-btn" title="Logout" class="btn-secondary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;"><i class="fas fa-sign-out-alt"></i><span class="nav-text">Logout</span></button>
             </div>
         </aside>
@@ -71,8 +83,34 @@
         <!-- Main Content -->
         <main class="dashboard-content">
 
+            
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-pane active">
+                <div class="dashboard-header">
+                    <h2>Overview Dashboard</h2>
+                </div>
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+                    <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem;">
+                        <div class="stat-icon" style="font-size: 2.5rem; color: #0d9caa;"><i class="fas fa-book"></i></div>
+                        <div><h3 style="font-size: 0.9rem; color: #666; margin: 0;">Total Books</h3><p id="stat-books" style="font-size: 1.8rem; font-weight: bold; margin: 0.2rem 0 0; color: #333;">...</p></div>
+                    </div>
+                    <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem;">
+                        <div class="stat-icon" style="font-size: 2.5rem; color: #0d9caa;"><i class="fas fa-layer-group"></i></div>
+                        <div><h3 style="font-size: 0.9rem; color: #666; margin: 0;">Total Units</h3><p id="stat-units" style="font-size: 1.8rem; font-weight: bold; margin: 0.2rem 0 0; color: #333;">...</p></div>
+                    </div>
+                    <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem;">
+                        <div class="stat-icon" style="font-size: 2.5rem; color: #0d9caa;"><i class="fas fa-font"></i></div>
+                        <div><h3 style="font-size: 0.9rem; color: #666; margin: 0;">Total Vocabulary</h3><p id="stat-vocab" style="font-size: 1.8rem; font-weight: bold; margin: 0.2rem 0 0; color: #333;">...</p></div>
+                    </div>
+                    <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem;">
+                        <div class="stat-icon" style="font-size: 2.5rem; color: #0d9caa;"><i class="fas fa-pen-nib"></i></div>
+                        <div><h3 style="font-size: 0.9rem; color: #666; margin: 0;">Grammar Lessons</h3><p id="stat-grammar" style="font-size: 1.8rem; font-weight: bold; margin: 0.2rem 0 0; color: #333;">...</p></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Books Tab -->
-            <div id="tab-books" class="tab-pane active">
+            <div id="tab-books" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
                     <h2>Books</h2>
                     <button id="add-book-btn" class="btn-primary">+ Add Book</button>
