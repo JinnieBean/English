@@ -66,6 +66,12 @@
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
 }
 
+/* Override inline colors from TinyMCE in dark mode */
+[data-theme="dark"] .lesson-content * {
+    color: var(--text-primary) !important;
+    background-color: transparent !important;
+}
+
 /* =========================================
    GLOBAL RESET
    ========================================= */
@@ -429,6 +435,13 @@ body {
 
 .sidebar.collapsed .sidebar-brand-icon {
     display: flex;
+}
+
+.sidebar-brand-logo {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 6px;
 }
 
 /* FIX #4: Sidebar brand text color — use teal instead of blue */
@@ -982,30 +995,141 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
 @media (max-width: 768px) {
     .main-header {
         flex-direction: column;
-        padding: 3rem 1rem 1rem;
+        padding: 2rem 1rem 1rem;
     }
     .header-line { display: none; }
-    .header-content h1 { font-size: var(--text-5xl); }
+    .header-content h1 { font-size: var(--text-4xl); }
     .notes-grid {
         justify-content: center;
         gap: 2rem;
     }
-    .mobile-menu-btn {
+    .note-card { width: 100%; max-width: 280px; }
+    .note-image { width: 100%; max-width: 260px; height: auto; aspect-ratio: 1; }
+
+    /* Bottom navigation bar (replaces sidebar) */
+    .sidebar,
+    .sidebar.collapsed,
+    html.sidebar-will-collapse .sidebar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        flex: none;
+        height: 65px;
+        flex-direction: row;
+        border-right: none;
+        border-top: 1px solid var(--sidebar-border);
+        z-index: 1000;
+        padding: 0;
+        padding-bottom: env(safe-area-inset-bottom);
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+        overflow: visible;
+        transition: none;
+    }
+    .app-layout { flex-direction: column; }
+    .main-content { padding-bottom: calc(75px + env(safe-area-inset-bottom)); }
+    .sidebar-header { display: none; }
+    .sidebar-nav,
+    .sidebar.collapsed .sidebar-nav {
+        flex: 1;
         display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        gap: 0;
+        margin: 0;
+        padding: 0;
+    }
+    .nav-section-title { display: none; }
+    .nav-section,
+    html.sidebar-will-collapse .sidebar .nav-section {
+        display: flex;
+        width: 100%;
+        justify-content: space-around;
+        flex-direction: row;
+        margin: 0;
+    }
+    .nav-link,
+    .sidebar.collapsed .nav-link,
+    html.sidebar-will-collapse .sidebar .nav-link {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 0.3rem 0;
+        gap: 0.2rem;
+        margin: 0;
+        border-radius: 8px;
+        flex: 1;
+        min-width: 0;
+        border-left: none;
+        border-top: 3px solid transparent;
+        align-self: stretch;
+    }
+    .nav-link.active,
+    .sidebar.collapsed .nav-link.active {
+        border-left-color: transparent;
+        border-top-color: var(--nav-active-border);
+        border-radius: 0;
+        background-color: transparent;
+        transform: none;
+    }
+    .nav-link .icon { width: 22px; height: 22px; }
+    .nav-link .icon svg { width: 22px; height: 22px; }
+    .nav-link-text,
+    .sidebar.collapsed .nav-link-text,
+    html.sidebar-will-collapse .sidebar .nav-link-text {
+        font-size: 0.65rem;
+        display: block;
+        opacity: 1;
+        width: auto;
+        max-width: none;
+        white-space: nowrap;
+    }
+    .dm-label,
+    .sidebar.collapsed .dm-label,
+    html.sidebar-will-collapse .sidebar .dm-label {
+        font-size: 0.65rem;
+        display: block;
+        opacity: 1;
+        width: auto;
+        margin-top: 0.2rem;
+    }
+    .dark-mode-toggle,
+    .sidebar.collapsed .dark-mode-toggle,
+    html.sidebar-will-collapse .sidebar .dark-mode-toggle {
+        position: static;
+        left: auto;
+        bottom: auto;
+        transform: none;
+        margin: 0 0.5rem 0 0;
+        padding: 0.3rem;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 0.2rem;
+        width: 60px;
+        height: auto;
+        flex-shrink: 0;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
     }
-    .sidebar {
-        position: fixed;
-        left: -100%;
-        top: 0;
-        z-index: 1000;
-        height: 100vh;
-        transition: left 0.3s ease;
-        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-    }
-    .sidebar.mobile-open { left: 0; }
+    .mobile-menu-btn { display: none !important; }
     .index-stats { gap: 2rem; }
+}
+
+@media (max-width: 480px) {
+    .container { padding: 1.5rem 1rem; }
+    .breadcrumb { padding-left: 0.25rem; }
+    .nav-link-text, .dm-label { font-size: 0.6rem; }
+    .nav-link .icon, .nav-link .icon svg { width: 20px; height: 20px; }
+    .dark-mode-toggle,
+    .sidebar.collapsed .dark-mode-toggle { width: 52px; }
+    .vocab-list, .phrasal-list { padding-left: 0.5rem; }
+    .course-header { font-size: 1.8rem; }
 }
 
 .mobile-menu-btn {
@@ -1056,10 +1180,8 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
 
 .lesson-content h1, .lesson-content h2, .lesson-content h3,
 .lesson-content h4, .lesson-content h5, .lesson-content h6 {
-    font-family: var(--font-heading);
     margin-top: 1.5rem;
     margin-bottom: 1rem;
-    font-weight: 600;
 }
 
 .lesson-content p { margin-bottom: 1rem; }
@@ -1070,14 +1192,6 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
 }
 
 .lesson-content li { margin-bottom: 0.5rem; }
-
-.lesson-content a {
-    color: var(--accent-color);
-    text-decoration: underline;
-}
-
-.lesson-content b, .lesson-content strong { font-weight: 700; }
-.lesson-content i, .lesson-content em { font-style: italic; }
 
 @font-face {
     font-family: 'Zeequada';
@@ -1144,4 +1258,85 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     background: var(--accent-color);
     cursor: pointer;
     border: none;
+}
+
+/* =========================================
+   LESSON LAYOUT
+   ========================================= */
+.lesson-layout {
+    display: flex;
+    gap: 3rem;
+    position: relative;
+    align-items: flex-start;
+}
+.lesson-content-area {
+    flex: 1;
+    min-width: 0;
+}
+
+/* =========================================
+   SKELETON LOADING
+   ========================================= */
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+.skeleton-title {
+    width: 40%;
+    height: 32px;
+    margin-bottom: 1rem;
+}
+.skeleton-text {
+    width: 100%;
+    height: 20px;
+    margin-bottom: 0.5rem;
+}
+.skeleton-text.short {
+    width: 60%;
+}
+[data-theme="dark"] .skeleton {
+    background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+    background-size: 200% 100%;
+}
+
+@media (min-width: 769px) {
+    .pattern-left {
+        flex: 0 0 45% !important; min-width: 0;
+    }
+}
+
+
+
+
+
+/* Aggressive alignment fix for Vocab, Phrasal, Pattern, Wordform */
+@media (min-width: 769px) {
+    .vocab-left, .phrasal-left, .pattern-left, .wf-form-left {
+        flex: 0 0 45% !important;
+        width: 45% !important;
+        max-width: 45% !important;
+        min-width: 45% !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .vocab-word-group {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+    .vocab-word, .phrasal-word, .wf-form-title {
+        white-space: nowrap !important;
+    }
+    .vocab-pos {
+        white-space: nowrap !important;
+        display: inline-block !important;
+    }
 }

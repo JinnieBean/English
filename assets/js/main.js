@@ -24,12 +24,29 @@ window.formatWordWithPos = (word) => {
     if (!word) return '';
     // Look for (v), (n), (adj) etc in the word itself and style it correctly.
     // The regex matches optional parens around the POS
-    return word.replace(/\s*\(?(v|n|adj|adv|prep|conj|pron|det)\)?\s*$/gi, (match, p1) => {
+    return word.replace(/\s*\(?\b(v|n|adj|adv|prep|conj|pron|det)\b\)?\s*$/gi, (match, p1) => {
         return ` <span class="vocab-pos" style="font-weight: 400; font-size: 1.2rem; color: var(--text-secondary);">(${p1.toLowerCase()})</span>`;
     });
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
+    
+    // Random Slogans for Homepage
+    const quoteContainer = document.querySelector('.index-quote blockquote');
+    if (quoteContainer) {
+        const slogans = [
+            { text: "The limits of my language mean the limits of my world.", author: "Ludwig Wittgenstein" },
+            { text: "To have another language is to possess a second soul.", author: "Charlemagne" },
+            { text: "Language is the road map of a culture. It tells you where its people come from and where they are going.", author: "Rita Mae Brown" },
+            { text: "Those who know nothing of foreign languages know nothing of their own.", author: "Johann Wolfgang von Goethe" },
+            { text: "A different language is a different vision of life.", author: "Federico Fellini" },
+            { text: "Learning another language is not only learning different words for the same things, but learning another way to think about things.", author: "Flora Lewis" },
+            { text: "One language sets you in a corridor for life. Two languages open every door along the way.", author: "Frank Smith" },
+            { text: "With languages, you are at home anywhere.", author: "Edmund de Waal" }
+        ];
+        const randomSlogan = slogans[Math.floor(Math.random() * slogans.length)];
+        quoteContainer.innerHTML = `"${randomSlogan.text}"\n                          <cite>— ${randomSlogan.author}</cite>`;
+    }
     
     // Render dynamic Unit Detail Header (Book Title, Unit Title, Tab Menu)
     const headerContainer = document.getElementById('unit-detail-header-container');
@@ -144,10 +161,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 booksListContainer.innerHTML = '<p style="padding: 1rem 0;">No books have been created yet.</p>';
             } else {
                 let booksHtml = '';
-                books.forEach(book => {
-                    booksHtml += `
-                        <div class="book-container">
-                            <div class="book-cover">
+                  books.forEach(book => {
+                      booksHtml += `
+                          <div class="book-container reveal">
+                              <div class="book-cover">
                                 <img src="${book.image || 'assets/images/book_cover.png'}" alt="${book.title}" loading="lazy" decoding="async">
                             </div>
                             <div class="book-details">
@@ -158,9 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                     `;
-                });
-                booksListContainer.innerHTML = booksHtml;
-            }
+                  });
+                  booksListContainer.innerHTML = booksHtml;
+                  if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
+              }
         } catch(e) {
             console.error(e);
             booksListContainer.innerHTML = '<p style="color: red; padding: 1rem 0;">Error loading data.</p>';
@@ -408,15 +426,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                             
             phrasals.sort((a, b) => a.word.localeCompare(b.word));
             
-            phrasalListContainer.innerHTML = '';
+                        // Inject search bar
+            const searchContainer = document.createElement('div');
+            searchContainer.className = 'vocab-search-container';
+            searchContainer.style.marginBottom = '1.5rem';
+            searchContainer.innerHTML = `<input type="text" id="phrasal-search-input" placeholder="Search phrasal verbs..." style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 30px; border: 1px solid var(--line-color); background: var(--card-bg); color: var(--text-primary); font-family: var(--font-body); outline: none; transition: border-color 0.2s; box-shadow: var(--shadow-sm);">`;
+            phrasalListContainer.parentNode.insertBefore(searchContainer, phrasalListContainer);
+
+            const renderPhrasalList = (filteredList) => {
+phrasalListContainer.innerHTML = '';
+            if(filteredList.length === 0) { phrasalListContainer.innerHTML = '<p>No phrasal verbs found.</p>'; return; }
             
             if(phrasals.length === 0) {
                 phrasalListContainer.innerHTML = '<p>This unit has no phrasal verbs yet.</p>';
             }
 
-            phrasals.forEach(p => {
+            filteredList.forEach(p => {
                 phrasalListContainer.innerHTML += `
-                    <div class="phrasal-item">
+                    <div class="phrasal-item reveal">
                         <div class="phrasal-left">
                             <div class="phrasal-word">${p.word}</div>
                             <div class="phrasal-pron">${p.pron}</div>
@@ -428,6 +455,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
             });
+
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
+            };
+
+            renderPhrasalList(phrasals);
+
+            const searchInput = document.getElementById('phrasal-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase().trim();
+                    if (!term) return renderPhrasalList(phrasals);
+                    const filtered = phrasals.filter(p => 
+                        (p.word || '').toLowerCase().includes(term) || 
+                        (p.def || '').toLowerCase().includes(term)
+                    );
+                    renderPhrasalList(filtered);
+                });
+            }
         } catch(e) {
             console.error(e);
             phrasalListContainer.innerHTML = '<p style="color: red;">Error loading data.</p>';
@@ -455,15 +500,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                             
             preps.sort((a, b) => a.word.localeCompare(b.word));
             
-            prepListContainer.innerHTML = '';
+                        // Inject search bar
+            const searchContainer = document.createElement('div');
+            searchContainer.className = 'vocab-search-container';
+            searchContainer.style.marginBottom = '1.5rem';
+            searchContainer.innerHTML = `<input type="text" id="prep-search-input" placeholder="Search prepositional phrases..." style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 30px; border: 1px solid var(--line-color); background: var(--card-bg); color: var(--text-primary); font-family: var(--font-body); outline: none; transition: border-color 0.2s; box-shadow: var(--shadow-sm);">`;
+            prepListContainer.parentNode.insertBefore(searchContainer, prepListContainer);
+
+            const renderPrepList = (filteredList) => {
+prepListContainer.innerHTML = '';
+            if(filteredList.length === 0) { prepListContainer.innerHTML = '<p>No prepositional phrases found.</p>'; return; }
             
             if(preps.length === 0) {
                 prepListContainer.innerHTML = '<p>This unit has no prepositional phrases yet.</p>';
             }
 
-            preps.forEach(p => {
+            filteredList.forEach(p => {
                 prepListContainer.innerHTML += `
-                    <div class="phrasal-item">
+                    <div class="phrasal-item reveal">
                         <div class="phrasal-left">
                             <div class="phrasal-word">${p.word}</div>
                         </div>
@@ -474,6 +528,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
             });
+
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
+            };
+
+            renderPrepList(preps);
+
+            const searchInput = document.getElementById('prep-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase().trim();
+                    if (!term) return renderPrepList(preps);
+                    const filtered = preps.filter(p => 
+                        (p.word || '').toLowerCase().includes(term) || 
+                        (p.def || '').toLowerCase().includes(term)
+                    );
+                    renderPrepList(filtered);
+                });
+            }
         } catch(e) {
             console.error(e);
             prepListContainer.innerHTML = '<p style="color: red;">Error loading data.</p>';
@@ -501,16 +573,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                             
             wordforms.sort((a, b) => (a.rootWord || '').localeCompare(b.rootWord || ''));
             
-            wfListContainer.innerHTML = '';
+                        // Inject search bar
+            const searchContainer = document.createElement('div');
+            searchContainer.className = 'vocab-search-container';
+            searchContainer.style.marginBottom = '1.5rem';
+            searchContainer.innerHTML = `<input type="text" id="wf-search-input" placeholder="Search root words..." style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 30px; border: 1px solid var(--line-color); background: var(--card-bg); color: var(--text-primary); font-family: var(--font-body); outline: none; transition: border-color 0.2s; box-shadow: var(--shadow-sm);">`;
+            wfListContainer.parentNode.insertBefore(searchContainer, wfListContainer);
+
+            const renderWfList = (filteredList) => {
+wfListContainer.innerHTML = '';
+            if(filteredList.length === 0) { wfListContainer.innerHTML = '<p>No word formations found.</p>'; return; }
             
             if(wordforms.length === 0) {
                 wfListContainer.innerHTML = '<p>This unit has no word formations yet.</p>';
             }
 
-            wordforms.forEach(w => {
+            filteredList.forEach(w => {
                 const formatPos = (text) => {
                     if(!text) return '';
-                    return text.replace(/\s*\(?(v|n|adj|adv|prep|conj|pron|det)\)?\b/gi, (match, p1) => {
+                    return text.replace(/\s*\(?\b(v|n|adj|adv|prep|conj|pron|det)\b\)?/gi, (match, p1) => {
                         return ` <span class="vocab-pos" style="font-weight: 400; font-size: 1.2rem; color: var(--text-secondary);">(${p1.toLowerCase()})</span>`;
                     });
                 };
@@ -564,7 +645,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
                 wfListContainer.innerHTML += `
-                    <div class="wf-item">
+                    <div class="wf-item reveal">
                         <div class="wf-main">
                             <div class="wf-root">${w.rootWord}</div>
                             <div class="wf-overview-list">
@@ -578,6 +659,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
             });
+
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
+            };
+
+            renderWfList(wordforms);
+
+            const searchInput = document.getElementById('wf-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase().trim();
+                    if (!term) return renderWfList(wordforms);
+                    const filtered = wordforms.filter(w => 
+                        (w.rootWord || '').toLowerCase().includes(term) || 
+                        (w.forms || []).some(f => (f.title || '').toLowerCase().includes(term))
+                    );
+                    renderWfList(filtered);
+                });
+            }
         } catch(e) {
             console.error(e);
             wfListContainer.innerHTML = '<p style="color: red;">Error loading data.</p>';
@@ -605,7 +704,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             
             patterns.sort((a, b) => a.word.localeCompare(b.word));
             
-            patternListContainer.innerHTML = '';
+                        // Inject search bar
+            const searchContainer = document.createElement('div');
+            searchContainer.className = 'vocab-search-container';
+            searchContainer.style.marginBottom = '1.5rem';
+            searchContainer.innerHTML = `<input type="text" id="pattern-search-input" placeholder="Search word patterns..." style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 30px; border: 1px solid var(--line-color); background: var(--card-bg); color: var(--text-primary); font-family: var(--font-body); outline: none; transition: border-color 0.2s; box-shadow: var(--shadow-sm);">`;
+            patternListContainer.parentNode.insertBefore(searchContainer, patternListContainer);
+
+            const renderPatternList = (filteredList) => {
+patternListContainer.innerHTML = '';
+            if(filteredList.length === 0) { patternListContainer.innerHTML = '<p>No word patterns found.</p>'; return; }
             
             if(patterns.length === 0) {
                 patternListContainer.innerHTML = '<p>This unit has no word patterns yet.</p>';
@@ -613,20 +721,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const formatPos = (text) => {
                 if(!text) return '';
-                return text.replace(/\s*\(?(v|n|adj|adv|prep|conj|pron|det)\)?\b/gi, (match, p1) => {
+                return text.replace(/\s*\(?\b(v|n|adj|adv|prep|conj|pron|det)\b\)?/gi, (match, p1) => {
                     return ` <span class="vocab-pos" style="font-weight: 400; font-size: 1.2rem; color: var(--text-secondary);">(${p1.toLowerCase()})</span>`;
                 });
             };
 
-            patterns.forEach(p => {
+            filteredList.forEach(p => {
                 patternListContainer.innerHTML += `
-                    <div class="phrasal-item">
-                        <div class="phrasal-left" style="flex-direction: column; align-items: flex-start;">
-                            <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: wrap;">
+                    <div class="phrasal-item reveal">
+                        <div class="phrasal-left pattern-left" style="flex-direction: column; align-items: flex-start;">
+                            <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: nowrap; white-space: nowrap;">
                                 <span class="phrasal-word">${window.formatWordWithPos(p.word)}</span>
                                 <span class="vocab-pos">${window.formatStandalonePos(p.pos)}</span>
                             </div>
-                            <div style="font-size: 1.3rem; color: var(--text-primary); font-weight: 500;">${p.pattern ? p.pattern.replace(/\n/g, '<br>') : ''}</div>
+                            <div style="font-size: 1.3rem; color: var(--text-primary); font-weight: normal; font-style: italic;">${p.pattern ? p.pattern.replace(/\n/g, '<br>') : ''}</div>
                         </div>
                         <div class="phrasal-right">
                             <p class="phrasal-def">${p.def}</p>
@@ -635,6 +743,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
             });
+
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
+            };
+
+            renderPatternList(patterns);
+
+            const searchInput = document.getElementById('pattern-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase().trim();
+                    if (!term) return renderPatternList(patterns);
+                    const filtered = patterns.filter(p => 
+                        (p.word || '').toLowerCase().includes(term) || 
+                        (p.pattern || '').toLowerCase().includes(term) ||
+                        (p.def || '').toLowerCase().includes(term)
+                    );
+                    renderPatternList(filtered);
+                });
+            }
         } catch(e) {
             console.error(e);
             patternListContainer.innerHTML = '<p style="color: red;">Error loading data.</p>';
@@ -672,23 +799,29 @@ window.toggleWf = function(id) {
                                 .map(doc => ({ id: doc.id, ...doc.data() }))
                                 .filter(l => l.unitId === unitId);
                 
-                lexicalListContainer.innerHTML = '';
+                            // Inject search bar
+            const searchContainer = document.createElement('div');
+            searchContainer.className = 'vocab-search-container';
+            searchContainer.style.marginBottom = '1.5rem';
+            searchContainer.innerHTML = `<input type="text" id="lexical-search-input" placeholder="Search lexical expansions..." style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 30px; border: 1px solid var(--line-color); background: var(--card-bg); color: var(--text-primary); font-family: var(--font-body); outline: none; transition: border-color 0.2s; box-shadow: var(--shadow-sm);">`;
+            lexicalListContainer.parentNode.insertBefore(searchContainer, lexicalListContainer);
+
+            const renderLexicalList = (filteredList) => {
+lexicalListContainer.innerHTML = '';
+            if(filteredList.length === 0) { lexicalListContainer.innerHTML = '<p>No lexical expansion found.</p>'; return; }
                 
                 if(lexicals.length === 0) {
                     lexicalListContainer.innerHTML = '<p>This unit has no lexical expansion yet.</p>';
                 }
 
-                lexicals.forEach(lex => {
-                    if (lex.words && lex.words.length > 0) {
-                        lex.words.sort((a, b) => a.word.localeCompare(b.word));
-                    }
-                    let textLeftHtml = lex.textLeft ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1rem; text-align: ${lex.alignLeft || 'left'};">${lex.textLeft}</div>` : '';
-                    let textRightHtml = lex.textRight ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1rem; text-align: ${lex.alignRight || 'left'};">${lex.textRight}</div>` : '';
+                filteredList.forEach(lex => {
+                    let textLeftHtml = lex.textLeft ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1.6rem; text-align: ${lex.alignLeft || 'left'};">${lex.textLeft}</div>` : '';
+                    let textRightHtml = lex.textRight ? `<div style="flex: 1; white-space: pre-wrap; font-family: inherit; font-size: 1.6rem; text-align: ${lex.alignRight || 'left'};">${lex.textRight}</div>` : '';
                     
                     let topSectionHtml = '';
                     if(textLeftHtml || textRightHtml) {
                         topSectionHtml = `
-                            <div style="display: flex; gap: 2rem; margin-bottom: 2rem; color: #4a7578;">
+                            <div style="display: flex; gap: 2rem; margin-bottom: 2rem; width: 100%; color: #4a7578; font-style: italic; font-weight: normal;">
                                 ${textLeftHtml}
                                 ${textRightHtml}
                             </div>
@@ -699,14 +832,14 @@ window.toggleWf = function(id) {
                     if(lex.words && lex.words.length > 0) {
                         lex.words.forEach(w => {
                             wordsHtml += `
-                                <div class="vocab-item">
+                                <div class="vocab-item reveal">
                                     <div class="vocab-left">
                                         <div class="vocab-word-group">
                                             <span class="vocab-word">${window.formatWordWithPos(w.word)}</span>
                                             <span class="vocab-pos">${window.formatStandalonePos(w.pos)}</span>
                                         </div>
                                         <div style="margin-top: 0.5rem;">
-                                            <span class="vocab-pronunciation" style="white-space: pre-wrap; line-height: 1.6;">${w.pron}</span>
+                                            <span class="vocab-pronunciation" style="white-space: pre-wrap; line-height: 1.6; font-style: italic; font-weight: normal;">${w.pron}</span>
                                         </div>
                                     </div>
                                     <div class="vocab-right">
@@ -719,13 +852,43 @@ window.toggleWf = function(id) {
                     }
                     
                     lexicalListContainer.innerHTML += `
-                        <div style="margin-bottom: 4rem;">
+                        <div class="wf-item reveal" style="margin-bottom: 3rem; width: 100%;">
                             ${topSectionHtml}
-                            ${wordsHtml}
+                            <div class="wf-toggle" id="wf-toggle-${lex.id}" onclick="window.toggleWf('${lex.id}')">▶</div>
+                            <div class="wf-forms collapsed" id="wf-forms-${lex.id}">
+                                <div style="display: flex; flex-direction: column; gap: 3rem; width: 100%;">
+                                    ${wordsHtml}
+                                </div>
+                            </div>
                         </div>
                     `;
                 });
-            } catch(e) {
+    
+                if (window.initRevealAnimations) requestAnimationFrame(() => window.initRevealAnimations());
+            };
+
+            renderLexicalList(lexicals);
+
+            const searchInput = document.getElementById('lexical-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase().trim();
+                    if (!term) return renderLexicalList(lexicals);
+                    
+                    const filtered = lexicals.filter(lex => {
+                        const inLeft = (lex.textLeft || '').toLowerCase().includes(term);
+                        const inRight = (lex.textRight || '').toLowerCase().includes(term);
+                        const inWords = (lex.words || []).some(w => 
+                            (w.word || '').toLowerCase().includes(term) || 
+                            (w.def || '').toLowerCase().includes(term)
+                        );
+                        return inLeft || inRight || inWords;
+                    });
+                    
+                    renderLexicalList(filtered);
+                });
+            }
+        } catch(e) {
                 console.error(e);
                 lexicalListContainer.innerHTML = '<p style="color: red;">Error loading Lexical Expansion.</p>';
             }
