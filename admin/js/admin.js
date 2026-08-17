@@ -524,6 +524,13 @@ window.deleteUnit = async (id) => {
 const vocabModal = document.getElementById('vocab-modal');
 const vocabForm = document.getElementById('vocab-form');
 
+let lastVocabUnitId = localStorage.getItem('admin-last-vocab-unit-id') || '';
+
+document.getElementById('vocab-unit-id').addEventListener('change', (e) => {
+    lastVocabUnitId = e.target.value;
+    localStorage.setItem('admin-last-vocab-unit-id', lastVocabUnitId);
+});
+
 function populateUnitSelects() {
     const filterSelect = document.getElementById('filter-unit-select');
     const formSelect = document.getElementById('vocab-unit-id');
@@ -578,6 +585,9 @@ function populateUnitSelects() {
     }
 
     formSelect.innerHTML = options;
+    if (lastVocabUnitId && Array.from(formSelect.options).some(o => o.value === lastVocabUnitId)) {
+        formSelect.value = lastVocabUnitId;
+    }
     formSelectPhrasal.innerHTML = options;
     formSelectPrep.innerHTML = options;
     formSelectWordform.innerHTML = options;
@@ -586,10 +596,12 @@ function populateUnitSelects() {
 }
 
 document.getElementById('add-vocab-btn').addEventListener('click', () => {
-    const lastUnit = document.getElementById('vocab-unit-id').value;
     document.getElementById('vocab-id').value = '';
     vocabForm.reset();
-    if(lastUnit) document.getElementById('vocab-unit-id').value = lastUnit;
+    const sel = document.getElementById('vocab-unit-id');
+    if (lastVocabUnitId && Array.from(sel.options).some(o => o.value === lastVocabUnitId)) {
+        sel.value = lastVocabUnitId;
+    }
     document.getElementById('vocab-modal-title').innerText = 'Add New Vocabulary';
     vocabModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
@@ -606,6 +618,9 @@ vocabForm.addEventListener('submit', async (e) => {
         def: document.getElementById('vocab-def').value,
         example: document.getElementById('vocab-example').value
     };
+
+    lastVocabUnitId = newVocab.unitId;
+    localStorage.setItem('admin-last-vocab-unit-id', lastVocabUnitId);
     
     try {
         if (id) {

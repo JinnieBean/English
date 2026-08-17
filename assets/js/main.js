@@ -614,10 +614,15 @@ wfListContainer.innerHTML = '';
                         let audiosHtml = '';
                         if(f.audios && f.audios.length > 0) {
                             f.audios.forEach(a => {
+                                const audioHtml = window.buildCustomAudioPlayer
+                                    ? window.buildCustomAudioPlayer(a.url)
+                                    : (a.url
+                                        ? `<audio controls preload="none" src="${a.url}"></audio>`
+                                        : `<span style="font-size: 0.8rem; color: #888; font-style: italic;">No audio</span>`);
                                 audiosHtml += `
-                                    <div class="wf-audio-wrapper">
-                                        <span class="wf-audio-pron">${a.pron}</span>
-                                        <audio controls preload="none" src="${a.url}"></audio>
+                                    <div class="vocab-audio-group">
+                                        <span class="vocab-pronunciation">${a.pron}</span>
+                                        ${audioHtml}
                                     </div>
                                 `;
                             });
