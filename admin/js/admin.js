@@ -524,12 +524,39 @@ window.deleteUnit = async (id) => {
 const vocabModal = document.getElementById('vocab-modal');
 const vocabForm = document.getElementById('vocab-form');
 
-let lastVocabUnitId = localStorage.getItem('admin-last-vocab-unit-id') || '';
+const unitSelectConfigs = [
+    { key: 'vocab', selectId: 'vocab-unit-id' },
+    { key: 'phrasal', selectId: 'phrasal-unit-id' },
+    { key: 'prep', selectId: 'prep-unit-id' },
+    { key: 'wordform', selectId: 'wordform-unit-id' },
+    { key: 'pattern', selectId: 'pattern-unit' },
+    { key: 'lexical', selectId: 'lexical-unit-id' }
+];
 
-document.getElementById('vocab-unit-id').addEventListener('change', (e) => {
-    lastVocabUnitId = e.target.value;
-    localStorage.setItem('admin-last-vocab-unit-id', lastVocabUnitId);
+const lastUnitSelections = {};
+
+unitSelectConfigs.forEach(({ key, selectId }) => {
+    lastUnitSelections[key] = localStorage.getItem(`admin-last-${key}-unit-id`) || '';
+    const sel = document.getElementById(selectId);
+    if (sel) {
+        sel.addEventListener('change', () => {
+            rememberUnitSelection(key, sel.value);
+        });
+    }
 });
+
+function rememberUnitSelection(key, value) {
+    if (!value) return;
+    lastUnitSelections[key] = value;
+    localStorage.setItem(`admin-last-${key}-unit-id`, value);
+}
+
+function applySavedUnitSelect(selectEl, key) {
+    const savedId = lastUnitSelections[key];
+    if (selectEl && savedId && Array.from(selectEl.options).some(o => o.value === savedId)) {
+        selectEl.value = savedId;
+    }
+}
 
 function populateUnitSelects() {
     const filterSelect = document.getElementById('filter-unit-select');
@@ -585,23 +612,23 @@ function populateUnitSelects() {
     }
 
     formSelect.innerHTML = options;
-    if (lastVocabUnitId && Array.from(formSelect.options).some(o => o.value === lastVocabUnitId)) {
-        formSelect.value = lastVocabUnitId;
-    }
+    applySavedUnitSelect(formSelect, 'vocab');
     formSelectPhrasal.innerHTML = options;
+    applySavedUnitSelect(formSelectPhrasal, 'phrasal');
     formSelectPrep.innerHTML = options;
+    applySavedUnitSelect(formSelectPrep, 'prep');
     formSelectWordform.innerHTML = options;
+    applySavedUnitSelect(formSelectWordform, 'wordform');
     if (formSelectPattern) formSelectPattern.innerHTML = options;
+    applySavedUnitSelect(formSelectPattern, 'pattern');
     if (formSelectLexical) formSelectLexical.innerHTML = options;
+    applySavedUnitSelect(formSelectLexical, 'lexical');
 }
 
 document.getElementById('add-vocab-btn').addEventListener('click', () => {
     document.getElementById('vocab-id').value = '';
     vocabForm.reset();
-    const sel = document.getElementById('vocab-unit-id');
-    if (lastVocabUnitId && Array.from(sel.options).some(o => o.value === lastVocabUnitId)) {
-        sel.value = lastVocabUnitId;
-    }
+    applySavedUnitSelect(document.getElementById('vocab-unit-id'), 'vocab');
     document.getElementById('vocab-modal-title').innerText = 'Add New Vocabulary';
     vocabModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
@@ -619,8 +646,7 @@ vocabForm.addEventListener('submit', async (e) => {
         example: document.getElementById('vocab-example').value
     };
 
-    lastVocabUnitId = newVocab.unitId;
-    localStorage.setItem('admin-last-vocab-unit-id', lastVocabUnitId);
+    rememberUnitSelection('vocab', newVocab.unitId);
     
     try {
         if (id) {
@@ -729,10 +755,9 @@ const phrasalModal = document.getElementById('phrasal-modal');
 const phrasalForm = document.getElementById('phrasal-form');
 
 document.getElementById('add-phrasal-btn').addEventListener('click', () => {
-    const lastUnit = document.getElementById('phrasal-unit-id').value;
     document.getElementById('phrasal-id').value = '';
     phrasalForm.reset();
-    if(lastUnit) document.getElementById('phrasal-unit-id').value = lastUnit;
+    applySavedUnitSelect(document.getElementById('phrasal-unit-id'), 'phrasal');
     document.getElementById('phrasal-modal-title').innerText = 'Add Phrasal Verb';
     phrasalModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
@@ -747,6 +772,8 @@ phrasalForm.addEventListener('submit', async (e) => {
         def: document.getElementById('phrasal-def').value,
         example: document.getElementById('phrasal-example').value
     };
+
+    rememberUnitSelection('phrasal', newPhrasal.unitId);
     
     try {
         if (id) {
@@ -851,10 +878,9 @@ const prepModal = document.getElementById('prep-modal');
 const prepForm = document.getElementById('prep-form');
 
 document.getElementById('add-prep-btn').addEventListener('click', () => {
-    const lastUnit = document.getElementById('prep-unit-id').value;
     document.getElementById('prep-id').value = '';
     prepForm.reset();
-    if(lastUnit) document.getElementById('prep-unit-id').value = lastUnit;
+    applySavedUnitSelect(document.getElementById('prep-unit-id'), 'prep');
     document.getElementById('prep-modal-title').innerText = 'Add Phrase';
     prepModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
@@ -868,6 +894,8 @@ prepForm.addEventListener('submit', async (e) => {
         def: document.getElementById('prep-def').value,
         example: document.getElementById('prep-example').value
     };
+
+    rememberUnitSelection('prep', newPrep.unitId);
     
     try {
         if (id) {
@@ -1069,10 +1097,9 @@ document.getElementById('add-wordform-btn').addEventListener('click', () => {
 });
 
 document.getElementById('add-new-wordform-btn').addEventListener('click', () => {
-    const lastUnit = document.getElementById('wordform-unit-id').value;
     document.getElementById('wordform-id').value = '';
     wordformForm.reset();
-    if(lastUnit) document.getElementById('wordform-unit-id').value = lastUnit;
+    applySavedUnitSelect(document.getElementById('wordform-unit-id'), 'wordform');
     
     wordformOverviewContainer.innerHTML = '';
     addOverviewRow(); // add at least 1 row default
@@ -1130,6 +1157,8 @@ wordformForm.addEventListener('submit', async (e) => {
         overviews: overviews,
         forms: forms
     };
+
+    rememberUnitSelection('wordform', newWf.unitId);
     
     try {
         if (id) {
@@ -1246,10 +1275,9 @@ const patternModal = document.getElementById('pattern-modal');
 const patternForm = document.getElementById('pattern-form');
 
 document.getElementById('add-pattern-btn').addEventListener('click', () => {
-    const lastUnit = document.getElementById('pattern-unit').value;
     document.getElementById('pattern-id').value = '';
     patternForm.reset();
-    if(lastUnit) document.getElementById('pattern-unit').value = lastUnit;
+    applySavedUnitSelect(document.getElementById('pattern-unit'), 'pattern');
     document.getElementById('pattern-modal-title').innerText = 'Add New Word Pattern';
     patternModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
 });
@@ -1265,6 +1293,8 @@ patternForm.addEventListener('submit', async (e) => {
     const example = document.getElementById('pattern-example').value;
     
     const payload = { unitId, word, pos, pattern, def, example };
+
+    rememberUnitSelection('pattern', unitId);
     
     try {
         if (id) {
@@ -1393,10 +1423,9 @@ if (document.getElementById('add-lexical-word-btn')) {
 
 if (document.getElementById('add-lexical-btn')) {
     document.getElementById('add-lexical-btn').addEventListener('click', () => {
-        const lastUnit = document.getElementById('lexical-unit-id').value;
         document.getElementById('lexical-id').value = '';
         lexicalForm.reset();
-        if(lastUnit) document.getElementById('lexical-unit-id').value = lastUnit;
+        applySavedUnitSelect(document.getElementById('lexical-unit-id'), 'lexical');
         lexicalWordsContainer.innerHTML = '';
         addLexicalWordRow();
         document.getElementById('lexical-modal-title').innerText = 'Add Lexical Expansion';
@@ -1428,6 +1457,8 @@ if (lexicalForm) {
         });
 
         const payload = { unitId, textLeft, alignLeft, textRight, alignRight, words };
+
+        rememberUnitSelection('lexical', unitId);
 
         try {
             if (id) {
