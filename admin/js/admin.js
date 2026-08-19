@@ -181,6 +181,18 @@ closeBtns.forEach(btn => {
 // window click to close modal disabled
 // window.addEventListener('click', (e) => { ... });
 
+function openModal(modal) {
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    window.isModalDirty = false;
+    const content = modal.querySelector('.modal-content');
+    if (content) content.scrollTop = 0;
+    setTimeout(() => {
+        const target = modal.querySelector('form input[type="text"], form textarea') || modal.querySelector('form select, form input:not([type="hidden"]):not([type="checkbox"])');
+        if (target) target.focus();
+    }, 100);
+}
+
 window.showToast = function(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -302,7 +314,7 @@ document.getElementById('add-book-btn').addEventListener('click', () => {
     bookForm.reset();
     document.getElementById('book-order').value = booksData.length > 0 ? Math.max(...booksData.map(b => b.order || 0)) + 1 : 1;
     document.getElementById('book-modal-title').innerText = 'Add New Book';
-    bookModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(bookModal);
 });
 
 bookForm.addEventListener('submit', async (e) => {
@@ -362,7 +374,7 @@ window.editBook = (id) => {
         document.getElementById('book-order').value = b.order || 1;
         
         document.getElementById('book-modal-title').innerText = 'Edit Book';
-        bookModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(bookModal);
     }
 };
 
@@ -413,7 +425,7 @@ document.getElementById('add-unit-btn').addEventListener('click', () => {
     if(lastSelectedBookId) document.getElementById('unit-book').value = lastSelectedBookId;
     document.getElementById('unit-order').value = unitsData.length > 0 ? Math.max(...unitsData.map(u => u.order || 0)) + 1 : 1;
     document.getElementById('unit-modal-title').innerText = 'Add New Unit';
-    unitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(unitModal);
 });
 
 unitForm.addEventListener('submit', async (e) => {
@@ -504,7 +516,7 @@ window.editUnit = (id) => {
         }
 
         document.getElementById('unit-modal-title').innerText = 'Edit Unit';
-        unitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(unitModal);
     }
 };
 
@@ -630,7 +642,7 @@ document.getElementById('add-vocab-btn').addEventListener('click', () => {
     vocabForm.reset();
     applySavedUnitSelect(document.getElementById('vocab-unit-id'), 'vocab');
     document.getElementById('vocab-modal-title').innerText = 'Add New Vocabulary';
-    vocabModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(vocabModal);
 });
 
 vocabForm.addEventListener('submit', async (e) => {
@@ -734,7 +746,7 @@ window.editVocab = (id) => {
         document.getElementById('vocab-def').value = v.def;
         document.getElementById('vocab-example').value = v.example;
         document.getElementById('vocab-modal-title').innerText = 'Edit Vocabulary';
-        vocabModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(vocabModal);
     }
 };
 
@@ -759,7 +771,7 @@ document.getElementById('add-phrasal-btn').addEventListener('click', () => {
     phrasalForm.reset();
     applySavedUnitSelect(document.getElementById('phrasal-unit-id'), 'phrasal');
     document.getElementById('phrasal-modal-title').innerText = 'Add Phrasal Verb';
-    phrasalModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(phrasalModal);
 });
 
 phrasalForm.addEventListener('submit', async (e) => {
@@ -857,7 +869,7 @@ window.editPhrasal = (id) => {
         document.getElementById('phrasal-def').value = p.def;
         document.getElementById('phrasal-example').value = p.example;
         document.getElementById('phrasal-modal-title').innerText = 'Edit Phrasal Verb';
-        phrasalModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(phrasalModal);
     }
 };
 
@@ -882,7 +894,7 @@ document.getElementById('add-prep-btn').addEventListener('click', () => {
     prepForm.reset();
     applySavedUnitSelect(document.getElementById('prep-unit-id'), 'prep');
     document.getElementById('prep-modal-title').innerText = 'Add Phrase';
-    prepModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(prepModal);
 });
 
 prepForm.addEventListener('submit', async (e) => {
@@ -977,7 +989,7 @@ window.editPrep = (id) => {
         document.getElementById('prep-def').value = p.def;
         document.getElementById('prep-example').value = p.example;
         document.getElementById('prep-modal-title').innerText = 'Edit Phrase';
-        prepModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(prepModal);
     }
 };
 
@@ -999,6 +1011,13 @@ const wordformForm = document.getElementById('wordform-form');
 const wordformContainer = document.getElementById('wordform-forms-container');
 const wordformOverviewContainer = document.getElementById('wordform-overview-container');
 let formIdCounter = 0;
+
+function focusNewRow(row) {
+    if (!row) return;
+    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    const input = row.querySelector('input, textarea');
+    if (input) input.focus();
+}
 
 function addOverviewRow(pos = '', words = '') {
     const row = document.createElement('div');
@@ -1053,7 +1072,7 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
         <div class="input-group">
             <label>Audios</label>
             <div id="${rowId}-audios" style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom: 0.5rem;"></div>
-            <button type="button" class="btn-secondary btn-small" onclick="window.addAudioToRow('${rowId}')">+ Add Audio</button>
+            <button type="button" class="btn-secondary btn-small" onclick="window.addAudioToRow('${rowId}', '', '', true)">+ Add Audio</button>
         </div>
         <div class="input-group">
             <label>Definitions</label>
@@ -1073,7 +1092,7 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
     }
 }
 
-window.addAudioToRow = function(rowId, pron = '', url = '') {
+window.addAudioToRow = function(rowId, pron = '', url = '', shouldFocus = false) {
     const container = document.getElementById(`${rowId}-audios`);
     if(!container) return;
     const div = document.createElement('div');
@@ -1086,14 +1105,20 @@ window.addAudioToRow = function(rowId, pron = '', url = '') {
         <button type="button" class="btn-secondary btn-danger btn-small" onclick="this.parentElement.remove()">X</button>
     `;
     container.appendChild(div);
+    if (shouldFocus) {
+        div.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        div.querySelector('.wf-audio-pron').focus();
+    }
 }
 
 document.getElementById('add-overview-btn').addEventListener('click', () => {
     addOverviewRow();
+    focusNewRow(wordformOverviewContainer.lastElementChild);
 });
 
 document.getElementById('add-wordform-btn').addEventListener('click', () => {
     addWordformRow();
+    focusNewRow(wordformContainer.lastElementChild);
 });
 
 document.getElementById('add-new-wordform-btn').addEventListener('click', () => {
@@ -1108,7 +1133,7 @@ document.getElementById('add-new-wordform-btn').addEventListener('click', () => 
     addWordformRow(); // add at least 1 row default
     
     document.getElementById('wordform-modal-title').innerText = 'Add Word Formation';
-    wordformModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(wordformModal);
 });
 
 wordformForm.addEventListener('submit', async (e) => {
@@ -1253,7 +1278,7 @@ window.editWordform = (id) => {
         }
 
         document.getElementById('wordform-modal-title').innerText = 'Edit Word Formation';
-        wordformModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(wordformModal);
     }
 };
 
@@ -1279,7 +1304,7 @@ document.getElementById('add-pattern-btn').addEventListener('click', () => {
     patternForm.reset();
     applySavedUnitSelect(document.getElementById('pattern-unit'), 'pattern');
     document.getElementById('pattern-modal-title').innerText = 'Add New Word Pattern';
-    patternModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(patternModal);
 });
 
 patternForm.addEventListener('submit', async (e) => {
@@ -1359,7 +1384,7 @@ window.editPattern = (id) => {
         document.getElementById('pattern-example').value = p.example;
         
         document.getElementById('pattern-modal-title').innerText = 'Edit Word Pattern';
-        patternModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(patternModal);
     }
 };
 
@@ -1418,6 +1443,7 @@ window.addLexicalWordRow = function(word = '', pos = '', pron = '', audio = '', 
 if (document.getElementById('add-lexical-word-btn')) {
     document.getElementById('add-lexical-word-btn').addEventListener('click', () => {
         addLexicalWordRow();
+        focusNewRow(lexicalWordsContainer.lastElementChild);
     });
 }
 
@@ -1429,7 +1455,7 @@ if (document.getElementById('add-lexical-btn')) {
         lexicalWordsContainer.innerHTML = '';
         addLexicalWordRow();
         document.getElementById('lexical-modal-title').innerText = 'Add Lexical Expansion';
-        lexicalModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(lexicalModal);
     });
 }
 
@@ -1518,7 +1544,7 @@ window.editLexical = (id) => {
         }
 
         document.getElementById('lexical-modal-title').innerText = 'Edit Lexical Expansion';
-        lexicalModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(lexicalModal);
     }
 };
 
@@ -1846,7 +1872,7 @@ if (document.getElementById('add-grammar-cat-btn')) {
         document.getElementById('grammar-cat-id').value = '';
         document.getElementById('grammar-cat-order').value = grammarCategoriesData.length > 0 ? Math.max(...grammarCategoriesData.map(c => c.order || 0)) + 1 : 1;
         document.getElementById('grammar-cat-modal-title').innerText = 'Add Category';
-        grammarCatModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(grammarCatModal);
     });
 }
 
@@ -1877,7 +1903,7 @@ window.editGrammarCat = function(id) {
     document.getElementById('grammar-cat-title').value = cat.title;
     document.getElementById('grammar-cat-order').value = cat.order || 0;
     document.getElementById('grammar-cat-modal-title').innerText = 'Edit Category';
-    grammarCatModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(grammarCatModal);
 };
 
 window.deleteGrammarCat = async function(id) {
@@ -1905,7 +1931,7 @@ if (document.getElementById('add-grammar-lesson-btn')) {
             tinymce.get('grammar-lesson-content').setContent('');
         }
         document.getElementById('grammar-lesson-modal-title').innerText = 'Add Lesson';
-        grammarLessonModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(grammarLessonModal);
     });
 }
 
@@ -1947,7 +1973,7 @@ window.editGrammarLesson = async function(id) {
     }
     
     document.getElementById('grammar-lesson-modal-title').innerText = 'Edit Lesson';
-    grammarLessonModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(grammarLessonModal);
 };
 
 // Unit CRUD
@@ -1964,7 +1990,7 @@ if (document.getElementById('add-grammar-unit-btn')) {
             tinymce.get('grammar-unit-content').setContent('');
         }
         document.getElementById('grammar-unit-modal-title').innerText = 'Add Unit';
-        grammarUnitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(grammarUnitModal);
     });
 }
 
@@ -2019,7 +2045,7 @@ window.editGrammarUnit = async function(id) {
     }
     
     document.getElementById('grammar-unit-modal-title').innerText = 'Edit Unit';
-    grammarUnitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(grammarUnitModal);
 };
 
 window.deleteGrammarLesson = async function(id) {
@@ -2280,7 +2306,7 @@ if (document.getElementById('add-pronunciation-cat-btn')) {
         document.getElementById('pronunciation-cat-id').value = '';
         document.getElementById('pronunciation-cat-order').value = pronunciationCategoriesData.length > 0 ? Math.max(...pronunciationCategoriesData.map(c => c.order || 0)) + 1 : 1;
         document.getElementById('pronunciation-cat-modal-title').innerText = 'Add Category';
-        pronunciationCatModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(pronunciationCatModal);
     });
 }
 
@@ -2311,7 +2337,7 @@ window.editPronunciationCat = function(id) {
     document.getElementById('pronunciation-cat-title').value = cat.title;
     document.getElementById('pronunciation-cat-order').value = cat.order || 0;
     document.getElementById('pronunciation-cat-modal-title').innerText = 'Edit Category';
-    pronunciationCatModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(pronunciationCatModal);
 };
 
 window.deletePronunciationCat = async function(id) {
@@ -2339,7 +2365,7 @@ if (document.getElementById('add-pronunciation-lesson-btn')) {
             tinymce.get('pronunciation-lesson-content').setContent('');
         }
         document.getElementById('pronunciation-lesson-modal-title').innerText = 'Add Lesson';
-        pronunciationLessonModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(pronunciationLessonModal);
     });
 }
 
@@ -2381,7 +2407,7 @@ window.editPronunciationLesson = async function(id) {
     }
     
     document.getElementById('pronunciation-lesson-modal-title').innerText = 'Edit Lesson';
-    pronunciationLessonModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(pronunciationLessonModal);
 };
 
 // Unit CRUD
@@ -2398,7 +2424,7 @@ if (document.getElementById('add-pronunciation-unit-btn')) {
             tinymce.get('pronunciation-unit-content').setContent('');
         }
         document.getElementById('pronunciation-unit-modal-title').innerText = 'Add Unit';
-        pronunciationUnitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+        openModal(pronunciationUnitModal);
     });
 }
 
@@ -2453,7 +2479,7 @@ window.editPronunciationUnit = async function(id) {
     }
     
     document.getElementById('pronunciation-unit-modal-title').innerText = 'Edit Unit';
-    pronunciationUnitModal.style.display = 'flex'; document.body.classList.add('modal-open'); window.isModalDirty = false;
+    openModal(pronunciationUnitModal);
 };
 
 window.deletePronunciationLesson = async function(id) {
