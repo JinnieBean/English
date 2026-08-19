@@ -876,21 +876,33 @@ lexicalListContainer.innerHTML = '';
 
             const searchInput = document.getElementById('lexical-search-input');
             if (searchInput) {
+                const normalizeSearch = (s) => (s || '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/đ/g, 'd');
+
                 searchInput.addEventListener('input', (e) => {
-                    const term = e.target.value.toLowerCase().trim();
+                    const term = normalizeSearch(e.target.value.trim());
                     if (!term) return renderLexicalList(lexicals);
-                    
-                    const filtered = lexicals.filter(lex => {
-                        const inLeft = (lex.textLeft || '').toLowerCase().includes(term);
-                        const inRight = (lex.textRight || '').toLowerCase().includes(term);
-                        const inWords = (lex.words || []).some(w => 
-                            (w.word || '').toLowerCase().includes(term) || 
-                            (w.def || '').toLowerCase().includes(term)
-                        );
-                        return inLeft || inRight || inWords;
+
+                    const ranked = [];
+                    lexicals.forEach(lex => {
+                        let score = 0;
+                        const texts = [normalizeSearch(lex.textLeft), normalizeSearch(lex.textRight)];
+                        (lex.words || []).forEach(w => {
+                            const word = normalizeSearch(w.word).replace(/\(.*?\)/g, '').trim();
+                            if (word.startsWith(term)) score = Math.max(score, 100);
+                            else if (word.includes(term)) score = Math.max(score, 80);
+                            else if (texts.some(t => t.includes(term))) score = Math.max(score, 60);
+                            else if (normalizeSearch(w.def).includes(term) || normalizeSearch(w.pron).includes(term)) score = Math.max(score, 40);
+                        });
+                        if (!score && texts.some(t => t.includes(term))) score = 60;
+                        if (score) ranked.push({ score, lex });
                     });
-                    
-                    renderLexicalList(filtered);
+
+                    ranked.sort((a, b) => b.score - a.score);
+                    renderLexicalList(ranked.map(r => r.lex));
                 });
             }
         } catch(e) {
