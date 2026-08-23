@@ -4,14 +4,29 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 /**
+ * ⚠️ ADMIN WHITELIST — only these accounts may open the admin panel.
+ * Put the email/password account you created in
+ * Firebase Console → Authentication → Users here (lowercase).
+ * Any other signed-in account (e.g. a learner's Google account) is
+ * immediately signed out of THIS panel.
+ */
+const ADMIN_EMAILS = [
+    'thornote@gmail.com' // TODO: replace with your real admin email
+];
+
+/**
  * Admin sessions live in sessionStorage (per-tab) so they NEVER share the
  * persisted learner session of the public site on the same origin:
  *  - signing in here does NOT sign in the study site
  *  - signing out on the study site does NOT kill this admin tab
  * Trade-off: closing every admin tab requires signing in again.
+ * Top-level await guarantees persistence is applied BEFORE auth state is restored.
  */
-setPersistence(auth, browserSessionPersistence).catch(err =>
-    console.warn('[auth] persistence change failed:', err?.code));
+try {
+    await setPersistence(auth, browserSessionPersistence);
+} catch (err) {
+    console.warn('[auth] persistence change failed:', err?.code);
+}
 import { collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from '../../assets/js/firebase-config.js';
 import { escapeHtml, friendlyError } from '../../assets/js/utils.js';
@@ -136,7 +151,20 @@ navItems.forEach(item => {
 /* =========================================================
    AUTH
    ========================================================= */
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
+    // Enforce the admin whitelist: any other authenticated account
+    // (e.g. a learner's Google account) is rejected and signed out here.
+    if (user && !ADMIN_EMAILS.includes((user.email || '').toLowerCase())) {
+        await signOut(auth);
+        loginSection.style.display = 'flex';
+        dashboardSection.style.display = 'none';
+        const errEl = document.getElementById('login-error');
+        if (errEl) {
+            errEl.innerText = `“${user.email}” does not have admin access. Sign in with the administrator account.`;
+        }
+        return;
+    }
+
     if (user) {
         loginSection.style.display = 'none';
         dashboardSection.style.display = 'flex';
@@ -153,8 +181,14 @@ onAuthStateChanged(auth, (user) => {
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.innerText = '';
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
+
+    // Fast-fail: don't even hit Auth for non-admin emails
+    if (!ADMIN_EMAILS.includes(email)) {
+        loginError.innerText = 'This email is not an administrator account.';
+        return;
+    }
 
     try {
         await signInWithEmailAndPassword(auth, email, password);
