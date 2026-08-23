@@ -4,7 +4,7 @@
  *          Vocab Highlight (#14), Flashcard Mode (#10),
  *          Progress Indicator (#11), Breadcrumb (#5), Stats (#8)
  */
-import { escapeHtml, formatTime } from './utils.js';
+import { escapeHtml, formatTime, applyAudioVersion } from './utils.js';
 
 /* ==============================================
    #7 — DARK MODE TOGGLE
@@ -122,8 +122,11 @@ function buildCustomAudioPlayer(src, ttsText) {
         return `<span class="audio-group-tts">${ttsButton(ttsText)}</span>`;
     }
 
+    // Longman rotates ?version= on its audio files — always force the
+    // current version at playback time so stale DB URLs keep working.
+    const effectiveSrc = applyAudioVersion(src);
     const id = 'ap-' + Math.random().toString(36).slice(2, 10);
-    const safeSrc = escapeHtml(src);
+    const safeSrc = escapeHtml(effectiveSrc);
     return `
         <div class="custom-audio-player" id="${id}" data-src="${safeSrc}">
             <button class="audio-play-btn" aria-label="Play audio" type="button">

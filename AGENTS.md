@@ -19,4 +19,5 @@ Static multi-page English study site (vanilla HTML/CSS/ES modules) backed by Fir
 - All dynamic data rendered into `innerHTML` must go through `escapeHtml()` (exception: TinyMCE lesson HTML, which passes through `sanitizeRichText()` on save in admin).
 - Unit-scoped public queries use `where('unitId','==',id)` (single-field equality needs no composite index); sort client-side afterwards. Index-page counters use `getCountFromServer`.
 - Flashcards persist "known" word ids in localStorage key `progress-${unitId}`; bookmarks in `vocab-bookmarks`.
+- Longman (ldoceonline.com) rotates `?version=` on its audio URLs. All playback URLs pass through `applyAudioVersion()` (assets/js/utils.js) — when Longman bumps the version, update ONLY the `AUDIO_VERSION` constant there. Admin → Dashboard → Data Tools → "Audio URL maintenance" can bulk-rewrite stored URLs (regex find/replace over vocabularies.audio, word_formations.forms[].audios[].url, lexical_expansions.words[].audio).
 - `git` operations in this checkout may fail with "dubious ownership"; add the path via `git config --global --add safe.directory` if needed.

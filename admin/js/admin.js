@@ -6,7 +6,7 @@ import {
     doc, serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from '../../assets/js/firebase-config.js';
-import { escapeHtml, friendlyError, sanitizeRichText } from '../../assets/js/utils.js';
+import { escapeHtml, friendlyError, sanitizeRichText, applyAudioVersion } from '../../assets/js/utils.js';
 
 /* =========================================================
    TINY MCE CLEANUP
@@ -928,10 +928,12 @@ onSubmit(vocabForm, async () => {
     window.showToast('Saved!', 'success');
 });
 
-// Audio test-play button
+// Audio test-play button (plays with the current Longman version applied,
+// exactly like the study site will)
 document.getElementById('vocab-audio-test')?.addEventListener('click', () => {
-    const url = document.getElementById('vocab-audio').value.trim();
-    if (!url) { window.showToast('Enter an audio URL first.', 'info'); return; }
+    const raw = document.getElementById('vocab-audio').value.trim();
+    if (!raw) { window.showToast('Enter an audio URL first.', 'info'); return; }
+    const url = applyAudioVersion(raw);
     const audio = new Audio(url);
     audio.play().catch(() => window.showToast('Could not play this audio URL.', 'error'));
 });
@@ -1612,6 +1614,7 @@ window.addLexicalWordRow = function (word = '', pos = '', pron = '', audio = '',
     div.dataset.rowId = rowId;
     div.innerHTML = `
         <button type="button" class="btn-secondary btn-danger btn-small lx-remove-btn" onclick="this.parentElement.remove()">Remove</button>
+        <input type="hidden" class="lx-audio" value="${escapeHtml(audio)}">
         <div class="form-row" style="margin-bottom: 0.5rem; padding-right: 4rem;">
             <div class="input-group flex-1">
                 <label>Word</label>
@@ -1672,9 +1675,10 @@ if (lexicalForm) {
             const w = r.querySelector('.lx-word').value.trim();
             const p = r.querySelector('.lx-pos').value.trim();
             const pr = r.querySelector('.lx-pron').value.trim();
+            const au = r.querySelector('.lx-audio')?.value.trim() || '';
             const d = r.querySelector('.lx-def').value.trim();
             const ex = r.querySelector('.lx-example').value.trim();
-            if (w) words.push({ word: w, pos: p, pron: pr, def: d, example: ex });
+            if (w) words.push({ word: w, pos: p, pron: pr, audio: au, def: d, example: ex });
         });
 
         const payload = { unitId, textLeft, alignLeft, textRight, alignRight, words, status: document.getElementById('lexical-status').value };
@@ -2318,6 +2322,164 @@ document.getElementById('import-btn')?.addEventListener('click', async () => {
     } catch (err) {
         console.error(err);
         window.showToast(friendlyError(err), 'error');
+    }
+});
+
+/* =========================================================
+   AUDIO URL MAINTENANCE — bulk regex find & replace
+   Scans every audio-bearing field:
+     vocabularies.audio · word_formations.forms[].audios[].url
+     lexical_expansions.words[].audio
+   ========================================================= */
+const AUDIO_COLLECTIONS = ['vocabularies', 'word_formations', 'lexical_expansions'];
+
+const AUDIO_DATA_BY_COLL = () => ({
+    vocabularies: vocabData,
+    word_formations: wordformData,
+    lexical_expansions: lexicalData
+});
+
+/** Deep-clone a doc, run replacer over its audio URLs.
+ *  Returns { out, urlsChanged } — out is null when nothing matched. */
+function mapAudioUrls(collName, data, replacer) {
+    let urlsChanged = 0;
+    let out;
+    if (collName === 'vocabularies' && data.audio) {
+        const nv = replacer(data.audio);
+        if (nv !== data.audio) { out = { ...data, audio: nv }; urlsChanged++; }
+    } else if (collName === 'word_formations' && Array.isArray(data.forms)) {
+        let forms = data.forms, touched = false;
+        forms = forms.map(f => {
+            if (!Array.isArray(f.audios)) return f;
+            const audios = f.audios.map(a => {
+                if (!a.url) return a;
+                const nv = replacer(a.url);
+                if (nv !== a.url) { urlsChanged++; touched = true; return { ...a, url: nv }; }
+                return a;
+            });
+            return touched ? { ...f, audios } : f;
+        });
+        if (urlsChanged > 0) out = { ...data, forms };
+    } else if (collName === 'lexical_expansions' && Array.isArray(data.words)) {
+        let words = data.words, touched = false;
+        words = words.map(w => {
+            if (!w.audio) return w;
+            const nv = replacer(w.audio);
+            if (nv !== w.audio) { urlsChanged++; touched = true; return { ...w, audio: nv }; }
+            return w;
+        });
+        if (urlsChanged > 0) out = { ...data, words };
+    }
+    return { out, urlsChanged };
+}
+
+function getAudioReplacer() {
+    const findInput = document.getElementById('audio-find');
+    const replaceInput = document.getElementById('audio-replace');
+    const pattern = findInput?.value.trim();
+    const replacement = replaceInput?.value ?? '';
+    if (!pattern) {
+        window.showToast('Enter a "Find" regular expression first.', 'info');
+        return null;
+    }
+    let regex;
+    try {
+        regex = new RegExp(pattern, 'g');
+    } catch (err) {
+        window.showToast(`Invalid regular expression: ${friendlyError(err)}`, 'error');
+        return null;
+    }
+    return (url) => url.replace(regex, replacement);
+}
+
+document.getElementById('audio-preview-btn')?.addEventListener('click', () => {
+    const replacer = getAudioReplacer();
+    if (!replacer) return;
+
+    const statusEl = document.getElementById('audio-tool-status');
+    const dataByColl = AUDIO_DATA_BY_COLL();
+    let totalDocs = 0, totalUrls = 0;
+    const perColl = [];
+
+    AUDIO_COLLECTIONS.forEach(coll => {
+        let docs = 0, urls = 0;
+        (dataByColl[coll] || []).forEach(d => {
+            const { urlsChanged } = mapAudioUrls(coll, d, replacer);
+            if (urlsChanged > 0) { docs++; urls += urlsChanged; }
+        });
+        if (docs > 0) perColl.push(`${coll}: ${docs} doc(s), ${urls} URL(s)`);
+        totalDocs += docs; totalUrls += urls;
+    });
+
+    if (statusEl) {
+        statusEl.textContent = totalDocs
+            ? `Matched ${totalDocs} document(s), ${totalUrls} URL(s). Review then press "Apply to database".`
+            : 'No matching audio URLs found.';
+    }
+    window.showToast(
+        totalDocs
+            ? `Found ${totalUrls} URL(s) across ${totalDocs} document(s) — ${perColl.join(' | ')}`
+            : 'No matching audio URLs found.',
+        totalDocs ? 'info' : 'error'
+    );
+});
+
+document.getElementById('audio-apply-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('audio-apply-btn');
+    if (btn?.dataset.busy === '1') return;
+    const replacer = getAudioReplacer();
+    if (!replacer) return;
+
+    const dataByColl = AUDIO_DATA_BY_COLL();
+    const pending = []; // [{ coll, id, field, value }]
+    let totalDocs = 0, totalUrls = 0;
+
+    AUDIO_COLLECTIONS.forEach(coll => {
+        (dataByColl[coll] || []).forEach(d => {
+            const { out, urlsChanged } = mapAudioUrls(coll, d, replacer);
+            if (!out) return;
+            totalDocs++; totalUrls += urlsChanged;
+            const field = coll === 'vocabularies' ? 'audio' : coll === 'word_formations' ? 'forms' : 'words';
+            pending.push({ coll, id: d.id, field, value: out[field], label: coll === 'vocabularies' ? out.audio : `${out[field]?.length ?? 0} item(s)` });
+        });
+    });
+
+    if (!pending.length) {
+        window.showToast('No matching audio URLs found.', 'info');
+        return;
+    }
+
+    const ok = await confirmDialog({
+        title: 'Rewrite audio URLs?',
+        message: `${totalDocs} document(s) will be updated (${totalUrls} URL(s)). This cannot be undone with Undo — export a backup first if unsure.`,
+        confirmText: 'Update'
+    });
+    if (!ok) return;
+
+    let origHtml = '';
+    if (btn) { origHtml = btn.innerHTML; btn.dataset.busy = '1'; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating…'; }
+
+    try {
+        const CHUNK = 300;
+        let written = 0;
+        for (let i = 0; i < pending.length; i += CHUNK) {
+            const batch = writeBatch(db);
+            for (const item of pending.slice(i, i + CHUNK)) {
+                batch.update(doc(db, item.coll, item.id), { [item.field]: item.value, updatedAt: serverTimestamp() });
+            }
+            await batch.commit();
+            written += Math.min(CHUNK, pending.length - i);
+            window.showToast(`Updated ${written}/${pending.length} documents…`, 'info');
+        }
+        await reloadDataFor(null);
+        const statusEl = document.getElementById('audio-tool-status');
+        if (statusEl) statusEl.textContent = '';
+        window.showToast(`Done — ${totalDocs} document(s) updated, ${totalUrls} URL(s) rewritten.`, 'success');
+    } catch (err) {
+        console.error(err);
+        window.showToast(friendlyError(err), 'error');
+    } finally {
+        if (btn) { btn.dataset.busy = ''; btn.disabled = false; btn.innerHTML = origHtml; }
     }
 });
 

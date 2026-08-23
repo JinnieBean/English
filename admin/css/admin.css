@@ -558,3 +558,13 @@ body.modal-open { overflow: hidden; }
 [data-theme="dark"] .confirm-box p { color: var(--text-primary); }
 [data-theme="dark"] .book-image-preview { background: var(--input-bg); }
 [data-theme="dark"] .pagination-controls { color: var(--text-secondary); }
+
+/* Audio maintenance tool inputs */
+.qa-select-wide {
+    flex: 1;
+    min-width: 220px;
+    width: auto;
+}
+@media (max-width: 768px) {
+    .qa-select-wide { min-width: 0; width: 100%; }
+}

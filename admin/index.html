@@ -147,6 +147,24 @@
                         <input type="file" id="import-file" accept=".json,application/json" class="input-field qa-file">
                         <button id="import-btn" class="btn-primary"><i class="fas fa-upload"></i> Import JSON</button>
                     </div>
+
+                    <h3 style="margin-top: 1.5rem;">Audio URL maintenance</h3>
+                    <p class="qa-hint">
+                        Bulk find &amp; replace across every audio field (vocabulary audio, word-formation audios,
+                        lexical word audio). "Find" is a regular expression — e.g.
+                        <code>version=1\.2\.\d+</code> replaced with <code>version=1.2.90</code>.
+                        Note: the study site already forces the latest Longman version automatically at playback
+                        (constant <code>AUDIO_VERSION</code> in assets/js/utils.js), so rewriting the database is optional.
+                    </p>
+                    <div class="qa-row">
+                        <input type="text" id="audio-find" class="input-field qa-select-wide" placeholder="Find (regex), e.g. version=1\.2\.\d+">
+                        <input type="text" id="audio-replace" class="input-field qa-select-wide" placeholder="Replace with, e.g. version=1.2.90">
+                    </div>
+                    <div class="qa-row">
+                        <button id="audio-preview-btn" class="btn-secondary"><i class="fas fa-search"></i> Preview matches</button>
+                        <button id="audio-apply-btn" class="btn-primary"><i class="fas fa-magic"></i> Apply to database</button>
+                        <span id="audio-tool-status" class="qa-hint" style="margin:0;"></span>
+                    </div>
                 </div>
             </div>
 
