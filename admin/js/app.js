@@ -28,7 +28,7 @@ try {
     console.warn('[auth] persistence change failed:', err?.code);
 }
 import { collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { auth, db } from '../../assets/js/firebase-config.js';
+import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
 import { escapeHtml, friendlyError } from '../../assets/js/utils.js';
 import { hooks, confirmDialog } from './common.js';
 import {

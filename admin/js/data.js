@@ -1,5 +1,5 @@
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from '../../assets/js/firebase-config.js';
+import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
 import { escapeHtml } from '../../assets/js/utils.js';
 
 /* =========================================================

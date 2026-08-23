@@ -1,5 +1,5 @@
 import { collection, getDocs, setDoc, getDoc, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { auth, db } from '../../assets/js/firebase-config.js';
+import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
 import { escapeHtml, friendlyError } from '../../assets/js/utils.js';
 
 /** Cross-module hooks wired by app.js (avoids circular imports). */

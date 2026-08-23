@@ -1,5 +1,5 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from '../../assets/js/firebase-config.js';
+import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
 import { escapeHtml, friendlyError, applyAudioVersion } from '../../assets/js/utils.js';
 import { hooks, openModal, onSubmit, stampCreate, stampUpdate, isDuplicate, dupToast, performDelete, assetUrl, publicUrlFor, enableDragReorder, confirmDialog, logAudit } from './common.js';
 import {
