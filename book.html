@@ -3,10 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Book - Thor's Notes</title>
+    <title>Vocabulary Books — Thor's Notes</title>
+    <meta name="description" content="Browse the vocabulary book collection — pick a book to see its units.">
+    <meta property="og:title" content="Vocabulary Books — Thor's Notes">
+    <meta property="og:description" content="Browse the vocabulary book collection — pick a book to see its units.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="assets/images/logo.png">
+    <meta name="twitter:card" content="summary">
+    <link rel="icon" type="image/png" href="assets/images/logo.png">
+    <meta name="theme-color" content="#1a4d4f">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/courses.css">
     <script>
@@ -22,6 +30,7 @@
     </script>
 </head>
 <body>
+    <noscript><p style="padding:1rem;text-align:center;">This site needs JavaScript enabled to load study content.</p></noscript>
     <div class="app-layout">
         <!-- Sidebar -->
                 <aside class="sidebar">
@@ -66,7 +75,7 @@
             </nav>
         <!-- Dark Mode Toggle (#7) -->
         <button class="dark-mode-toggle" id="dark-mode-toggle" title="Toggle dark mode">
-            <span class="dm-icon">??</span>
+            <span class="dm-icon">&#127769;</span>
             <span class="dm-label">Dark Mode</span>
         </button>        </aside>
 
@@ -79,10 +88,12 @@
                     <a href="index.html">
                         <h1>Thor's Notes</h1>
                     </a>
-                    <p>Something about ...</p>
+                    <p>A personal English study notebook</p>
                 </div>
                 <div class="header-line"></div>
             </header>
+    <div id="breadcrumb-container" class="breadcrumb-container" data-crumbs='[{"label":"Home","href":"index.html"},{"label":"Books"}]'></div>
+
 
             <main class="container">
                 <div id="books-list-container" style="display: flex; flex-direction: column; gap: 2rem;">

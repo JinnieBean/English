@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
-
 /* =========================================
    DESIGN TOKENS & TYPOGRAPHY SCALE (#19)
    ========================================= */
@@ -7,7 +5,8 @@
     /* Colors - Light Mode */
     --bg-color: #e8f0ec;
     --text-primary: #0a4f54;
-    --text-secondary: #4a7578;
+    --text-secondary: #40686b;
+    --example-color: #4a6a94;
     --line-color: #c9ded5;
     --card-bg: #ffffff;
     --sidebar-bg: #ffffff;
@@ -48,6 +47,7 @@
     --bg-color: #0f1f22;
     --text-primary: #c8e6e9;
     --text-secondary: #7db5ba;
+    --example-color: #9db8dd;
     --line-color: #1e3a3f;
     --card-bg: #162a2e;
     --sidebar-bg: #111f23;
@@ -1339,4 +1339,297 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
         white-space: nowrap !important;
         display: inline-block !important;
     }
+}
+
+/* =========================================
+   UX STATES: loading / error / empty
+   ========================================= */
+.list-skeleton { padding: 1rem 0; }
+.empty-state {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+.error-state {
+    margin: 2rem auto;
+    max-width: 480px;
+    text-align: center;
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    padding: 2rem;
+}
+.error-state p { color: var(--text-primary); margin-bottom: 1rem; }
+.btn-retry {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 0.5rem 1.4rem;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-retry:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13, 112, 120, 0.4); }
+
+/* =========================================
+   SECTION SEARCH + TOOLBAR
+   ========================================= */
+.breadcrumb-container { min-height: 0; }
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    padding-top: 1.25rem;
+}
+.vocab-search-container { margin-bottom: 1.5rem; }
+.vocab-search-container input[type="search"] {
+    width: 100%;
+    padding: 0.8rem 1.2rem;
+    border-radius: 30px;
+    border: 1px solid var(--line-color);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: var(--shadow-sm);
+}
+.vocab-search-container input[type="search"]:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(13, 112, 120, 0.15);
+}
+
+.vocab-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-bottom: 1.25rem;
+}
+.vocab-tools-left,
+.vocab-tools-right { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.csv-export-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    color: var(--text-secondary);
+    border-radius: 20px;
+    padding: 0.45rem 1rem;
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.csv-export-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
+.starred-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+.bookmark-btn {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.8rem;
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: var(--line-color);
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s ease, transform 0.15s ease;
+    z-index: 1;
+}
+.bookmark-btn:hover { transform: scale(1.15); }
+.bookmark-btn.active { color: #eab308; }
+
+/* =========================================
+   AUDIO PLAYER — seek / loop / download / TTS
+   ========================================= */
+.custom-audio-player {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 240px;
+}
+.audio-seek-slider {
+    flex: 1;
+    min-width: 70px;
+    height: 4px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+.audio-duration { font-size: 0.72rem; color: var(--text-secondary); white-space: nowrap; }
+.audio-loop-btn,
+.audio-download-btn,
+.audio-tts-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.audio-loop-btn:hover,
+.audio-download-btn:hover,
+.audio-tts-btn:hover { background: var(--nav-hover-bg); color: var(--accent-color); }
+.audio-loop-btn.active { color: var(--accent-color); background: var(--nav-active-bg); }
+.audio-none { font-size: 0.78rem; color: var(--text-secondary); font-style: italic; }
+
+/* =========================================
+   FLASHCARDS — grading buttons + summary
+   ========================================= */
+.fc-btn-unknown { background: var(--card-bg); color: #b45309; border: 1px solid #eab308; }
+.fc-btn-known   { background: var(--card-bg); color: #15803d; border: 1px solid #22c55e; }
+.fc-btn-unknown:hover, .fc-btn-known:hover { filter: brightness(0.97); }
+.fc-active { box-shadow: inset 0 0 0 2px currentColor; }
+.fc-btn-flip { background: var(--nav-hover-bg); color: var(--text-secondary); border: 1px solid var(--line-color); }
+.flashcard-front { position: relative; }
+.fc-marked-known .flashcard-word::after { content: " \2713"; color: #22c55e; font-size: 0.7em; }
+.fc-tts {
+    margin-top: 0.75rem;
+    border: none;
+    background: var(--nav-hover-bg);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.fc-tts:hover { transform: scale(1.08); }
+.flashcard-summary { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 0.75rem; }
+.fc-summary-title { font-family: var(--font-heading); font-size: var(--text-2xl); color: var(--text-primary); }
+.fc-summary-text { color: var(--text-secondary); }
+.fc-summary-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center; }
+
+/* =========================================
+   QUIZ MODE
+   ========================================= */
+.quiz-question-area { display: flex; flex-direction: column; flex: 1; justify-content: center; }
+.quiz-prompt { font-size: var(--text-lg); color: var(--text-primary); text-align: center; margin-bottom: 1.5rem; }
+.quiz-options { display: flex; flex-direction: column; gap: 0.7rem; width: 100%; }
+.quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    text-align: left;
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: 12px;
+    padding: 0.85rem 1.1rem;
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+.quiz-option:not(:disabled):hover { border-color: var(--accent-color); transform: translateX(3px); }
+.quiz-option:disabled { cursor: default; opacity: 0.75; }
+.quiz-option.correct { border-color: #22c55e; background: rgba(34, 197, 94, 0.12); opacity: 1; }
+.quiz-option.wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.12); opacity: 1; }
+.quiz-option-key {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--line-color);
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+}
+.quiz-feedback { min-height: 1.6rem; margin-top: 1rem; text-align: center; color: var(--text-secondary); font-style: italic; }
+
+/* =========================================
+   MISC — coming soon cards, lexical top section
+   ========================================= */
+.coming-soon { opacity: 0.65; cursor: not-allowed; position: relative; }
+.soon-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--accent-color);
+    color: #fff;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 10px;
+    padding: 0.15rem 0.6rem;
+}
+.soon-inline { font-size: 0.75em; opacity: 0.8; }
+.lex-top-section {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    width: 100%;
+    color: var(--text-secondary);
+    font-style: italic;
+    font-weight: normal;
+}
+button.wf-toggle {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    padding: 0.2rem 0.6rem;
+}
+
+@media (max-width: 480px) {
+    .custom-audio-player { min-width: 200px; }
+    .vocab-toolbar { flex-direction: column; align-items: stretch; }
+    .quiz-option { font-size: var(--text-sm); }
+}
+
+/* =========================================
+   PRINT
+   ========================================= */
+@media print {
+    .sidebar,
+    .mobile-menu-btn,
+    .dark-mode-toggle,
+    .site-footer,
+    .vocab-toolbar,
+    .vocab-search-container,
+    .breadcrumb-container,
+    .bookmark-btn,
+    .custom-audio-player .audio-controls-extra,
+    .flashcard-toggle-btn {
+        display: none !important;
+    }
+    .main-content { margin-left: 0 !important; }
+    body { background: #fff; color: #000; }
+}
+
+/* Brand title used where the lesson <h1> is the page's true heading */
+.header-brand-title {
+    font-family: var(--font-heading);
+    font-size: var(--text-6xl);
+    font-weight: 400;
+    color: var(--text-primary);
+}
+@media (max-width: 768px) {
+    .header-brand-title { font-size: var(--text-4xl); }
 }

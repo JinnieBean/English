@@ -1,92 +1,183 @@
-/* grammar-styles.css — extracted from grammar.html inline styles (#3) */
+/* =========================================================
+   grammar-styles.css — Shared styles for the Grammar and
+   Pronunciation overview + lesson pages (both css prefixes).
+   Previously duplicated as inline <style> blocks on 4 pages.
+   ========================================================= */
 
-.grammar-intro {
+/* ---------- Overview page ---------- */
+.grammar-intro,
+.pronunciation-intro {
     margin: 2rem 0 4rem;
 }
-
-.grammar-intro-title {
-    font-family: var(--font-heading, 'Playfair Display', serif);
-    color: var(--text-primary, #1a4d4f);
-    font-size: var(--text-3xl, 2rem);
+.grammar-intro-title,
+.pronunciation-intro-title {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent-color);
+    font-size: 2rem;
     margin-bottom: 1rem;
 }
-
-.grammar-intro-desc {
-    font-size: var(--text-lg, 1.1rem);
-    color: var(--text-primary, #333);
+.grammar-intro-desc,
+.pronunciation-intro-desc {
+    font-size: 1.1rem;
+    color: var(--text-primary);
     margin-bottom: 1rem;
 }
-
-.grammar-read-more {
+.grammar-read-more,
+.pronunciation-read-more {
     display: inline-block;
-    background: linear-gradient(135deg, var(--accent-color, #1a7a7f), var(--accent-dark, #125e62));
+    background-color: var(--accent-color);
     color: white;
     padding: 0.5rem 1.5rem;
     border-radius: 20px;
     text-decoration: none;
-    font-size: var(--text-base, 0.95rem);
-    transition: all 0.25s ease;
-    box-shadow: 0 3px 10px rgba(26, 122, 127, 0.3);
+    font-size: 0.95rem;
+    transition: background-color 0.3s;
+}
+.grammar-read-more:hover,
+.pronunciation-read-more:hover {
+    background-color: var(--accent-dark);
 }
 
-.grammar-read-more:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 15px rgba(26, 122, 127, 0.4);
-}
-
-.grammar-category {
+.grammar-category,
+.pronunciation-category {
     margin-bottom: 3rem;
 }
-
-.grammar-category-title {
-    font-family: var(--font-heading, 'Playfair Display', serif);
-    color: var(--text-primary, #1a4d4f);
-    font-size: var(--text-3xl, 1.8rem);
+.grammar-category-title,
+.pronunciation-category-title {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent-color);
+    font-size: 1.8rem;
     margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--line-color, #ddd);
+    border-bottom: 1px solid var(--line-color);
     padding-bottom: 0.5rem;
 }
 
-.grammar-lesson-link {
+.grammar-lesson-link,
+.pronunciation-lesson-link {
     display: flex;
     align-items: center;
     justify-content: flex-start;
     gap: 1rem;
-    margin-bottom: 1rem;
     text-decoration: none;
-    color: var(--nav-text, #333);
-    border-bottom: 1px solid var(--line-color, #eee);
-    padding-bottom: 0.8rem;
-    border-radius: 6px;
-    transition: background-color 0.2s ease, padding-left 0.2s ease;
+    color: var(--text-primary);
 }
 
-.grammar-lesson-link:hover {
-    background-color: var(--nav-hover-bg, #f7fafc);
-    padding-left: 0.5rem;
+.grammar-lesson-link:hover .lesson-title,
+.pronunciation-lesson-link:hover .lesson-title {
+    color: var(--accent-color);
 }
-
-.grammar-lesson-link:hover .lesson-title {
-    color: var(--accent-color, #1a7a7f);
-}
-
 .lesson-title {
-    font-family: var(--font-heading, 'Playfair Display', serif);
-    font-size: var(--text-xl, 1.3rem);
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
     transition: color 0.2s;
 }
 
-.lesson-more {
-    font-size: var(--text-sm, 0.85rem);
-    border: 1px solid var(--text-secondary, #888);
-    border-radius: 12px;
-    padding: 0.1rem 0.6rem;
-    color: var(--text-secondary, #555);
-    transition: all 0.2s;
+/* Lesson group + nested unit links (rendered by content-tree.js) */
+.grammar-lesson-group,
+.pronunciation-lesson-group {
+    margin-bottom: 1.5rem;
+}
+.grammar-lesson-link.lesson-heading,
+.pronunciation-lesson-link.lesson-heading {
+    padding-left: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.lesson-heading .lesson-title {
+    font-size: 1.25rem;
+    color: var(--accent-color);
+    font-weight: 600;
+}
+.grammar-lesson-units,
+.pronunciation-lesson-units {
+    margin-left: 1rem;
+    padding-left: 0.5rem;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.unit-link {
+    padding-left: 2rem;
+    position: relative;
+    gap: 0.6rem;
+}
+.unit-bullet {
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent-color);
+    font-size: 1.2rem;
+}
+.unit-link .lesson-title {
+    font-size: 1.15rem;
+    font-family: var(--font-body);
+}
+.tree-empty {
+    padding-left: 1rem;
+    color: var(--text-secondary);
+    font-style: italic;
 }
 
-.grammar-lesson-link:hover .lesson-more {
-    background: linear-gradient(135deg, var(--accent-color, #1a7a7f), var(--accent-dark, #125e62));
-    border-color: transparent;
-    color: white;
+/* ---------- Lesson page ---------- */
+.back-nav {
+    margin-top: 1.5rem;
+}
+.back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--accent-color);
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+.back-link:hover {
+    text-decoration: underline;
+}
+.lesson-header {
+    margin: 2rem 0 3rem;
+    border-bottom: 1px solid var(--line-color);
+    padding-bottom: 1.5rem;
+}
+.lesson-main-title {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent-color);
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+.lesson-author {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+.lesson-content {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    overflow-wrap: break-word;
+}
+
+/* Styles for rich text content from TinyMCE */
+.lesson-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+.lesson-content table, .lesson-content th, .lesson-content td {
+    border: 1px solid var(--line-color);
+}
+.lesson-content th, .lesson-content td {
+    padding: 0.8rem;
+    text-align: left;
+}
+.lesson-content th {
+    background-color: var(--nav-active-bg);
+    font-family: 'Playfair Display', serif;
+    color: var(--accent-color);
+}
+.lesson-content p {
+    margin-bottom: 1rem;
+}
+.lesson-content img {
+    max-width: 100%;
+    height: auto;
 }

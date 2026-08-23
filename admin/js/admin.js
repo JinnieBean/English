@@ -1,17 +1,17 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, getDocs, setDoc, getDoc, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+    signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+    collection, getDocs, setDoc, getDoc, addDoc, updateDoc, deleteDoc,
+    doc, serverTimestamp, writeBatch
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { auth, db } from '../../assets/js/firebase-config.js';
+import { escapeHtml, friendlyError, sanitizeRichText } from '../../assets/js/utils.js';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBiGp-ZZD0Yq-Tok2aAOwVbxXMmq7eRZuM",
-    authDomain: "english-study-68459.firebaseapp.com",
-    projectId: "english-study-68459",
-    storageBucket: "english-study-68459.firebasestorage.app",
-    messagingSenderId: "1048895043926",
-    appId: "1:1048895043926:web:06c3c04a722e2f3f647ef7"
-};
-
-window.closeTinyMCEPopups = function() {
+/* =========================================================
+   TINY MCE CLEANUP
+   ========================================================= */
+window.closeTinyMCEPopups = function () {
     try {
         if (typeof tinymce !== 'undefined' && tinymce.editors) {
             Array.from(tinymce.editors).forEach(ed => {
@@ -26,12 +26,213 @@ window.closeTinyMCEPopups = function() {
     }
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+/* =========================================================
+   GENERIC UI HELPERS
+   ========================================================= */
 
-// DOM Elements
+/** Close any modal overlay consistently (single source of truth). */
+window.closeModalOverlay = function (modalOrId) {
+    const modal = typeof modalOrId === 'string' ? document.getElementById(modalOrId) : modalOrId;
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    }
+    window.closeTinyMCEPopups();
+    window.isModalDirty = false;
+};
+// Legacy alias used by inline handlers
+window.closeModal = function (id) { window.closeModalOverlay(id); };
+
+function openModal(modal) {
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    window.isModalDirty = false;
+    const content = modal.querySelector('.modal-content');
+    if (content) content.scrollTop = 0;
+    setTimeout(() => {
+        const target = modal.querySelector('form input[type="text"], form textarea') || modal.querySelector('form select, form input:not([type="hidden"]):not([type="checkbox"])');
+        if (target) target.focus();
+    }, 100);
+}
+
+/** Toast with optional action button (e.g. Undo). */
+window.showToast = function (message, type = 'success', action = null) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+
+    let icon = '';
+    if (type === 'success') icon = '<i class="fas fa-check-circle" style="color: #4caf50;"></i>';
+    else if (type === 'error') icon = '<i class="fas fa-exclamation-circle" style="color: #d32f2f;"></i>';
+    else icon = '<i class="fas fa-info-circle" style="color: #2196f3;"></i>';
+
+    const inner = document.createElement('div');
+    inner.style.cssText = 'display:flex; align-items:center; gap:10px;';
+    const ic = document.createElement('span');
+    ic.innerHTML = icon;
+    const msg = document.createElement('span');
+    msg.className = 'toast-message';
+    msg.textContent = message;
+    inner.appendChild(ic);
+    inner.appendChild(msg);
+
+    if (action?.label) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'toast-action-btn';
+        btn.textContent = action.label;
+        btn.addEventListener('click', () => { action.onClick?.(); dismiss(); });
+        inner.appendChild(btn);
+    }
+
+    toast.appendChild(inner);
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    let dismissed = false;
+    const dismiss = () => {
+        if (dismissed) return;
+        dismissed = true;
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    };
+    setTimeout(dismiss, action ? 6500 : 3000);
+}
+
+/** Promise-based confirmation dialog replacing native confirm(). */
+let _confirmEls = null;
+function ensureConfirmOverlay() {
+    if (_confirmEls) return _confirmEls;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal confirm-overlay';
+    overlay.id = 'confirm-modal';
+    overlay.innerHTML = `
+        <div class="modal-content confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+            <h3 id="confirm-title">Please confirm</h3>
+            <p id="confirm-message"></p>
+            <div class="confirm-actions">
+                <button type="button" class="btn-secondary" id="confirm-cancel">Cancel</button>
+                <button type="button" class="btn-danger" id="confirm-ok">Delete</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay._resolve?.(false);
+    });
+    document.getElementById('confirm-cancel').addEventListener('click', () => overlay._resolve?.(false));
+    document.getElementById('confirm-ok').addEventListener('click', () => overlay._resolve?.(true));
+    _confirmEls = overlay;
+    return overlay;
+}
+
+function confirmDialog({ title = 'Please confirm', message = '', confirmText = 'Delete' } = {}) {
+    const overlay = ensureConfirmOverlay();
+    overlay.querySelector('#confirm-title').textContent = title;
+    overlay.querySelector('#confirm-message').textContent = message;
+    const okBtn = overlay.querySelector('#confirm-ok');
+    okBtn.textContent = confirmText;
+    okBtn.classList.toggle('btn-danger', confirmText === 'Delete');
+    overlay.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    okBtn.focus();
+    return new Promise((resolve) => {
+        overlay._resolve = (val) => {
+            overlay._resolve = null;
+            overlay.style.display = 'none';
+            document.body.classList.remove('modal-open');
+            resolve(val);
+        };
+    });
+}
+
+/** Form submit wrapper: prevents double-submit and shows busy state. */
+function onSubmit(form, handler) {
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn && btn.dataset.busy === '1') return;
+        let origHtml = '';
+        if (btn) {
+            origHtml = btn.innerHTML;
+            btn.dataset.busy = '1';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+        }
+        try {
+            await handler();
+        } catch (err) {
+            console.error(err);
+            window.showToast(friendlyError(err), 'error');
+        } finally {
+            if (btn) {
+                btn.dataset.busy = '';
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    });
+}
+
+/** Add audit timestamps to every write. */
+function stampCreate(data) {
+    return { ...data, status: data.status || 'published', createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+}
+function stampUpdate(data) {
+    return { ...data, updatedAt: serverTimestamp() };
+}
+
+/** Client-side duplicate detection against already-loaded data. */
+function isDuplicate(items, match, excludeId) {
+    return items.some(x => x.id !== excludeId && match(x));
+}
+
+function dupToast(label) {
+    window.showToast(`A ${label} with these details already exists.`, 'error');
+}
+
+/** Delete helper: confirm dialog + undo toast. */
+async function performDelete(collName, id, label, extraWarning = '') {
+    const ok = await confirmDialog({
+        title: `Delete this ${label}?`,
+        message: `This will permanently remove the ${label}.${extraWarning ? ' ' + extraWarning : ''}`,
+        confirmText: 'Delete'
+    });
+    if (!ok) return;
+    try {
+        const ref = doc(db, collName, id);
+        const snap = await getDoc(ref);
+        await deleteDoc(ref);
+        if (snap.exists()) {
+            const saved = snap.data();
+            window.showToast(`${label} deleted.`, 'success', {
+                label: 'Undo',
+                onClick: async () => {
+                    try {
+                        await setDoc(ref, saved);
+                        await reloadDataFor(collName);
+                        window.showToast('Delete undone.', 'success');
+                    } catch (err) {
+                        console.error(err);
+                        window.showToast(friendlyError(err), 'error');
+                    }
+                }
+            });
+        } else {
+            window.showToast(`${label} deleted.`, 'success');
+        }
+        await reloadDataFor(collName);
+    } catch (error) {
+        console.error(error);
+        window.showToast(friendlyError(error), 'error');
+    }
+}
+
+/* =========================================================
+   DOM ELEMENTS + GLOBAL STATE
+   ========================================================= */
 const loginSection = document.getElementById('login-section');
 const dashboardSection = document.getElementById('dashboard-section');
 const loginForm = document.getElementById('login-form');
@@ -54,11 +255,9 @@ document.addEventListener('input', (e) => {
     }
 });
 
-// Tabs
 const navItems = document.querySelectorAll('.nav-item');
 const tabPanes = document.querySelectorAll('.tab-pane');
 
-// Sidebar Toggle
 const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
 const adminSidebar = document.getElementById('admin-sidebar');
 if (sidebarToggleBtn && adminSidebar) {
@@ -67,93 +266,11 @@ if (sidebarToggleBtn && adminSidebar) {
     }
     sidebarToggleBtn.addEventListener('click', () => {
         adminSidebar.classList.toggle('collapsed');
-        localStorage.setItem('admin-sidebar-collapsed', adminSidebar.classList.contains('collapsed'));
+        localStorage.setItem('admin-sidebar-collapsed', String(adminSidebar.classList.contains('collapsed')));
     });
 }
 
-// State
-
-const paginationState = {
-    vocab: { page: 1, limit: 50, maxPage: 1 },
-    phrasal: { page: 1, limit: 50, maxPage: 1 },
-    prep: { page: 1, limit: 50, maxPage: 1 },
-    wordform: { page: 1, limit: 50, maxPage: 1 },
-    pattern: { page: 1, limit: 50, maxPage: 1 },
-    lexical: { page: 1, limit: 50, maxPage: 1 }
-};
-
-function addPaginationControls() {
-    const tabs = ['vocab', 'phrasal', 'prep', 'wordform', 'pattern', 'lexical'];
-    tabs.forEach(tab => {
-        const tableContainer = document.querySelector(`#tab-${tab} .table-container`);
-        if (tableContainer && !document.getElementById(`pagination-${tab}`)) {
-            const pag = document.createElement('div');
-            pag.className = 'pagination-controls';
-            pag.id = `pagination-${tab}`;
-            pag.style = "display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; font-size: 0.9rem; color: #555;";
-            pag.innerHTML = `
-                <div class="pagination-info" id="pag-info-${tab}">Showing 0 - 0 of 0</div>
-                <div class="pagination-buttons" style="display: flex; gap: 0.5rem; align-items: center;">
-                    <button class="btn-secondary btn-small" id="pag-prev-${tab}" style="padding: 0.2rem 0.5rem;">&lt; Prev</button>
-                    <span id="pag-page-${tab}" style="font-weight: 500;">Page 1</span>
-                    <button class="btn-secondary btn-small" id="pag-next-${tab}" style="padding: 0.2rem 0.5rem;">Next &gt;</button>
-                </div>
-                <div class="pagination-limit">
-                    <select id="pag-limit-${tab}" class="input-field" style="padding: 0.2rem; margin:0; width: auto;">
-                        <option value="20">20 per page</option>
-                        <option value="50" selected>50 per page</option>
-                        <option value="100">100 per page</option>
-                        <option value="999999">All</option>
-                    </select>
-                </div>
-            `;
-            tableContainer.parentElement.appendChild(pag);
-            
-            document.getElementById(`pag-prev-${tab}`).addEventListener('click', () => {
-                if (paginationState[tab].page > 1) {
-                    paginationState[tab].page--;
-                    const renderFn = tab === 'wordform' ? 'renderWordform' : `render${tab.charAt(0).toUpperCase() + tab.slice(1)}`;
-                    window[renderFn]();
-                }
-            });
-            document.getElementById(`pag-next-${tab}`).addEventListener('click', () => {
-                if (paginationState[tab].page < paginationState[tab].maxPage) {
-                    paginationState[tab].page++;
-                    const renderFn = tab === 'wordform' ? 'renderWordform' : `render${tab.charAt(0).toUpperCase() + tab.slice(1)}`;
-                    window[renderFn]();
-                }
-            });
-            document.getElementById(`pag-limit-${tab}`).addEventListener('change', (e) => {
-                paginationState[tab].limit = parseInt(e.target.value);
-                paginationState[tab].page = 1;
-                const renderFn = tab === 'wordform' ? 'renderWordform' : `render${tab.charAt(0).toUpperCase() + tab.slice(1)}`;
-                window[renderFn]();
-            });
-        }
-    });
-}
-
-let booksData = [];
-let unitsData = [];
-let vocabData = [];
-let phrasalData = [];
-let prepData = [];
-let wordformData = [];
-let patternData = [];
-let lexicalData = [];
-
-// --- Tabs Logic ---
-navItems.forEach(item => {
-    item.addEventListener('click', () => {
-        navItems.forEach(nav => nav.classList.remove('active'));
-        tabPanes.forEach(tab => tab.style.display = 'none');
-        
-        item.classList.add('active');
-        document.getElementById(item.getAttribute('data-tab')).style.display = 'block';
-    });
-});
-
-// Modals
+// Modal dirty tracking
 window.isModalDirty = false;
 document.addEventListener('input', (e) => {
     if (e.target.closest('.modal')) window.isModalDirty = true;
@@ -164,68 +281,251 @@ document.addEventListener('change', (e) => {
 
 const closeBtns = document.querySelectorAll('.close-modal');
 closeBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
         if (window.isModalDirty) {
-            if (!confirm("You have unsaved changes. Are you sure you want to close?")) return;
+            const ok = await confirmDialog({
+                title: 'Discard changes?',
+                message: 'You have unsaved changes. Close anyway?',
+                confirmText: 'Discard'
+            });
+            if (!ok) return;
         }
-        const targetId = e.target.getAttribute('data-target');
-        const modal = document.getElementById(targetId);
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.classList.remove('modal-open');
-        }
-        window.closeTinyMCEPopups();
-        window.isModalDirty = false;
+        window.closeModalOverlay(e.target.getAttribute('data-target'));
     });
 });
-// window click to close modal disabled
-// window.addEventListener('click', (e) => { ... });
 
-function openModal(modal) {
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
-    window.isModalDirty = false;
-    const content = modal.querySelector('.modal-content');
-    if (content) content.scrollTop = 0;
-    setTimeout(() => {
-        const target = modal.querySelector('form input[type="text"], form textarea') || modal.querySelector('form select, form input:not([type="hidden"]):not([type="checkbox"])');
-        if (target) target.focus();
-    }, 100);
-}
+// Esc closes the topmost open modal (with dirty check)
+document.addEventListener('keydown', async (e) => {
+    if (e.key !== 'Escape') return;
+    const openModals = [...document.querySelectorAll('.modal')].filter(m => m.style.display === 'flex');
+    if (!openModals.length) return;
+    const top = openModals[openModals.length - 1];
+    if (top.id === 'confirm-modal') { top._resolve?.(false); return; }
+    if (window.isModalDirty) {
+        const ok = await confirmDialog({
+            title: 'Discard changes?',
+            message: 'You have unsaved changes. Close anyway?',
+            confirmText: 'Discard'
+        });
+        if (!ok) return;
+    }
+    window.closeModalOverlay(top);
+});
 
-window.showToast = function(message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    
-    const toast = document.createElement('div');
-    toast.className = 'toast ' + type;
-    
-    let icon = '';
-    if (type === 'success') icon = '<i class="fas fa-check-circle" style="color: #4caf50;"></i>';
-    else if (type === 'error') icon = '<i class="fas fa-exclamation-circle" style="color: #d32f2f;"></i>';
-    else icon = '<i class="fas fa-info-circle" style="color: #2196f3;"></i>';
-    
-    toast.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-            ${icon}
-            <span class="toast-message">${message}</span>
-        </div>
-    `;
-    
-    container.appendChild(toast);
-    
-    setTimeout(() => toast.classList.add('show'), 10);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+/* =========================================================
+   PAGINATION
+   ========================================================= */
+const paginationState = {
+    vocab: { page: 1, limit: 50 },
+    phrasal: { page: 1, limit: 50 },
+    prep: { page: 1, limit: 50 },
+    wordform: { page: 1, limit: 50 },
+    pattern: { page: 1, limit: 50 },
+    lexical: { page: 1, limit: 50 }
 };
 
-// --- Auth Logic ---
+const PAG_RENDER_FN = {
+    vocab: 'renderVocab', phrasal: 'renderPhrasal', prep: 'renderPrep',
+    wordform: 'renderWordform', pattern: 'renderPattern', lexical: 'renderLexical'
+};
+
+function addPaginationControls() {
+    Object.keys(PAG_RENDER_FN).forEach(tab => {
+        const tableContainer = document.querySelector(`#tab-${tab} .table-container`);
+        if (tableContainer && !document.getElementById(`pagination-${tab}`)) {
+            const pag = document.createElement('div');
+            pag.className = 'pagination-controls';
+            pag.id = `pagination-${tab}`;
+            pag.innerHTML = `
+                <div class="pagination-info" id="pag-info-${tab}">Showing 0 - 0 of 0</div>
+                <div class="pagination-buttons">
+                    <button class="btn-secondary btn-small" id="pag-prev-${tab}">&lt; Prev</button>
+                    <span id="pag-page-${tab}">Page 1</span>
+                    <button class="btn-secondary btn-small" id="pag-next-${tab}">Next &gt;</button>
+                </div>
+                <div class="pagination-limit">
+                    <select id="pag-limit-${tab}" class="input-field">
+                        <option value="20">20 per page</option>
+                        <option value="50" selected>50 per page</option>
+                        <option value="100">100 per page</option>
+                        <option value="999999">All</option>
+                    </select>
+                </div>`;
+            tableContainer.parentElement.appendChild(pag);
+
+            document.getElementById(`pag-prev-${tab}`).addEventListener('click', () => {
+                if (paginationState[tab].page > 1) {
+                    paginationState[tab].page--;
+                    window[PAG_RENDER_FN[tab]]();
+                }
+            });
+            document.getElementById(`pag-next-${tab}`).addEventListener('click', () => {
+                if (paginationState[tab].page < paginationState[tab].maxPage) {
+                    paginationState[tab].page++;
+                    window[PAG_RENDER_FN[tab]]();
+                }
+            });
+            document.getElementById(`pag-limit-${tab}`).addEventListener('change', (e) => {
+                paginationState[tab].limit = parseInt(e.target.value);
+                paginationState[tab].page = 1;
+                window[PAG_RENDER_FN[tab]]();
+            });
+        }
+    });
+}
+
+/** Slice a filtered list for the given tab and update its controls. */
+function applyPagination(tab, list) {
+    const state = paginationState[tab];
+    state.maxPage = Math.max(1, Math.ceil(list.length / state.limit));
+    if (state.page > state.maxPage) state.page = state.maxPage;
+    const startIdx = (state.page - 1) * state.limit;
+    const endIdx = startIdx + state.limit;
+
+    const infoEl = document.getElementById(`pag-info-${tab}`);
+    const pageEl = document.getElementById(`pag-page-${tab}`);
+    const prevBtn = document.getElementById(`pag-prev-${tab}`);
+    const nextBtn = document.getElementById(`pag-next-${tab}`);
+
+    if (infoEl) infoEl.innerText = `Showing ${list.length > 0 ? startIdx + 1 : 0} - ${Math.min(endIdx, list.length)} of ${list.length}`;
+    if (pageEl) pageEl.innerText = `Page ${state.page} / ${state.maxPage}`;
+    if (prevBtn) prevBtn.disabled = state.page <= 1;
+    if (nextBtn) nextBtn.disabled = state.page >= state.maxPage;
+
+    return list.slice(startIdx, endIdx);
+}
+
+function resetPage(tab) {
+    if (paginationState[tab]) paginationState[tab].page = 1;
+}
+
+/* =========================================================
+   DATA STATE + LOADING
+   ========================================================= */
+let booksData = [];
+let unitsData = [];
+let vocabData = [];
+let phrasalData = [];
+let prepData = [];
+let wordformData = [];
+let patternData = [];
+let lexicalData = [];
+
+async function fetchAll(name) {
+    const snap = await getDocs(collection(db, name));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function loadData() {
+    const results = await Promise.allSettled([
+        fetchAll("books"), fetchAll("units"), fetchAll("vocabularies"),
+        fetchAll("phrasal_verbs"), fetchAll("prep_phrases"), fetchAll("word_formations"),
+        fetchAll("word_patterns"), fetchAll("lexical_expansions")
+    ]);
+    const names = ["books", "units", "vocabularies", "phrasal_verbs", "prep_phrases", "word_formations", "word_patterns", "lexical_expansions"];
+    results.forEach((r, i) => {
+        if (r.status === 'fulfilled') {
+            assignData(names[i], r.value);
+        } else {
+            console.error(`Error loading ${names[i]}:`, r.reason);
+            window.showToast(`Could not load ${names[i]}: ${friendlyError(r.reason)}`, 'error');
+        }
+    });
+
+    renderBooks();
+    renderUnits();
+    populateBookSelects();
+    populateUnitSelects();
+    addPaginationControls();
+    renderVocab();
+    renderPhrasal();
+    renderPrep();
+    renderWordform();
+    renderPattern();
+    renderLexical();
+    updateDashboardStats();
+}
+
+function assignData(name, value) {
+    switch (name) {
+        case "books": booksData = value; break;
+        case "units": unitsData = value; break;
+        case "vocabularies": vocabData = value; break;
+        case "phrasal_verbs": phrasalData = value; break;
+        case "prep_phrases": prepData = value; break;
+        case "word_formations": wordformData = value; break;
+        case "word_patterns": patternData = value; break;
+        case "lexical_expansions": lexicalData = value; break;
+    }
+}
+
+/** Reload only what a given collection affects. */
+async function reloadDataFor(collName) {
+    try {
+        if (collName === 'grammar_categories' || collName === 'grammar_lessons' || collName === 'grammar_units') {
+            await loadGrammarData();
+            return;
+        }
+        if (collName === 'pronunciation_categories' || collName === 'pronunciation_lessons' || collName === 'pronunciation_units') {
+            await loadPronunciationData();
+            return;
+        }
+        const targets = {
+            books: ["books"], units: ["units"],
+            vocabularies: ["vocabularies"], phrasal_verbs: ["phrasal_verbs"],
+            prep_phrases: ["prep_phrases"], word_formations: ["word_formations"],
+            word_patterns: ["word_patterns"], lexical_expansions: ["lexical_expansions"]
+        };
+        const names = targets[collName] || Object.values(targets).flat();
+        const unique = [...new Set(names)];
+        const values = await Promise.all(unique.map(fetchAll));
+        values.forEach((v, i) => assignData(unique[i], v));
+        renderBooks(); renderUnits();
+        populateBookSelects(); populateUnitSelects();
+        renderVocab(); renderPhrasal(); renderPrep(); renderWordform(); renderPattern(); renderLexical();
+        updateDashboardStats();
+    } catch (err) {
+        console.error(err);
+        window.showToast(friendlyError(err), 'error');
+    }
+}
+
+/* =========================================================
+   TABS
+   ========================================================= */
+// Real implementations are attached after the tree managers are created below.
+let loadGrammarData = async () => {};
+let loadPronunciationData = async () => {};
+
+navItems.forEach(item => {
+    item.addEventListener('click', () => {
+        navItems.forEach(nav => nav.classList.remove('active'));
+        tabPanes.forEach(tab => tab.style.display = 'none');
+
+        item.classList.add('active');
+        document.getElementById(item.getAttribute('data-tab')).style.display = 'block';
+
+        // Lazy-load heavy tabs on first visit
+        if (item.dataset.tab === 'tab-grammar') {
+            initTinyMCE();
+            loadGrammarData();
+        } else if (item.dataset.tab === 'tab-pronunciation') {
+            initTinyMCE();
+            loadPronunciationData();
+        }
+    });
+});
+
+/* =========================================================
+   AUTH
+   ========================================================= */
 onAuthStateChanged(auth, (user) => {
     if (user) {
         loginSection.style.display = 'none';
         dashboardSection.style.display = 'flex';
+        const emailEl = document.getElementById('admin-user-email');
+        if (emailEl) emailEl.textContent = user.email || '';
+        if (emailEl) emailEl.title = `Signed in as ${user.email || 'unknown'}`;
         loadData();
     } else {
         loginSection.style.display = 'flex';
@@ -238,12 +538,12 @@ loginForm.addEventListener('submit', async (e) => {
     loginError.innerText = '';
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    
+
     try {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-        loginError.innerText = "Login failed. Please check your email/password.";
         console.error(error);
+        loginError.innerText = friendlyError(error);
     }
 });
 
@@ -251,170 +551,147 @@ logoutBtn.addEventListener('click', () => {
     signOut(auth);
 });
 
-// --- Data Loading ---
-async function loadData() {
-    try {
-        // Load Books
-        const booksSnapshot = await getDocs(collection(db, "books"));
-        booksData = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Load Units
-        const unitsSnapshot = await getDocs(collection(db, "units"));
-        unitsData = unitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Load Vocab
-        const vocabSnapshot = await getDocs(collection(db, "vocabularies"));
-        vocabData = vocabSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Load Phrasal Verbs
-        const phrasalSnapshot = await getDocs(collection(db, "phrasal_verbs"));
-        phrasalData = phrasalSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Load Prepositional Phrases
-        const prepSnapshot = await getDocs(collection(db, "prep_phrases"));
-        prepData = prepSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Load Word Formations
-        const wfSnapshot = await getDocs(collection(db, "word_formations"));
-        wordformData = wfSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Load Word Patterns
-        const patternSnapshot = await getDocs(collection(db, "word_patterns"));
-        patternData = patternSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Load Lexical Expansions
-        const lexicalSnapshot = await getDocs(collection(db, "lexical_expansions"));
-        lexicalData = lexicalSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        renderBooks();
-        renderUnits();
-        populateBookSelects();
-        populateUnitSelects();
-        addPaginationControls();
-        renderVocab();
-        renderPhrasal();
-        renderPrep();
-        renderWordform();
-        renderPattern();
-        renderLexical();
-        updateDashboardStats();
-        
-    } catch (error) {
-        console.error("Error loading data:", error);
-        window.showToast("Cannot load data from Database: " + (error.message || error), 'error');
-    }
-}
-
-// --- Books Logic ---
+/* =========================================================
+   BOOKS
+   ========================================================= */
 const bookModal = document.getElementById('book-modal');
 const bookForm = document.getElementById('book-form');
 
 document.getElementById('add-book-btn').addEventListener('click', () => {
     document.getElementById('book-id').value = '';
     bookForm.reset();
+    document.getElementById('book-status').value = 'published';
     document.getElementById('book-order').value = booksData.length > 0 ? Math.max(...booksData.map(b => b.order || 0)) + 1 : 1;
+    updateBookPreview();
     document.getElementById('book-modal-title').innerText = 'Add New Book';
     openModal(bookModal);
 });
 
-bookForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+// Cover image preview
+function updateBookPreview() {
+    const preview = document.getElementById('book-image-preview');
+    const urlInput = document.getElementById('book-image');
+    if (preview && urlInput) preview.src = urlInput.value.trim() || 'assets/images/book_cover.png';
+}
+document.getElementById('book-image')?.addEventListener('input', updateBookPreview);
+document.getElementById('book-image')?.addEventListener('change', updateBookPreview);
+
+onSubmit(bookForm, async () => {
     const id = document.getElementById('book-id').value;
     const bookData = {
         title: document.getElementById('book-title').value.trim(),
         subtitle: document.getElementById('book-subtitle').value.trim(),
         desc: document.getElementById('book-desc').value.trim(),
         image: document.getElementById('book-image').value.trim(),
-        order: parseInt(document.getElementById('book-order').value) || 1
+        order: parseInt(document.getElementById('book-order').value) || 1,
+        status: document.getElementById('book-status').value
     };
+    if (!bookData.title) { window.showToast('Book title is required.', 'error'); return; }
+    if (isDuplicate(booksData, b => (b.title || '').toLowerCase() === bookData.title.toLowerCase(), id)) {
+        dupToast('book'); return;
+    }
 
-    try {
-        if (id) {
-            await updateDoc(doc(db, "books", id), bookData);
-        } else {
-            await addDoc(collection(db, "books"), bookData);
-        }
-        bookModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-        await loadData();
-        window.showToast('Saved!', 'success');
-    } catch (error) { console.error(error); window.showToast("Failed to save book.: " + (error.message || error), 'error'); }
+    if (id) {
+        await updateDoc(doc(db, "books", id), stampUpdate(bookData));
+    } else {
+        await addDoc(collection(db, "books"), stampCreate(bookData));
+    }
+    window.closeModalOverlay(bookModal);
+    await reloadDataFor(id ? "books" : null);
+    window.showToast('Saved!', 'success');
 });
 
 function renderBooks() {
     const list = document.getElementById('books-list');
+    if (!list) return;
     const searchTerm = document.getElementById('search-book')?.value.toLowerCase() || '';
-    
-    let filtered = booksData.filter(b => b.title.toLowerCase().includes(searchTerm));
+
+    const filtered = booksData.filter(b => (b.title || '').toLowerCase().includes(searchTerm));
     filtered.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    list.innerHTML = '';
-    filtered.forEach(b => {
-        list.innerHTML += `
-            <tr>
-                <td>${b.order || 0}</td>
-                <td><img src="${b.image || 'assets/images/book_cover.png'}" alt="cover" style="height: 40px; border-radius: 4px;"></td>
-                <td>${b.title} ${b.subtitle ? `<br><small style="color: #666;">${b.subtitle}</small>` : ''}</td>
-                <td>
-                    <button class="btn-secondary btn-small" onclick="editBook('${b.id}')">Edit</button>
-                    <button class="btn-danger btn-small" onclick="deleteBook('${b.id}')">Delete</button>
-                </td>
-            </tr>
-        `;
-    });
+    if (!filtered.length) {
+        list.innerHTML = `<tr><td colspan="4" class="empty-row">No books found.</td></tr>`;
+        return;
+    }
+
+    list.innerHTML = filtered.map(b => `
+        <tr>
+            <td>${b.order || 0}</td>
+            <td><img src="${escapeHtml(b.image || 'assets/images/book_cover.png')}" alt="" style="height: 40px; border-radius: 4px;" onerror="this.style.visibility='hidden'"></td>
+            <td><strong>${escapeHtml(b.title)}</strong> ${b.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}${b.subtitle ? `<br><small>${escapeHtml(b.subtitle)}</small>` : ''}</td>
+            <td>
+                <button class="btn-secondary btn-small" onclick="editBook('${b.id}')">Edit</button>
+                <button class="btn-secondary btn-small" onclick="duplicateBook('${b.id}')">Duplicate</button>
+                <button class="btn-danger btn-small" onclick="deleteBook('${b.id}')">Delete</button>
+            </td>
+        </tr>
+    `).join('');
 }
 
 window.editBook = (id) => {
     const b = booksData.find(x => x.id === id);
     if (b) {
         document.getElementById('book-id').value = b.id;
-        document.getElementById('book-title').value = b.title;
+        document.getElementById('book-title').value = b.title || '';
         document.getElementById('book-subtitle').value = b.subtitle || '';
         document.getElementById('book-desc').value = b.desc || '';
         document.getElementById('book-image').value = b.image || 'assets/images/book_cover.png';
         document.getElementById('book-order').value = b.order || 1;
-        
+        document.getElementById('book-status').value = b.status || 'published';
+        updateBookPreview();
         document.getElementById('book-modal-title').innerText = 'Edit Book';
         openModal(bookModal);
     }
 };
 
-window.deleteBook = async (id) => {
-    if (confirm("Are you sure you want to delete this Book? Make sure no units belong to it first!")) {
-        try {
-            await deleteDoc(doc(db, "books", id));
-            await loadData();
-            window.showToast('Deleted!', 'success');
-        } catch (error) { console.error(error); window.showToast("Failed to delete book.: " + (error.message || error), 'error'); }
+window.duplicateBook = async (id) => {
+    const b = booksData.find(x => x.id === id);
+    if (!b) return;
+    const { id: _omit, createdAt: _c, updatedAt: _u, ...rest } = b;
+    rest.title = (b.title || 'Untitled') + ' (copy)';
+    try {
+        await addDoc(collection(db, "books"), stampCreate(rest));
+        await reloadDataFor("books");
+        window.showToast('Book duplicated.', 'success');
+    } catch (err) {
+        console.error(err);
+        window.showToast(friendlyError(err), 'error');
     }
+};
+
+window.deleteBook = async (id) => {
+    const count = unitsData.filter(u => u.bookId === id).length;
+    const warning = count > 0
+        ? `${count} unit${count > 1 ? 's' : ''} still belong${count > 1 ? '' : 's'} to this book and will be orphaned.`
+        : '';
+    await performDelete("books", id, 'book', warning);
 };
 
 document.getElementById('search-book')?.addEventListener('input', renderBooks);
 
-// --- Units Logic ---
+/* =========================================================
+   UNITS
+   ========================================================= */
 const unitModal = document.getElementById('unit-modal');
 const unitForm = document.getElementById('unit-form');
 
 function populateBookSelects() {
     const filterSelect = document.getElementById('filter-unit-book');
     const formSelect = document.getElementById('unit-book');
-    
-    if(!filterSelect || !formSelect) return;
 
-    const options = booksData.sort((a,b) => (a.order||0) - (b.order||0)).map(b => `<option value="${b.id}">${b.title}</option>`).join('');
-    
+    if (!filterSelect || !formSelect) return;
+
+    const sorted = [...booksData].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const options = sorted.map(b => `<option value="${b.id}">${escapeHtml(b.title)}</option>`).join('');
+
     const currentFilter = filterSelect.value;
     filterSelect.innerHTML = `<option value="all">All Books</option>` + options;
-    if(currentFilter && currentFilter !== 'all') {
-        filterSelect.value = currentFilter;
-    }
+    if (currentFilter && currentFilter !== 'all') filterSelect.value = currentFilter;
 
     const currentForm = formSelect.value;
     formSelect.innerHTML = options;
-    if(currentForm) {
-        formSelect.value = currentForm;
-    } else if (lastSelectedBookId) {
-        formSelect.value = lastSelectedBookId;
-    }
+    if (currentForm) formSelect.value = currentForm;
+    else if (lastSelectedBookId) formSelect.value = lastSelectedBookId;
 }
 
 let lastSelectedBookId = null;
@@ -422,38 +699,39 @@ let lastSelectedBookId = null;
 document.getElementById('add-unit-btn').addEventListener('click', () => {
     document.getElementById('unit-id').value = '';
     unitForm.reset();
-    if(lastSelectedBookId) document.getElementById('unit-book').value = lastSelectedBookId;
+    if (lastSelectedBookId) document.getElementById('unit-book').value = lastSelectedBookId;
+    document.getElementById('unit-status').value = 'published';
     document.getElementById('unit-order').value = unitsData.length > 0 ? Math.max(...unitsData.map(u => u.order || 0)) + 1 : 1;
     document.getElementById('unit-modal-title').innerText = 'Add New Unit';
     openModal(unitModal);
 });
 
-unitForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+onSubmit(unitForm, async () => {
     const id = document.getElementById('unit-id').value;
     const bookId = document.getElementById('unit-book').value;
     const title = document.getElementById('unit-title').value.trim();
     const order = parseInt(document.getElementById('unit-order').value);
-    
+
     const sectionCheckboxes = document.querySelectorAll('input[name="unit-section"]:checked');
     const sections = Array.from(sectionCheckboxes).map(cb => cb.value);
 
-    lastSelectedBookId = bookId; // Remember for next time
-    
-    const unitData = { bookId, title, order, sections };
+    lastSelectedBookId = bookId;
 
-    try {
-        if (id) {
-            // Update
-            await updateDoc(doc(db, "units", id), unitData);
-        } else {
-            // Create
-            await addDoc(collection(db, "units"), unitData);
-        }
-        unitModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-        await loadData();
-        window.showToast('Saved!', 'success');
-    } catch (error) { console.error(error); window.showToast("Error saving Unit!: " + (error.message || error), 'error'); }
+    const unitData = { bookId, title, order, sections, status: document.getElementById('unit-status').value };
+    if (!title) { window.showToast('Unit title is required.', 'error'); return; }
+    if (!bookId) { window.showToast('Please select a book.', 'error'); return; }
+    if (isDuplicate(unitsData, u => u.bookId === bookId && (u.title || '').toLowerCase() === title.toLowerCase(), id)) {
+        dupToast('unit'); return;
+    }
+
+    if (id) {
+        await updateDoc(doc(db, "units", id), stampUpdate(unitData));
+    } else {
+        await addDoc(collection(db, "units"), stampCreate(unitData));
+    }
+    window.closeModalOverlay(unitModal);
+    await reloadDataFor("units");
+    window.showToast('Saved!', 'success');
 });
 
 document.getElementById('search-unit')?.addEventListener('input', renderUnits);
@@ -464,50 +742,49 @@ function renderUnits() {
     const list = document.getElementById('units-list');
     if (!list) return;
     const searchQuery = document.getElementById('search-unit')?.value.toLowerCase() || '';
-    const sortValue = document.getElementById('sort-unit')?.value || 'az';
+    const sortValue = document.getElementById('sort-unit')?.value || 'default';
     const bookFilter = document.getElementById('filter-unit-book')?.value || 'all';
-    list.innerHTML = '';
-    
-    let filteredData = unitsData.filter(u => u.title.toLowerCase().includes(searchQuery));
+
+    let filteredData = unitsData.filter(u => (u.title || '').toLowerCase().includes(searchQuery));
     if (bookFilter !== 'all') {
         filteredData = filteredData.filter(u => u.bookId === bookFilter);
     }
-    
-    if (sortValue === 'az') {
-        filteredData.sort((a, b) => a.title.localeCompare(b.title));
-    } else if (sortValue === 'za') {
-        filteredData.sort((a, b) => b.title.localeCompare(a.title));
-    } else {
-        filteredData.sort((a, b) => a.order - b.order);
+
+    if (sortValue === 'az') filteredData.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    else if (sortValue === 'za') filteredData.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+    else filteredData.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    if (!filteredData.length) {
+        list.innerHTML = `<tr><td colspan="4" class="empty-row">No units found.</td></tr>`;
+        return;
     }
 
-    filteredData.forEach(unit => {
+    list.innerHTML = filteredData.map(unit => {
         const book = booksData.find(b => b.id === unit.bookId);
-        list.innerHTML += `
+        return `
             <tr>
                 <td>${unit.order || 0}</td>
-                <td>${book ? book.title : '<em>No Book</em>'}</td>
-                <td>${unit.title}</td>
+                <td>${book ? escapeHtml(book.title) : '<em>No Book</em>'}</td>
+                <td><strong>${escapeHtml(unit.title)}</strong> ${unit.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
                 <td>
                     <button class="btn-secondary btn-small" onclick="editUnit('${unit.id}')">Edit</button>
-                    <button class="btn-secondary btn-danger btn-small" onclick="deleteUnit('${unit.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="duplicateUnit('${unit.id}')">Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deleteUnit('${unit.id}')">Delete</button>
                 </td>
-            </tr>
-        `;
-    });
+            </tr>`;
+    }).join('');
 }
 
 window.editUnit = (id) => {
     const unit = unitsData.find(u => u.id === id);
-    if(unit) {
+    if (unit) {
         document.getElementById('unit-id').value = unit.id;
         document.getElementById('unit-book').value = unit.bookId || '';
-        document.getElementById('unit-title').value = unit.title;
+        document.getElementById('unit-title').value = unit.title || '';
         document.getElementById('unit-order').value = unit.order || 1;
-        
-        // Reset checkboxes
+        document.getElementById('unit-status').value = unit.status || 'published';
+
         document.querySelectorAll('input[name="unit-section"]').forEach(cb => cb.checked = false);
-        // Check selected
         if (unit.sections) {
             unit.sections.forEach(sec => {
                 const cb = document.querySelector(`input[name="unit-section"][value="${sec}"]`);
@@ -520,29 +797,45 @@ window.editUnit = (id) => {
     }
 };
 
-window.deleteUnit = async (id) => {
-    if(confirm('Are you sure you want to delete this unit? All vocabs will need to be reassigned manually.')) {
-        try {
-            await deleteDoc(doc(db, "units", id));
-            await loadData();
-            window.showToast('Deleted!', 'success');
-        } catch (error) {
-            console.error("Error deleting Unit:", error);
-        }
+window.duplicateUnit = async (id) => {
+    const u = unitsData.find(x => x.id === id);
+    if (!u) return;
+    const { id: _omit, createdAt: _c, updatedAt: _u, ...rest } = u;
+    rest.title = (u.title || 'Unit') + ' (copy)';
+    try {
+        await addDoc(collection(db, "units"), stampCreate(rest));
+        await reloadDataFor("units");
+        window.showToast('Unit duplicated.', 'success');
+    } catch (err) {
+        console.error(err);
+        window.showToast(friendlyError(err), 'error');
     }
-}
+};
 
-// --- Vocab Logic ---
-const vocabModal = document.getElementById('vocab-modal');
-const vocabForm = document.getElementById('vocab-form');
+window.deleteUnit = async (id) => {
+    const children =
+        vocabData.filter(v => v.unitId === id).length +
+        phrasalData.filter(v => v.unitId === id).length +
+        prepData.filter(v => v.unitId === id).length +
+        wordformData.filter(v => v.unitId === id).length +
+        patternData.filter(v => v.unitId === id).length +
+        lexicalData.filter(v => v.unitId === id).length;
+    const warning = children > 0
+        ? `${children} linked record${children > 1 ? 's' : ''} (vocabulary, phrases…) will be orphaned.`
+        : '';
+    await performDelete("units", id, 'unit', warning);
+};
 
+/* =========================================================
+   SHARED UNIT SELECT POPULATION
+   ========================================================= */
 const unitSelectConfigs = [
-    { key: 'vocab', selectId: 'vocab-unit-id' },
-    { key: 'phrasal', selectId: 'phrasal-unit-id' },
-    { key: 'prep', selectId: 'prep-unit-id' },
-    { key: 'wordform', selectId: 'wordform-unit-id' },
-    { key: 'pattern', selectId: 'pattern-unit' },
-    { key: 'lexical', selectId: 'lexical-unit-id' }
+    { key: 'vocab', selectId: 'vocab-unit-id', filterId: 'filter-unit-select' },
+    { key: 'phrasal', selectId: 'phrasal-unit-id', filterId: 'filter-unit-select-phrasal' },
+    { key: 'prep', selectId: 'prep-unit-id', filterId: 'filter-unit-select-prep' },
+    { key: 'wordform', selectId: 'wordform-unit-id', filterId: 'filter-unit-select-wordform' },
+    { key: 'pattern', selectId: 'pattern-unit', filterId: 'filter-unit-select-pattern' },
+    { key: 'lexical', selectId: 'lexical-unit-id', filterId: 'filter-unit-select-lexical' }
 ];
 
 const lastUnitSelections = {};
@@ -551,9 +844,7 @@ unitSelectConfigs.forEach(({ key, selectId }) => {
     lastUnitSelections[key] = localStorage.getItem(`admin-last-${key}-unit-id`) || '';
     const sel = document.getElementById(selectId);
     if (sel) {
-        sel.addEventListener('change', () => {
-            rememberUnitSelection(key, sel.value);
-        });
+        sel.addEventListener('change', () => rememberUnitSelection(key, sel.value));
     }
 });
 
@@ -571,198 +862,155 @@ function applySavedUnitSelect(selectEl, key) {
 }
 
 function populateUnitSelects() {
-    const filterSelect = document.getElementById('filter-unit-select');
-    const formSelect = document.getElementById('vocab-unit-id');
-    const filterSelectPhrasal = document.getElementById('filter-unit-select-phrasal');
-    const formSelectPhrasal = document.getElementById('phrasal-unit-id');
-    const filterSelectPrep = document.getElementById('filter-unit-select-prep');
-    const formSelectPrep = document.getElementById('prep-unit-id');
-    const filterSelectWordform = document.getElementById('filter-unit-select-wordform');
-    const formSelectWordform = document.getElementById('wordform-unit-id');
-    const filterSelectPattern = document.getElementById('filter-unit-select-pattern');
-    const formSelectPattern = document.getElementById('pattern-unit');
-    const filterSelectLexical = document.getElementById('filter-unit-select-lexical');
-    const formSelectLexical = document.getElementById('lexical-unit-id');
-    
-    const options = unitsData.sort((a,b) => a.order - b.order).map(u => `<option value="${u.id}">${u.title}</option>`).join('');
-    
-    // Keep current option if filter is selected
-    const currentFilter = filterSelect.value;
-    filterSelect.innerHTML = `<option value="all">All Units</option>` + options;
-    if(currentFilter && currentFilter !== 'all') {
-        filterSelect.value = currentFilter;
-    }
-    
-    const currentFilterPhrasal = filterSelectPhrasal.value;
-    filterSelectPhrasal.innerHTML = `<option value="all">All Units</option>` + options;
-    if(currentFilterPhrasal && currentFilterPhrasal !== 'all') {
-        filterSelectPhrasal.value = currentFilterPhrasal;
-    }
+    const options = [...unitsData]
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(u => `<option value="${u.id}">${escapeHtml(u.title)}</option>`)
+        .join('');
 
-    const currentFilterPrep = filterSelectPrep.value;
-    filterSelectPrep.innerHTML = `<option value="all">All Units</option>` + options;
-    if(currentFilterPrep && currentFilterPrep !== 'all') {
-        filterSelectPrep.value = currentFilterPrep;
-    }
+    unitSelectConfigs.forEach(({ key, selectId, filterId }) => {
+        const formSelect = document.getElementById(selectId);
+        const filterSelect = document.getElementById(filterId);
 
-    const currentFilterWordform = filterSelectWordform.value;
-    filterSelectWordform.innerHTML = `<option value="all">All Units</option>` + options;
-    if(currentFilterWordform && currentFilterWordform !== 'all') {
-        filterSelectWordform.value = currentFilterWordform;
-    }
-
-    const currentFilterPattern = filterSelectPattern ? filterSelectPattern.value : null;
-    if (filterSelectPattern) filterSelectPattern.innerHTML = `<option value="all">All Units</option>` + options;
-    if (filterSelectPattern && currentFilterPattern && currentFilterPattern !== 'all') {
-        filterSelectPattern.value = currentFilterPattern;
-    }
-
-    const currentFilterLexical = filterSelectLexical ? filterSelectLexical.value : null;
-    if (filterSelectLexical) filterSelectLexical.innerHTML = `<option value="all">All Units</option>` + options;
-    if (filterSelectLexical && currentFilterLexical && currentFilterLexical !== 'all') {
-        filterSelectLexical.value = currentFilterLexical;
-    }
-
-    formSelect.innerHTML = options;
-    applySavedUnitSelect(formSelect, 'vocab');
-    formSelectPhrasal.innerHTML = options;
-    applySavedUnitSelect(formSelectPhrasal, 'phrasal');
-    formSelectPrep.innerHTML = options;
-    applySavedUnitSelect(formSelectPrep, 'prep');
-    formSelectWordform.innerHTML = options;
-    applySavedUnitSelect(formSelectWordform, 'wordform');
-    if (formSelectPattern) formSelectPattern.innerHTML = options;
-    applySavedUnitSelect(formSelectPattern, 'pattern');
-    if (formSelectLexical) formSelectLexical.innerHTML = options;
-    applySavedUnitSelect(formSelectLexical, 'lexical');
+        if (filterSelect) {
+            const currentFilter = filterSelect.value;
+            filterSelect.innerHTML = `<option value="all">All Units</option>` + options;
+            if (currentFilter && currentFilter !== 'all') filterSelect.value = currentFilter;
+        }
+        if (formSelect) {
+            formSelect.innerHTML = options;
+            applySavedUnitSelect(formSelect, key);
+        }
+    });
 }
+
+/* =========================================================
+   VOCABULARY
+   ========================================================= */
+const vocabModal = document.getElementById('vocab-modal');
+const vocabForm = document.getElementById('vocab-form');
 
 document.getElementById('add-vocab-btn').addEventListener('click', () => {
     document.getElementById('vocab-id').value = '';
     vocabForm.reset();
     applySavedUnitSelect(document.getElementById('vocab-unit-id'), 'vocab');
+    document.getElementById('vocab-status').value = 'published';
     document.getElementById('vocab-modal-title').innerText = 'Add New Vocabulary';
     openModal(vocabModal);
 });
 
-vocabForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+onSubmit(vocabForm, async () => {
     const id = document.getElementById('vocab-id').value;
     const newVocab = {
         unitId: document.getElementById('vocab-unit-id').value,
-        word: document.getElementById('vocab-word').value,
-        pos: document.getElementById('vocab-pos').value,
-        pron: document.getElementById('vocab-pron').value,
-        audio: document.getElementById('vocab-audio').value,
-        def: document.getElementById('vocab-def').value,
-        example: document.getElementById('vocab-example').value
+        word: document.getElementById('vocab-word').value.trim(),
+        pos: document.getElementById('vocab-pos').value.trim(),
+        pron: document.getElementById('vocab-pron').value.trim(),
+        audio: document.getElementById('vocab-audio').value.trim(),
+        def: document.getElementById('vocab-def').value.trim(),
+        example: document.getElementById('vocab-example').value.trim(),
+        status: document.getElementById('vocab-status').value
     };
 
     rememberUnitSelection('vocab', newVocab.unitId);
-    
-    try {
-        if (id) {
-            await updateDoc(doc(db, "vocabularies", id), newVocab);
-        } else {
-            await addDoc(collection(db, "vocabularies"), newVocab);
-        }
-        vocabModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-        await loadData();
-        window.showToast('Saved!', 'success');
-    } catch (error) { console.error(error); window.showToast("Error saving vocabulary!: " + (error.message || error), 'error'); }
+    if (!newVocab.word) { window.showToast('Word is required.', 'error'); return; }
+    if (!newVocab.unitId) { window.showToast('Please select a unit.', 'error'); return; }
+    if (isDuplicate(vocabData, v => v.unitId === newVocab.unitId && (v.word || '').toLowerCase() === newVocab.word.toLowerCase(), id)) {
+        dupToast('vocabulary entry'); return;
+    }
+
+    if (id) {
+        await updateDoc(doc(db, "vocabularies", id), stampUpdate(newVocab));
+    } else {
+        await addDoc(collection(db, "vocabularies"), stampCreate(newVocab));
+    }
+    window.closeModalOverlay(vocabModal);
+    await reloadDataFor("vocabularies");
+    window.showToast('Saved!', 'success');
+});
+
+// Audio test-play button
+document.getElementById('vocab-audio-test')?.addEventListener('click', () => {
+    const url = document.getElementById('vocab-audio').value.trim();
+    if (!url) { window.showToast('Enter an audio URL first.', 'info'); return; }
+    const audio = new Audio(url);
+    audio.play().catch(() => window.showToast('Could not play this audio URL.', 'error'));
 });
 
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
-document.getElementById('search-vocab').addEventListener('input', () => {
-        if (paginationState['vocab']) paginationState['vocab'].page = 1;
-        addPaginationControls();
-        renderVocab();
-    });
+document.getElementById('search-vocab').addEventListener('input', () => { resetPage('vocab'); renderVocab(); });
 document.getElementById('sort-vocab').addEventListener('change', renderVocab);
 
 function renderVocab() {
     const list = document.getElementById('vocab-list');
+    if (!list) return;
     const filter = document.getElementById('filter-unit-select').value;
     const searchQuery = document.getElementById('search-vocab').value.toLowerCase();
     const sortValue = document.getElementById('sort-vocab').value;
-    list.innerHTML = '';
-    
-    let filteredVocab = filter === 'all' ? vocabData : vocabData.filter(v => v.unitId === filter);
-    filteredVocab = filteredVocab.filter(v => v.word.toLowerCase().includes(searchQuery) || (v.def && v.def.toLowerCase().includes(searchQuery)));
-    
-    if (sortValue === 'az') {
-        filteredVocab.sort((a, b) => a.word.localeCompare(b.word));
-    } else if (sortValue === 'za') {
-        filteredVocab.sort((a, b) => b.word.localeCompare(a.word));
-    }
-    
-    
-    const state = paginationState['vocab'];
-    if (state) {
-        state.maxPage = Math.ceil(filteredVocab.length / state.limit) || 1;
-        if (state.page > state.maxPage) state.page = state.maxPage;
-        const startIdx = (state.page - 1) * state.limit;
-        const endIdx = startIdx + state.limit;
 
-        const infoEl = document.getElementById('pag-info-vocab');
-        const pageEl = document.getElementById('pag-page-vocab');
-        const prevBtn = document.getElementById('pag-prev-vocab');
-        const nextBtn = document.getElementById('pag-next-vocab');
-        
-        if (infoEl) infoEl.innerText = `Showing ${ filteredVocab.length > 0 ? startIdx + 1 : 0 } - ${Math.min(endIdx, filteredVocab.length)} of ${ filteredVocab.length }`;
-        if (pageEl) pageEl.innerText = `Page ${state.page} / ${state.maxPage}`;
-        if (prevBtn) prevBtn.disabled = state.page === 1;
-        if (nextBtn) nextBtn.disabled = state.page === state.maxPage;
+    let filtered = filter === 'all' ? vocabData : vocabData.filter(v => v.unitId === filter);
+    filtered = filtered.filter(v =>
+        (v.word || '').toLowerCase().includes(searchQuery) ||
+        (v.def || '').toLowerCase().includes(searchQuery));
 
-        filteredVocab = filteredVocab.slice(startIdx, endIdx);
+    if (sortValue === 'az') filtered.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
+    else if (sortValue === 'za') filtered.sort((a, b) => (b.word || '').localeCompare(a.word || ''));
+
+    const pageItems = applyPagination('vocab', filtered);
+    if (!pageItems.length) {
+        list.innerHTML = `<tr><td colspan="5" class="empty-row">${filtered.length === 0 ? 'No vocabulary found.' : 'No vocabulary on this page.'}</td></tr>`;
+        return;
     }
-    
-    filteredVocab.forEach(v => {
+
+    list.innerHTML = pageItems.map(v => {
         const unitName = unitsData.find(u => u.id === v.unitId)?.title || 'Unknown';
-        list.innerHTML += `
+        return `
             <tr>
-                <td><strong>${v.word}</strong></td>
-                <td>${v.pos}</td>
-                <td>${v.pron}</td>
-                <td>${unitName}</td>
+                <td><strong>${escapeHtml(v.word)}</strong> ${v.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
+                <td>${escapeHtml(v.pos)}</td>
+                <td>${escapeHtml(v.pron)}</td>
+                <td>${escapeHtml(unitName)}</td>
                 <td>
                     <button class="btn-secondary btn-small" onclick="editVocab('${v.id}')">Edit</button>
-                    <button class="btn-secondary btn-danger btn-small" onclick="deleteVocab('${v.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="duplicateVocab('${v.id}')">Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deleteVocab('${v.id}')">Delete</button>
                 </td>
-            </tr>
-        `;
-    });
+            </tr>`;
+    }).join('');
 }
 
 window.editVocab = (id) => {
     const v = vocabData.find(v => v.id === id);
-    if(v) {
+    if (v) {
         document.getElementById('vocab-id').value = v.id;
-        document.getElementById('vocab-unit-id').value = v.unitId;
-        document.getElementById('vocab-word').value = v.word;
-        document.getElementById('vocab-pos').value = v.pos;
-        document.getElementById('vocab-pron').value = v.pron;
-        document.getElementById('vocab-audio').value = v.audio;
-        document.getElementById('vocab-def').value = v.def;
-        document.getElementById('vocab-example').value = v.example;
+        document.getElementById('vocab-unit-id').value = v.unitId || '';
+        document.getElementById('vocab-word').value = v.word || '';
+        document.getElementById('vocab-pos').value = v.pos || '';
+        document.getElementById('vocab-pron').value = v.pron || '';
+        document.getElementById('vocab-audio').value = v.audio || '';
+        document.getElementById('vocab-def').value = v.def || '';
+        document.getElementById('vocab-example').value = v.example || '';
+        document.getElementById('vocab-status').value = v.status || 'published';
         document.getElementById('vocab-modal-title').innerText = 'Edit Vocabulary';
         openModal(vocabModal);
     }
 };
 
-window.deleteVocab = async (id) => {
-    if(confirm('Are you sure you want to delete this word?')) {
-        try {
-            await deleteDoc(doc(db, "vocabularies", id));
-            await loadData();
-            window.showToast('Deleted!', 'success');
-        } catch (error) {
-            console.error("Error deleting vocabulary:", error);
-        }
-    }
-}
+window.duplicateVocab = async (id) => {
+    const v = vocabData.find(x => x.id === id);
+    if (!v) return;
+    const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = v;
+    try {
+        await addDoc(collection(db, "vocabularies"), stampCreate(rest));
+        await reloadDataFor("vocabularies");
+        window.showToast('Entry duplicated.', 'success');
+    } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
+};
 
-// --- Phrasal Verbs Logic ---
+window.deleteVocab = (id) => performDelete("vocabularies", id, 'word');
+
+/* =========================================================
+   PHRASAL VERBS
+   ========================================================= */
 const phrasalModal = document.getElementById('phrasal-modal');
 const phrasalForm = document.getElementById('phrasal-form');
 
@@ -770,122 +1018,110 @@ document.getElementById('add-phrasal-btn').addEventListener('click', () => {
     document.getElementById('phrasal-id').value = '';
     phrasalForm.reset();
     applySavedUnitSelect(document.getElementById('phrasal-unit-id'), 'phrasal');
+    document.getElementById('phrasal-status').value = 'published';
     document.getElementById('phrasal-modal-title').innerText = 'Add Phrasal Verb';
     openModal(phrasalModal);
 });
 
-phrasalForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+onSubmit(phrasalForm, async () => {
     const id = document.getElementById('phrasal-id').value;
     const newPhrasal = {
         unitId: document.getElementById('phrasal-unit-id').value,
-        word: document.getElementById('phrasal-word').value,
-        pron: document.getElementById('phrasal-pron').value,
-        def: document.getElementById('phrasal-def').value,
-        example: document.getElementById('phrasal-example').value
+        word: document.getElementById('phrasal-word').value.trim(),
+        pron: document.getElementById('phrasal-pron').value.trim(),
+        def: document.getElementById('phrasal-def').value.trim(),
+        example: document.getElementById('phrasal-example').value.trim(),
+        status: document.getElementById('phrasal-status').value
     };
 
     rememberUnitSelection('phrasal', newPhrasal.unitId);
-    
-    try {
-        if (id) {
-            await updateDoc(doc(db, "phrasal_verbs", id), newPhrasal);
-        } else {
-            await addDoc(collection(db, "phrasal_verbs"), newPhrasal);
-        }
-        phrasalModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-        await loadData();
-        window.showToast('Saved!', 'success');
-    } catch (error) { console.error(error); window.showToast("Error saving Phrasal Verb!: " + (error.message || error), 'error'); }
+    if (!newPhrasal.word) { window.showToast('Phrasal verb is required.', 'error'); return; }
+    if (isDuplicate(phrasalData, p => p.unitId === newPhrasal.unitId && (p.word || '').toLowerCase() === newPhrasal.word.toLowerCase(), id)) {
+        dupToast('phrasal verb'); return;
+    }
+
+    if (id) {
+        await updateDoc(doc(db, "phrasal_verbs", id), stampUpdate(newPhrasal));
+    } else {
+        await addDoc(collection(db, "phrasal_verbs"), stampCreate(newPhrasal));
+    }
+    window.closeModalOverlay(phrasalModal);
+    await reloadDataFor("phrasal_verbs");
+    window.showToast('Saved!', 'success');
 });
 
 document.getElementById('filter-unit-select-phrasal').addEventListener('change', renderPhrasal);
-document.getElementById('search-phrasal').addEventListener('input', () => {
-        if (paginationState['phrasal']) paginationState['phrasal'].page = 1;
-        renderPhrasal();
-    });
+document.getElementById('search-phrasal').addEventListener('input', () => { resetPage('phrasal'); renderPhrasal(); });
 document.getElementById('sort-phrasal').addEventListener('change', renderPhrasal);
 
 function renderPhrasal() {
     const list = document.getElementById('phrasal-list');
+    if (!list) return;
     const filter = document.getElementById('filter-unit-select-phrasal').value;
     const searchQuery = document.getElementById('search-phrasal').value.toLowerCase();
     const sortValue = document.getElementById('sort-phrasal').value;
-    list.innerHTML = '';
-    
-    let filteredPhrasal = filter === 'all' ? phrasalData : phrasalData.filter(p => p.unitId === filter);
-    filteredPhrasal = filteredPhrasal.filter(p => p.word.toLowerCase().includes(searchQuery) || (p.def && p.def.toLowerCase().includes(searchQuery)));
 
-    if (sortValue === 'az') {
-        filteredPhrasal.sort((a, b) => a.word.localeCompare(b.word));
-    } else if (sortValue === 'za') {
-        filteredPhrasal.sort((a, b) => b.word.localeCompare(a.word));
+    let filtered = filter === 'all' ? phrasalData : phrasalData.filter(p => p.unitId === filter);
+    filtered = filtered.filter(p =>
+        (p.word || '').toLowerCase().includes(searchQuery) ||
+        (p.def || '').toLowerCase().includes(searchQuery));
+
+    if (sortValue === 'az') filtered.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
+    else if (sortValue === 'za') filtered.sort((a, b) => (b.word || '').localeCompare(a.word || ''));
+
+    const pageItems = applyPagination('phrasal', filtered);
+    if (!pageItems.length) {
+        list.innerHTML = `<tr><td colspan="4" class="empty-row">No phrasal verbs found.</td></tr>`;
+        return;
     }
-    
-    
-    const state = paginationState['phrasal'];
-    if (state) {
-        state.maxPage = Math.ceil(filteredPhrasal.length / state.limit) || 1;
-        if (state.page > state.maxPage) state.page = state.maxPage;
-        const startIdx = (state.page - 1) * state.limit;
-        const endIdx = startIdx + state.limit;
 
-        const infoEl = document.getElementById('pag-info-phrasal');
-        const pageEl = document.getElementById('pag-page-phrasal');
-        const prevBtn = document.getElementById('pag-prev-phrasal');
-        const nextBtn = document.getElementById('pag-next-phrasal');
-        
-        if (infoEl) infoEl.innerText = `Showing ${ filteredPhrasal.length > 0 ? startIdx + 1 : 0 } - ${Math.min(endIdx, filteredPhrasal.length)} of ${ filteredPhrasal.length }`;
-        if (pageEl) pageEl.innerText = `Page ${state.page} / ${state.maxPage}`;
-        if (prevBtn) prevBtn.disabled = state.page === 1;
-        if (nextBtn) nextBtn.disabled = state.page === state.maxPage;
-
-        filteredPhrasal = filteredPhrasal.slice(startIdx, endIdx);
-    }
-    
-    filteredPhrasal.forEach(p => {
+    list.innerHTML = pageItems.map(p => {
         const unitName = unitsData.find(u => u.id === p.unitId)?.title || 'Unknown';
-        list.innerHTML += `
+        return `
             <tr>
-                <td><strong>${p.word}</strong></td>
-                <td>${p.pron}</td>
-                <td>${unitName}</td>
+                <td><strong>${escapeHtml(p.word)}</strong> ${p.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}<br><small>${escapeHtml(p.pron)}</small></td>
+                <td>${escapeHtml(unitName)}</td>
+                <td>${escapeHtml((p.def || '').slice(0, 120))}${(p.def || '').length > 120 ? '…' : ''}</td>
                 <td>
                     <button class="btn-secondary btn-small" onclick="editPhrasal('${p.id}')">Edit</button>
-                    <button class="btn-secondary btn-danger btn-small" onclick="deletePhrasal('${p.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="duplicatePhrasal('${p.id}')">Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deletePhrasal('${p.id}')">Delete</button>
                 </td>
-            </tr>
-        `;
-    });
+            </tr>`;
+    }).join('');
 }
 
 window.editPhrasal = (id) => {
     const p = phrasalData.find(p => p.id === id);
-    if(p) {
+    if (p) {
         document.getElementById('phrasal-id').value = p.id;
-        document.getElementById('phrasal-unit-id').value = p.unitId;
-        document.getElementById('phrasal-word').value = p.word;
-        document.getElementById('phrasal-pron').value = p.pron;
-        document.getElementById('phrasal-def').value = p.def;
-        document.getElementById('phrasal-example').value = p.example;
+        document.getElementById('phrasal-unit-id').value = p.unitId || '';
+        document.getElementById('phrasal-word').value = p.word || '';
+        document.getElementById('phrasal-pron').value = p.pron || '';
+        document.getElementById('phrasal-def').value = p.def || '';
+        document.getElementById('phrasal-example').value = p.example || '';
+        document.getElementById('phrasal-status').value = p.status || 'published';
         document.getElementById('phrasal-modal-title').innerText = 'Edit Phrasal Verb';
         openModal(phrasalModal);
     }
 };
 
-window.deletePhrasal = async (id) => {
-    if(confirm('Are you sure you want to delete this phrasal verb?')) {
-        try {
-            await deleteDoc(doc(db, "phrasal_verbs", id));
-            await loadData();
-            window.showToast('Deleted!', 'success');
-        } catch (error) {
-            console.error("Error deleting Phrasal Verb:", error);
-        }
-    }
-}
+window.duplicatePhrasal = async (id) => {
+    const p = phrasalData.find(x => x.id === id);
+    if (!p) return;
+    const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
+    try {
+        await addDoc(collection(db, "phrasal_verbs"), stampCreate(rest));
+        await reloadDataFor("phrasal_verbs");
+        window.showToast('Phrasal verb duplicated.', 'success');
+    } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
+};
 
-// --- Prepositional Phrases Logic ---
+window.deletePhrasal = (id) => performDelete("phrasal_verbs", id, 'phrasal verb');
+
+/* =========================================================
+   PREPOSITIONAL PHRASES
+   ========================================================= */
 const prepModal = document.getElementById('prep-modal');
 const prepForm = document.getElementById('prep-form');
 
@@ -893,119 +1129,108 @@ document.getElementById('add-prep-btn').addEventListener('click', () => {
     document.getElementById('prep-id').value = '';
     prepForm.reset();
     applySavedUnitSelect(document.getElementById('prep-unit-id'), 'prep');
+    document.getElementById('prep-status').value = 'published';
     document.getElementById('prep-modal-title').innerText = 'Add Phrase';
     openModal(prepModal);
 });
 
-prepForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+onSubmit(prepForm, async () => {
     const id = document.getElementById('prep-id').value;
     const newPrep = {
         unitId: document.getElementById('prep-unit-id').value,
-        word: document.getElementById('prep-word').value,
-        def: document.getElementById('prep-def').value,
-        example: document.getElementById('prep-example').value
+        word: document.getElementById('prep-word').value.trim(),
+        def: document.getElementById('prep-def').value.trim(),
+        example: document.getElementById('prep-example').value.trim(),
+        status: document.getElementById('prep-status').value
     };
 
     rememberUnitSelection('prep', newPrep.unitId);
-    
-    try {
-        if (id) {
-            await updateDoc(doc(db, "prep_phrases", id), newPrep);
-        } else {
-            await addDoc(collection(db, "prep_phrases"), newPrep);
-        }
-        prepModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-        await loadData();
-        window.showToast('Saved!', 'success');
-    } catch (error) { console.error(error); window.showToast("Error saving Phrase!: " + (error.message || error), 'error'); }
+    if (!newPrep.word) { window.showToast('Phrase is required.', 'error'); return; }
+    if (isDuplicate(prepData, p => p.unitId === newPrep.unitId && (p.word || '').toLowerCase() === newPrep.word.toLowerCase(), id)) {
+        dupToast('phrase'); return;
+    }
+
+    if (id) {
+        await updateDoc(doc(db, "prep_phrases", id), stampUpdate(newPrep));
+    } else {
+        await addDoc(collection(db, "prep_phrases"), stampCreate(newPrep));
+    }
+    window.closeModalOverlay(prepModal);
+    await reloadDataFor("prep_phrases");
+    window.showToast('Saved!', 'success');
 });
 
 document.getElementById('filter-unit-select-prep').addEventListener('change', renderPrep);
-document.getElementById('search-prep').addEventListener('input', () => {
-        if (paginationState['prep']) paginationState['prep'].page = 1;
-        renderPrep();
-    });
+document.getElementById('search-prep').addEventListener('input', () => { resetPage('prep'); renderPrep(); });
 document.getElementById('sort-prep').addEventListener('change', renderPrep);
 
 function renderPrep() {
     const list = document.getElementById('prep-list');
+    if (!list) return;
     const filter = document.getElementById('filter-unit-select-prep').value;
     const searchQuery = document.getElementById('search-prep').value.toLowerCase();
     const sortValue = document.getElementById('sort-prep').value;
-    list.innerHTML = '';
-    
-    let filteredPrep = filter === 'all' ? prepData : prepData.filter(p => p.unitId === filter);
-    filteredPrep = filteredPrep.filter(p => p.word.toLowerCase().includes(searchQuery) || (p.def && p.def.toLowerCase().includes(searchQuery)));
 
-    if (sortValue === 'az') {
-        filteredPrep.sort((a, b) => a.word.localeCompare(b.word));
-    } else if (sortValue === 'za') {
-        filteredPrep.sort((a, b) => b.word.localeCompare(a.word));
+    let filtered = filter === 'all' ? prepData : prepData.filter(p => p.unitId === filter);
+    filtered = filtered.filter(p =>
+        (p.word || '').toLowerCase().includes(searchQuery) ||
+        (p.def || '').toLowerCase().includes(searchQuery));
+
+    if (sortValue === 'az') filtered.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
+    else if (sortValue === 'za') filtered.sort((a, b) => (b.word || '').localeCompare(a.word || ''));
+
+    const pageItems = applyPagination('prep', filtered);
+    if (!pageItems.length) {
+        list.innerHTML = `<tr><td colspan="4" class="empty-row">No phrases found.</td></tr>`;
+        return;
     }
-    
-    
-    const state = paginationState['prep'];
-    if (state) {
-        state.maxPage = Math.ceil(filteredPrep.length / state.limit) || 1;
-        if (state.page > state.maxPage) state.page = state.maxPage;
-        const startIdx = (state.page - 1) * state.limit;
-        const endIdx = startIdx + state.limit;
 
-        const infoEl = document.getElementById('pag-info-prep');
-        const pageEl = document.getElementById('pag-page-prep');
-        const prevBtn = document.getElementById('pag-prev-prep');
-        const nextBtn = document.getElementById('pag-next-prep');
-        
-        if (infoEl) infoEl.innerText = `Showing ${ filteredPrep.length > 0 ? startIdx + 1 : 0 } - ${Math.min(endIdx, filteredPrep.length)} of ${ filteredPrep.length }`;
-        if (pageEl) pageEl.innerText = `Page ${state.page} / ${state.maxPage}`;
-        if (prevBtn) prevBtn.disabled = state.page === 1;
-        if (nextBtn) nextBtn.disabled = state.page === state.maxPage;
-
-        filteredPrep = filteredPrep.slice(startIdx, endIdx);
-    }
-    
-    filteredPrep.forEach(p => {
+    list.innerHTML = pageItems.map(p => {
         const unitName = unitsData.find(u => u.id === p.unitId)?.title || 'Unknown';
-        list.innerHTML += `
+        return `
             <tr>
-                <td><strong>${p.word}</strong></td>
-                <td>${unitName}</td>
+                <td><strong>${escapeHtml(p.word)}</strong> ${p.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
+                <td>${escapeHtml(unitName)}</td>
+                <td>${escapeHtml((p.def || '').slice(0, 120))}${(p.def || '').length > 120 ? '…' : ''}</td>
                 <td>
                     <button class="btn-secondary btn-small" onclick="editPrep('${p.id}')">Edit</button>
-                    <button class="btn-secondary btn-danger btn-small" onclick="deletePrep('${p.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="duplicatePrep('${p.id}')">Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deletePrep('${p.id}')">Delete</button>
                 </td>
-            </tr>
-        `;
-    });
+            </tr>`;
+    }).join('');
 }
 
 window.editPrep = (id) => {
     const p = prepData.find(p => p.id === id);
-    if(p) {
+    if (p) {
         document.getElementById('prep-id').value = p.id;
-        document.getElementById('prep-unit-id').value = p.unitId;
-        document.getElementById('prep-word').value = p.word;
-        document.getElementById('prep-def').value = p.def;
-        document.getElementById('prep-example').value = p.example;
+        document.getElementById('prep-unit-id').value = p.unitId || '';
+        document.getElementById('prep-word').value = p.word || '';
+        document.getElementById('prep-def').value = p.def || '';
+        document.getElementById('prep-example').value = p.example || '';
+        document.getElementById('prep-status').value = p.status || 'published';
         document.getElementById('prep-modal-title').innerText = 'Edit Phrase';
         openModal(prepModal);
     }
 };
 
-window.deletePrep = async (id) => {
-    if(confirm('Are you sure you want to delete this phrase?')) {
-        try {
-            await deleteDoc(doc(db, "prep_phrases", id));
-            await loadData();
-            window.showToast('Deleted!', 'success');
-        } catch (error) {
-            console.error("Error deleting Phrase:", error);
-        }
-    }
-}
+window.duplicatePrep = async (id) => {
+    const p = prepData.find(x => x.id === id);
+    if (!p) return;
+    const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
+    try {
+        await addDoc(collection(db, "prep_phrases"), stampCreate(rest));
+        await reloadDataFor("prep_phrases");
+        window.showToast('Phrase duplicated.', 'success');
+    } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
+};
 
-// --- Word Formation Logic ---
+window.deletePrep = (id) => performDelete("prep_phrases", id, 'phrase');
+
+/* =========================================================
+   WORD FORMATION
+   ========================================================= */
 const wordformModal = document.getElementById('wordform-modal');
 const wordformForm = document.getElementById('wordform-form');
 const wordformContainer = document.getElementById('wordform-forms-container');
@@ -1022,11 +1247,10 @@ function focusNewRow(row) {
 function addOverviewRow(pos = '', words = '') {
     const row = document.createElement('div');
     row.className = 'wf-overview-row';
-    row.style.display = 'flex';
-    row.style.gap = '0.5rem';
+    row.style.cssText = 'display:flex; gap:0.5rem;';
     row.innerHTML = `
-        <input type="text" class="input-field wf-overview-pos" placeholder="(noun)" value="${pos.replace(/"/g, '&quot;')}" style="width: 100px;" required>
-        <input type="text" class="input-field wf-overview-words" placeholder="act, action" value="${words.replace(/"/g, '&quot;')}" style="flex: 1;" required>
+        <input type="text" class="input-field wf-overview-pos" placeholder="(noun)" value="${escapeHtml(pos)}" style="width: 100px;" required>
+        <input type="text" class="input-field wf-overview-words" placeholder="act, action" value="${escapeHtml(words)}" style="flex: 1;" required>
         <button type="button" class="btn-secondary btn-danger btn-small" onclick="this.parentElement.remove()">X</button>
     `;
     wordformOverviewContainer.appendChild(row);
@@ -1037,12 +1261,6 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
     const rowId = `wf-row-${formIdCounter}`;
     const row = document.createElement('div');
     row.className = 'wf-complex-row';
-    row.style.border = '1px solid #ccc';
-    row.style.padding = '1rem';
-    row.style.borderRadius = '4px';
-    row.style.marginBottom = '1rem';
-    row.style.position = 'relative';
-
 
     let wordVal = title;
     let posVal = '';
@@ -1058,15 +1276,15 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
     }
 
     row.innerHTML = `
-        <button type="button" class="btn-secondary btn-danger btn-small" style="position:absolute; top: 1rem; right: 1rem;" onclick="this.parentElement.remove()">Remove Form</button>
+        <button type="button" class="btn-secondary btn-danger btn-small wf-remove-btn" onclick="this.parentElement.remove()">Remove Form</button>
         <div class="form-row">
             <div class="input-group flex-1">
                 <label>Word</label>
-                <input type="text" class="input-field wf-word" value="${wordVal.replace(/"/g, '&quot;')}" required>
+                <input type="text" class="input-field wf-word" value="${escapeHtml(wordVal)}" required>
             </div>
             <div class="input-group" style="width: 200px;">
                 <label>Part of Speech (POS)</label>
-                <input type="text" class="input-field wf-pos" value="${posVal.replace(/"/g, '&quot;')}">
+                <input type="text" class="input-field wf-pos" value="${escapeHtml(posVal)}">
             </div>
         </div>
         <div class="input-group">
@@ -1076,15 +1294,15 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
         </div>
         <div class="input-group">
             <label>Definitions</label>
-            <textarea class="input-field wf-defs" rows="3">${definitions}</textarea>
+            <textarea class="input-field wf-defs" rows="3">${escapeHtml(definitions)}</textarea>
         </div>
         <div class="input-group">
             <label>Examples</label>
-            <textarea class="input-field wf-examples" rows="3">${examples}</textarea>
+            <textarea class="input-field wf-examples" rows="3">${escapeHtml(examples)}</textarea>
         </div>
     `;
     wordformContainer.appendChild(row);
-    
+
     if (audios && audios.length > 0) {
         audios.forEach(a => window.addAudioToRow(rowId, a.pron, a.url));
     } else {
@@ -1092,16 +1310,15 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
     }
 }
 
-window.addAudioToRow = function(rowId, pron = '', url = '', shouldFocus = false) {
+window.addAudioToRow = function (rowId, pron = '', url = '', shouldFocus = false) {
     const container = document.getElementById(`${rowId}-audios`);
-    if(!container) return;
+    if (!container) return;
     const div = document.createElement('div');
     div.className = 'wf-audio-row';
-    div.style.display = 'flex';
-    div.style.gap = '0.5rem';
+    div.style.cssText = 'display:flex; gap:0.5rem;';
     div.innerHTML = `
-        <input type="text" class="input-field wf-audio-pron" placeholder="Pronunciation (/ækt/)" value="${pron.replace(/"/g, '&quot;')}" style="flex:1;">
-        <input type="text" class="input-field wf-audio-url" placeholder="Audio URL" value="${url.replace(/"/g, '&quot;')}" style="flex:2;">
+        <input type="text" class="input-field wf-audio-pron" placeholder="Pronunciation (/ækt/)" value="${escapeHtml(pron)}" style="flex:1;">
+        <input type="text" class="input-field wf-audio-url" placeholder="Audio URL" value="${escapeHtml(url)}" style="flex:2;">
         <button type="button" class="btn-secondary btn-danger btn-small" onclick="this.parentElement.remove()">X</button>
     `;
     container.appendChild(div);
@@ -1125,33 +1342,29 @@ document.getElementById('add-new-wordform-btn').addEventListener('click', () => 
     document.getElementById('wordform-id').value = '';
     wordformForm.reset();
     applySavedUnitSelect(document.getElementById('wordform-unit-id'), 'wordform');
-    
+    document.getElementById('wordform-status').value = 'published';
+
     wordformOverviewContainer.innerHTML = '';
-    addOverviewRow(); // add at least 1 row default
-    
+    addOverviewRow();
+
     wordformContainer.innerHTML = '';
-    addWordformRow(); // add at least 1 row default
-    
+    addWordformRow();
+
     document.getElementById('wordform-modal-title').innerText = 'Add Word Formation';
     openModal(wordformModal);
 });
 
-wordformForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+onSubmit(wordformForm, async () => {
     const id = document.getElementById('wordform-id').value;
-    
-    // Gather all overviews
+
     const overviewRows = wordformOverviewContainer.querySelectorAll('.wf-overview-row');
     let overviews = [];
     overviewRows.forEach(r => {
         const p = r.querySelector('.wf-overview-pos').value.trim();
         const w = r.querySelector('.wf-overview-words').value.trim();
-        if (p && w) {
-            overviews.push({ pos: p, words: w });
-        }
+        if (p && w) overviews.push({ pos: p, words: w });
     });
 
-    // Gather all detailed forms
     const rows = wordformContainer.querySelectorAll('.wf-complex-row');
     let forms = [];
     rows.forEach(r => {
@@ -1160,109 +1373,87 @@ wordformForm.addEventListener('submit', async (e) => {
         const title = pos ? (word + ' ' + pos) : word;
         const defs = r.querySelector('.wf-defs').value.trim();
         const examples = r.querySelector('.wf-examples').value.trim();
-        
+
         let audios = [];
-        const audioRows = r.querySelectorAll('.wf-audio-row');
-        audioRows.forEach(ar => {
+        r.querySelectorAll('.wf-audio-row').forEach(ar => {
             const pron = ar.querySelector('.wf-audio-pron').value.trim();
             const url = ar.querySelector('.wf-audio-url').value.trim();
-            if(pron || url) {
-                audios.push({ pron, url });
-            }
+            if (pron || url) audios.push({ pron, url });
         });
-        
-        if (title) {
-            forms.push({ title, definitions: defs, examples: examples, audios });
-        }
+
+        if (title) forms.push({ title, definitions: defs, examples: examples, audios });
     });
 
     const newWf = {
         unitId: document.getElementById('wordform-unit-id').value,
-        rootWord: document.getElementById('wordform-root').value,
-        overviews: overviews,
-        forms: forms
+        rootWord: document.getElementById('wordform-root').value.trim(),
+        overviews,
+        forms,
+        status: document.getElementById('wordform-status').value
     };
 
     rememberUnitSelection('wordform', newWf.unitId);
-    
-    try {
-        if (id) {
-            await updateDoc(doc(db, "word_formations", id), newWf);
-        } else {
-            await addDoc(collection(db, "word_formations"), newWf);
-        }
-        wordformModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-        await loadData();
-        window.showToast('Saved!', 'success');
-    } catch (error) { console.error(error); window.showToast("Error saving Word Formation!: " + (error.message || error), 'error'); }
+    if (!newWf.rootWord) { window.showToast('Root word is required.', 'error'); return; }
+    if (isDuplicate(wordformData, w => w.unitId === newWf.unitId && (w.rootWord || '').toLowerCase() === newWf.rootWord.toLowerCase(), id)) {
+        dupToast('word formation'); return;
+    }
+
+    if (id) {
+        await updateDoc(doc(db, "word_formations", id), stampUpdate(newWf));
+    } else {
+        await addDoc(collection(db, "word_formations"), stampCreate(newWf));
+    }
+    window.closeModalOverlay(wordformModal);
+    await reloadDataFor("word_formations");
+    window.showToast('Saved!', 'success');
 });
 
 document.getElementById('filter-unit-select-wordform').addEventListener('change', renderWordform);
-document.getElementById('search-wordform').addEventListener('input', () => {
-        if (paginationState['wordform']) paginationState['wordform'].page = 1;
-        renderWordform();
-    });
+document.getElementById('search-wordform').addEventListener('input', () => { resetPage('wordform'); renderWordform(); });
 document.getElementById('sort-wordform').addEventListener('change', renderWordform);
 
 function renderWordform() {
     const list = document.getElementById('wordform-list');
+    if (!list) return;
     const filter = document.getElementById('filter-unit-select-wordform').value;
     const searchQuery = document.getElementById('search-wordform').value.toLowerCase();
     const sortValue = document.getElementById('sort-wordform').value;
-    list.innerHTML = '';
-    
-    let filteredWf = filter === 'all' ? wordformData : wordformData.filter(w => w.unitId === filter);
-    filteredWf = filteredWf.filter(w => w.rootWord.toLowerCase().includes(searchQuery));
 
-    if (sortValue === 'az') {
-        filteredWf.sort((a, b) => a.rootWord.localeCompare(b.rootWord));
-    } else if (sortValue === 'za') {
-        filteredWf.sort((a, b) => b.rootWord.localeCompare(a.rootWord));
+    let filtered = filter === 'all' ? wordformData : wordformData.filter(w => w.unitId === filter);
+    filtered = filtered.filter(w => (w.rootWord || '').toLowerCase().includes(searchQuery));
+
+    if (sortValue === 'az') filtered.sort((a, b) => (a.rootWord || '').localeCompare(b.rootWord || ''));
+    else if (sortValue === 'za') filtered.sort((a, b) => (b.rootWord || '').localeCompare(a.rootWord || ''));
+
+    const pageItems = applyPagination('wordform', filtered);
+    if (!pageItems.length) {
+        list.innerHTML = `<tr><td colspan="3" class="empty-row">No word formations found.</td></tr>`;
+        return;
     }
-    
-    
-    const state = paginationState['wordform'];
-    if (state) {
-        state.maxPage = Math.ceil(filteredWf.length / state.limit) || 1;
-        if (state.page > state.maxPage) state.page = state.maxPage;
-        const startIdx = (state.page - 1) * state.limit;
-        const endIdx = startIdx + state.limit;
 
-        const infoEl = document.getElementById('pag-info-wordform');
-        const pageEl = document.getElementById('pag-page-wordform');
-        const prevBtn = document.getElementById('pag-prev-wordform');
-        const nextBtn = document.getElementById('pag-next-wordform');
-        
-        if (infoEl) infoEl.innerText = `Showing ${ filteredWf.length > 0 ? startIdx + 1 : 0 } - ${Math.min(endIdx, filteredWf.length)} of ${ filteredWf.length }`;
-        if (pageEl) pageEl.innerText = `Page ${state.page} / ${state.maxPage}`;
-        if (prevBtn) prevBtn.disabled = state.page === 1;
-        if (nextBtn) nextBtn.disabled = state.page === state.maxPage;
-
-        filteredWf = filteredWf.slice(startIdx, endIdx);
-    }
-    
-    filteredWf.forEach(w => {
+    list.innerHTML = pageItems.map(w => {
         const unitName = unitsData.find(u => u.id === w.unitId)?.title || 'Unknown';
-        list.innerHTML += `
+        return `
             <tr>
-                <td><strong>${w.rootWord}</strong></td>
-                <td>${unitName}</td>
+                <td><strong>${escapeHtml(w.rootWord)}</strong> ${w.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
+                <td>${escapeHtml(unitName)}</td>
                 <td>
                     <button class="btn-secondary btn-small" onclick="editWordform('${w.id}')">Edit</button>
-                    <button class="btn-secondary btn-danger btn-small" onclick="deleteWordform('${w.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="duplicateWordform('${w.id}')">Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deleteWordform('${w.id}')">Delete</button>
                 </td>
-            </tr>
-        `;
-    });
+            </tr>`;
+    }).join('');
 }
 
 window.editWordform = (id) => {
     const w = wordformData.find(w => w.id === id);
-    if(w) {
+    if (w) {
         document.getElementById('wordform-id').value = w.id;
-        document.getElementById('wordform-unit-id').value = w.unitId;
-        document.getElementById('wordform-root').value = w.rootWord;
-        
+        document.getElementById('wordform-unit-id').value = w.unitId || '';
+        document.getElementById('wordform-root').value = w.rootWord || '';
+        document.getElementById('wordform-status').value = w.status || 'published';
+
         wordformOverviewContainer.innerHTML = '';
         if (w.overviews && w.overviews.length > 0) {
             w.overviews.forEach(o => addOverviewRow(o.pos, o.words));
@@ -1282,20 +1473,23 @@ window.editWordform = (id) => {
     }
 };
 
-window.deleteWordform = async (id) => {
-    if(confirm('Are you sure you want to delete this word formation?')) {
-        try {
-            await deleteDoc(doc(db, "word_formations", id));
-            await loadData();
-            window.showToast('Deleted!', 'success');
-        } catch (error) {
-            console.error("Error deleting Word formation:", error);
-        }
-    }
-}
+window.duplicateWordform = async (id) => {
+    const w = wordformData.find(x => x.id === id);
+    if (!w) return;
+    const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = w;
+    rest.rootWord = (w.rootWord || 'root') + '-copy';
+    try {
+        await addDoc(collection(db, "word_formations"), stampCreate(rest));
+        await reloadDataFor("word_formations");
+        window.showToast('Word formation duplicated.', 'success');
+    } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
+};
 
+window.deleteWordform = (id) => performDelete("word_formations", id, 'word formation');
 
-// --- Word Patterns Logic ---
+/* =========================================================
+   WORD PATTERNS
+   ========================================================= */
 const patternModal = document.getElementById('pattern-modal');
 const patternForm = document.getElementById('pattern-form');
 
@@ -1303,138 +1497,142 @@ document.getElementById('add-pattern-btn').addEventListener('click', () => {
     document.getElementById('pattern-id').value = '';
     patternForm.reset();
     applySavedUnitSelect(document.getElementById('pattern-unit'), 'pattern');
+    document.getElementById('pattern-status').value = 'published';
     document.getElementById('pattern-modal-title').innerText = 'Add New Word Pattern';
     openModal(patternModal);
 });
 
-patternForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+onSubmit(patternForm, async () => {
     const id = document.getElementById('pattern-id').value;
-    const unitId = document.getElementById('pattern-unit').value;
-    const word = document.getElementById('pattern-word').value;
-    const pos = document.getElementById('pattern-pos').value;
-    const pattern = document.getElementById('pattern-pattern').value;
-    const def = document.getElementById('pattern-def').value;
-    const example = document.getElementById('pattern-example').value;
-    
-    const payload = { unitId, word, pos, pattern, def, example };
+    const payload = {
+        unitId: document.getElementById('pattern-unit').value,
+        word: document.getElementById('pattern-word').value.trim(),
+        pos: document.getElementById('pattern-pos').value.trim(),
+        pattern: document.getElementById('pattern-pattern').value.trim(),
+        def: document.getElementById('pattern-def').value.trim(),
+        example: document.getElementById('pattern-example').value.trim(),
+        status: document.getElementById('pattern-status').value
+    };
 
-    rememberUnitSelection('pattern', unitId);
-    
-    try {
-        if (id) {
-            await updateDoc(doc(db, "word_patterns", id), payload);
-        } else {
-            await addDoc(collection(db, "word_patterns"), payload);
-        }
-        patternModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-        await loadData();
-        window.showToast('Saved!', 'success');
-    } catch (error) { console.error(error); window.showToast("Error saving Word Pattern!: " + (error.message || error), 'error'); }
+    rememberUnitSelection('pattern', payload.unitId);
+    if (!payload.word) { window.showToast('Word is required.', 'error'); return; }
+    if (isDuplicate(patternData, p => p.unitId === payload.unitId && (p.word || '').toLowerCase() === payload.word.toLowerCase(), id)) {
+        dupToast('word pattern'); return;
+    }
+
+    if (id) {
+        await updateDoc(doc(db, "word_patterns", id), stampUpdate(payload));
+    } else {
+        await addDoc(collection(db, "word_patterns"), stampCreate(payload));
+    }
+    window.closeModalOverlay(patternModal);
+    await reloadDataFor("word_patterns");
+    window.showToast('Saved!', 'success');
 });
 
 document.getElementById('filter-unit-select-pattern').addEventListener('change', renderPattern);
-document.getElementById('search-pattern').addEventListener('input', () => {
-        if (paginationState['pattern']) paginationState['pattern'].page = 1;
-        renderPattern();
-    });
+document.getElementById('search-pattern').addEventListener('input', () => { resetPage('pattern'); renderPattern(); });
 document.getElementById('sort-pattern').addEventListener('change', renderPattern);
 
 function renderPattern() {
     const list = document.getElementById('pattern-list');
-    if(!list) return;
+    if (!list) return;
     const filter = document.getElementById('filter-unit-select-pattern').value;
     const searchQuery = document.getElementById('search-pattern').value.toLowerCase();
     const sortValue = document.getElementById('sort-pattern').value;
-    list.innerHTML = '';
-    
-    let filteredData = filter === 'all' ? patternData : patternData.filter(p => p.unitId === filter);
-    filteredData = filteredData.filter(p => p.word.toLowerCase().includes(searchQuery));
 
-    if (sortValue === 'az') {
-        filteredData.sort((a, b) => a.word.localeCompare(b.word));
-    } else if (sortValue === 'za') {
-        filteredData.sort((a, b) => b.word.localeCompare(a.word));
+    let filtered = filter === 'all' ? patternData : patternData.filter(p => p.unitId === filter);
+    filtered = filtered.filter(p => (p.word || '').toLowerCase().includes(searchQuery));
+
+    if (sortValue === 'az') filtered.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
+    else if (sortValue === 'za') filtered.sort((a, b) => (b.word || '').localeCompare(a.word || ''));
+
+    // FIX: pagination now actually slices the list for this tab
+    const pageItems = applyPagination('pattern', filtered);
+    if (!pageItems.length) {
+        list.innerHTML = `<tr><td colspan="3" class="empty-row">No word patterns found.</td></tr>`;
+        return;
     }
-    
-    filteredData.forEach(p => {
+
+    list.innerHTML = pageItems.map(p => {
         const unitName = unitsData.find(u => u.id === p.unitId)?.title || 'Unknown';
-        list.innerHTML += `
+        return `
             <tr>
-                <td><strong>${p.word}</strong> <span style="font-size: 0.9em; color: #666;">${p.pos}</span><br><small>${p.pattern}</small></td>
-                <td>${unitName}</td>
+                <td><strong>${escapeHtml(p.word)}</strong> <small>${escapeHtml(p.pos)}</small>${p.status === 'draft' ? ' <span class="badge badge-draft">Draft</span>' : ''}<br><small>${escapeHtml(p.pattern)}</small></td>
+                <td>${escapeHtml(unitName)}</td>
                 <td>
                     <button class="btn-secondary btn-small" onclick="editPattern('${p.id}')">Edit</button>
-                    <button class="btn-secondary btn-danger btn-small" onclick="deletePattern('${p.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="duplicatePattern('${p.id}')">Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deletePattern('${p.id}')">Delete</button>
                 </td>
-            </tr>
-        `;
-    });
+            </tr>`;
+    }).join('');
 }
 
 window.editPattern = (id) => {
     const p = patternData.find(x => x.id === id);
-    if(p) {
+    if (p) {
         document.getElementById('pattern-id').value = p.id;
-        document.getElementById('pattern-unit').value = p.unitId;
-        document.getElementById('pattern-word').value = p.word;
-        document.getElementById('pattern-pos').value = p.pos;
-        document.getElementById('pattern-pattern').value = p.pattern;
-        document.getElementById('pattern-def').value = p.def;
-        document.getElementById('pattern-example').value = p.example;
-        
+        document.getElementById('pattern-unit').value = p.unitId || '';
+        document.getElementById('pattern-word').value = p.word || '';
+        document.getElementById('pattern-pos').value = p.pos || '';
+        document.getElementById('pattern-pattern').value = p.pattern || '';
+        document.getElementById('pattern-def').value = p.def || '';
+        document.getElementById('pattern-example').value = p.example || '';
+        document.getElementById('pattern-status').value = p.status || 'published';
         document.getElementById('pattern-modal-title').innerText = 'Edit Word Pattern';
         openModal(patternModal);
     }
 };
 
-window.deletePattern = async (id) => {
-    if(confirm("Are you sure you want to delete this pattern?")) {
-        try {
-            await deleteDoc(doc(db, "word_patterns", id));
-            await loadData();
-            window.showToast('Deleted!', 'success');
-        } catch (error) { console.error(error); window.showToast("Error deleting!: " + (error.message || error), 'error'); }
-    }
+window.duplicatePattern = async (id) => {
+    const p = patternData.find(x => x.id === id);
+    if (!p) return;
+    const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
+    try {
+        await addDoc(collection(db, "word_patterns"), stampCreate(rest));
+        await reloadDataFor("word_patterns");
+        window.showToast('Pattern duplicated.', 'success');
+    } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
 };
 
+window.deletePattern = (id) => performDelete("word_patterns", id, 'pattern');
 
-// --- Lexical Expansion Logic ---
+/* =========================================================
+   LEXICAL EXPANSION
+   ========================================================= */
 const lexicalModal = document.getElementById('lexical-modal');
 const lexicalForm = document.getElementById('lexical-form');
 const lexicalWordsContainer = document.getElementById('lexical-words-container');
 
-window.addLexicalWordRow = function(word = '', pos = '', pron = '', audio = '', def = '', example = '') {
-    const rowId = 'lexical-word-' + Date.now() + Math.random().toString(36).substr(2, 9);
+window.addLexicalWordRow = function (word = '', pos = '', pron = '', audio = '', def = '', example = '') {
+    const rowId = 'lexical-word-' + Date.now() + Math.random().toString(36).slice(2, 11);
     const div = document.createElement('div');
     div.className = 'lexical-word-row';
-    div.style.border = '1px solid #ddd';
-    div.style.padding = '0.5rem';
-    div.style.borderRadius = '4px';
-    div.style.position = 'relative';
+    div.dataset.rowId = rowId;
     div.innerHTML = `
-        <button type="button" class="btn-secondary btn-danger btn-small" style="position: absolute; top: 0.5rem; right: 0.5rem;" onclick="this.parentElement.remove()">Remove</button>
+        <button type="button" class="btn-secondary btn-danger btn-small lx-remove-btn" onclick="this.parentElement.remove()">Remove</button>
         <div class="form-row" style="margin-bottom: 0.5rem; padding-right: 4rem;">
             <div class="input-group flex-1">
                 <label>Word</label>
-                <input type="text" class="input-field lx-word" placeholder="Word" value="${word.replace(/"/g, '&quot;')}">
+                <input type="text" class="input-field lx-word" placeholder="Word" value="${escapeHtml(word)}">
             </div>
             <div class="input-group" style="width: 100px;">
                 <label>POS</label>
-                <input type="text" class="input-field lx-pos" placeholder="POS" value="${pos.replace(/"/g, '&quot;')}">
+                <input type="text" class="input-field lx-pos" placeholder="POS" value="${escapeHtml(pos)}">
             </div>
         </div>
         <div class="input-group" style="margin-bottom: 0.5rem;">
             <label>Pronunciation / Notes</label>
-            <textarea class="lx-pron" rows="2" placeholder="Pronunciation / Notes">${pron}</textarea>
+            <textarea class="lx-pron" rows="2" placeholder="Pronunciation / Notes">${escapeHtml(pron)}</textarea>
         </div>
         <div class="input-group" style="margin-bottom: 0.5rem;">
             <label>Definition</label>
-            <textarea class="lx-def" rows="2" placeholder="Definition">${def}</textarea>
+            <textarea class="lx-def" rows="2" placeholder="Definition">${escapeHtml(def)}</textarea>
         </div>
         <div class="input-group" style="margin-bottom: 0;">
             <label>Example</label>
-            <textarea class="lx-example" rows="2" placeholder="Example">${example}</textarea>
+            <textarea class="lx-example" rows="2" placeholder="Example">${escapeHtml(example)}</textarea>
         </div>
     `;
     lexicalWordsContainer.appendChild(div);
@@ -1452,6 +1650,7 @@ if (document.getElementById('add-lexical-btn')) {
         document.getElementById('lexical-id').value = '';
         lexicalForm.reset();
         applySavedUnitSelect(document.getElementById('lexical-unit-id'), 'lexical');
+        document.getElementById('lexical-status').value = 'published';
         lexicalWordsContainer.innerHTML = '';
         addLexicalWordRow();
         document.getElementById('lexical-modal-title').innerText = 'Add Lexical Expansion';
@@ -1460,8 +1659,7 @@ if (document.getElementById('add-lexical-btn')) {
 }
 
 if (lexicalForm) {
-    lexicalForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    onSubmit(lexicalForm, async () => {
         const id = document.getElementById('lexical-id').value;
         const unitId = document.getElementById('lexical-unit-id').value;
         const textLeft = document.getElementById('lexical-text-left').value;
@@ -1469,33 +1667,31 @@ if (lexicalForm) {
         const textRight = document.getElementById('lexical-text-right').value;
         const alignRight = document.getElementById('lexical-align-right').value;
 
-        const wordRows = lexicalWordsContainer.querySelectorAll('.lexical-word-row');
-        let words = [];
-        wordRows.forEach(r => {
+        const words = [];
+        lexicalWordsContainer.querySelectorAll('.lexical-word-row').forEach(r => {
             const w = r.querySelector('.lx-word').value.trim();
             const p = r.querySelector('.lx-pos').value.trim();
             const pr = r.querySelector('.lx-pron').value.trim();
             const d = r.querySelector('.lx-def').value.trim();
             const ex = r.querySelector('.lx-example').value.trim();
-            if (w) {
-                words.push({ word: w, pos: p, pron: pr, def: d, example: ex });
-            }
+            if (w) words.push({ word: w, pos: p, pron: pr, def: d, example: ex });
         });
 
-        const payload = { unitId, textLeft, alignLeft, textRight, alignRight, words };
+        const payload = { unitId, textLeft, alignLeft, textRight, alignRight, words, status: document.getElementById('lexical-status').value };
 
         rememberUnitSelection('lexical', unitId);
+        if (!unitId) { window.showToast('Please select a unit.', 'error'); return; }
 
         try {
             if (id) {
-                await updateDoc(doc(db, "lexical_expansions", id), payload);
+                await updateDoc(doc(db, "lexical_expansions", id), stampUpdate(payload));
             } else {
-                await addDoc(collection(db, "lexical_expansions"), payload);
+                await addDoc(collection(db, "lexical_expansions"), stampCreate(payload));
             }
-            lexicalModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-            await loadData();
-        window.showToast('Saved!', 'success');
-        } catch (error) { console.error(error); window.showToast("Error saving Lexical Expansion!: " + (error.message || error), 'error'); }
+            window.closeModalOverlay(lexicalModal);
+            await reloadDataFor("lexical_expansions");
+            window.showToast('Saved!', 'success');
+        } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
     });
 }
 
@@ -1505,39 +1701,47 @@ if (document.getElementById('filter-unit-select-lexical')) {
 
 function renderLexical() {
     const list = document.getElementById('lexical-list');
-    if(!list) return;
+    if (!list) return;
     const filter = document.getElementById('filter-unit-select-lexical').value;
-    list.innerHTML = '';
-    
-    let filteredData = filter === 'all' ? lexicalData : lexicalData.filter(p => p.unitId === filter);
 
-    filteredData.forEach(p => {
+    let filtered = filter === 'all' ? lexicalData : lexicalData.filter(p => p.unitId === filter);
+    filtered.sort((a, b) => (a.textLeft || '').localeCompare(b.textLeft || ''));
+
+    // FIX: pagination now actually slices the list for this tab
+    const pageItems = applyPagination('lexical', filtered);
+    if (!pageItems.length) {
+        list.innerHTML = `<tr><td colspan="3" class="empty-row">No lexical expansions found.</td></tr>`;
+        return;
+    }
+
+    list.innerHTML = pageItems.map(p => {
         const unitName = unitsData.find(u => u.id === p.unitId)?.title || 'Unknown';
-        list.innerHTML += `
+        return `
             <tr>
-                <td>${unitName}</td>
-                <td><pre style="font-family:inherit; font-size: 0.8rem; max-width: 300px; max-height: 100px; overflow: hidden; margin:0;">${p.textLeft || ''}</pre></td>
+                <td>${escapeHtml(unitName)} ${p.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
+                <td><pre style="font-family:inherit; font-size: 0.8rem; max-width: 300px; max-height: 100px; overflow: hidden; margin:0;">${escapeHtml((p.textLeft || '').slice(0, 200))}</pre></td>
                 <td>
                     <button class="btn-secondary btn-small" onclick="editLexical('${p.id}')">Edit</button>
-                    <button class="btn-secondary btn-danger btn-small" onclick="deleteLexical('${p.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="duplicateLexical('${p.id}')">Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deleteLexical('${p.id}')">Delete</button>
                 </td>
-            </tr>
-        `;
-    });
-};
+            </tr>`;
+    }).join('');
+}
 
 window.editLexical = (id) => {
     const p = lexicalData.find(x => x.id === id);
-    if(p) {
+    if (p) {
         document.getElementById('lexical-id').value = p.id;
-        document.getElementById('lexical-unit-id').value = p.unitId;
+        document.getElementById('lexical-unit-id').value = p.unitId || '';
         document.getElementById('lexical-text-left').value = p.textLeft || '';
         document.getElementById('lexical-align-left').value = p.alignLeft || 'left';
         document.getElementById('lexical-text-right').value = p.textRight || '';
         document.getElementById('lexical-align-right').value = p.alignRight || 'left';
-        
+        document.getElementById('lexical-status').value = p.status || 'published';
+
         lexicalWordsContainer.innerHTML = '';
-        if(p.words && p.words.length > 0) {
+        if (p.words && p.words.length > 0) {
             p.words.forEach(w => addLexicalWordRow(w.word, w.pos, w.pron, w.audio, w.def, w.example));
         } else {
             addLexicalWordRow();
@@ -1548,44 +1752,402 @@ window.editLexical = (id) => {
     }
 };
 
-window.deleteLexical = async (id) => {
-    if(confirm("Are you sure you want to delete this Lexical Expansion?")) {
-        try {
-            await deleteDoc(doc(db, "lexical_expansions", id));
-            await loadData();
-            window.showToast('Deleted!', 'success');
-        } catch (error) { console.error(error); window.showToast("Error deleting!: " + (error.message || error), 'error'); }
-    }
+window.duplicateLexical = async (id) => {
+    const p = lexicalData.find(x => x.id === id);
+    if (!p) return;
+    const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
+    try {
+        await addDoc(collection(db, "lexical_expansions"), stampCreate(rest));
+        await reloadDataFor("lexical_expansions");
+        window.showToast('Lexical expansion duplicated.', 'success');
+    } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
 };
 
+window.deleteLexical = (id) => performDelete("lexical_expansions", id, 'lexical expansion');
 
-// =========================================================
-// GRAMMAR MANAGEMENT LOGIC
-// =========================================================
+/* =========================================================
+   GRAMMAR MANAGEMENT
+   ========================================================= */
 
-// State
-let grammarCategoriesData = [];
-let grammarLessonsData = [];
-let grammarUnitsData = [];
+// --- Shared tree CRUD factory (used by Grammar AND Pronunciation) ---
+function makeTreeManager(cfg) {
+    const state = { categories: [], lessons: [], units: [] };
 
-// DOM Elements
-const grammarCatList = document.getElementById('grammar-cat-list');
-const grammarLessonList = document.getElementById('grammar-lesson-list');
-const grammarUnitList = document.getElementById('grammar-unit-list');
-const filterGrammarCat = document.getElementById('filter-grammar-cat');
-const filterGrammarUnitCat = document.getElementById('filter-grammar-unit-cat');
-const filterGrammarUnitLes = document.getElementById('filter-grammar-unit-les');
+    const catList = document.getElementById(cfg.catListId);
+    const lessonList = document.getElementById(cfg.lessonListId);
+    const unitList = document.getElementById(cfg.unitListId);
 
-const grammarCatModal = document.getElementById('grammar-cat-modal');
-const grammarCatForm = document.getElementById('grammar-cat-form');
+    async function loadData() {
+        try {
+            const [cats, les, unis] = await Promise.all([
+                fetchAll(cfg.categories),
+                fetchAll(cfg.lessons),
+                fetchAll(cfg.units)
+            ]);
+            state.categories = cats;
+            state.lessons = les;
+            state.units = unis;
+            renderCategories();
+            updateCatSelects();
+            renderLessons();
+            renderUnits();
+            updateUnitSelects();
+            updateDashboardStats();
+        } catch (e) {
+            console.error(`Error loading ${cfg.label} data:`, e);
+            window.showToast(`Could not load ${cfg.label} data: ${friendlyError(e)}`, 'error');
+        }
+    }
 
-const grammarLessonModal = document.getElementById('grammar-lesson-modal');
-const grammarLessonForm = document.getElementById('grammar-lesson-form');
+    function renderCategories() {
+        if (!catList) return;
+        if (!state.categories.length) {
+            catList.innerHTML = `<tr><td colspan="3" class="empty-row">No categories yet.</td></tr>`;
+            return;
+        }
+        catList.innerHTML = state.categories.map(cat => `
+            <tr>
+                <td>${cat.order || 0}</td>
+                <td><strong>${escapeHtml(cat.title)}</strong></td>
+                <td>
+                    <button class="btn-secondary btn-small" onclick="${cfg.fnPrefix}EditCat('${cat.id}')">Edit</button>
+                    <button class="btn-danger btn-small" onclick="${cfg.fnPrefix}DeleteCat('${cat.id}')">Delete</button>
+                </td>
+            </tr>`).join('');
+    }
 
-const grammarUnitModal = document.getElementById('grammar-unit-modal');
-const grammarUnitForm = document.getElementById('grammar-unit-form');
+    function updateCatSelects() {
+        const filterCat = document.getElementById(cfg.filterCatId);
+        const lessonCat = document.getElementById(cfg.lessonCatId);
+        const unitCatFilter = document.getElementById(cfg.unitCatFilterId);
+        const unitCat = document.getElementById(cfg.unitCatId);
 
-// Initialize TinyMCE
+        const optList = state.categories.map(cat => `<option value="${cat.id}">${escapeHtml(cat.title)}</option>`).join('');
+
+        if (filterCat) {
+            const cur = filterCat.value;
+            filterCat.innerHTML = '<option value="all">All Categories</option>' + optList;
+            filterCat.value = cur || 'all';
+        }
+        if (lessonCat) {
+            const cur = lessonCat.value;
+            lessonCat.innerHTML = optList;
+            if (cur) lessonCat.value = cur;
+        }
+        if (unitCatFilter) {
+            const cur = unitCatFilter.value;
+            unitCatFilter.innerHTML = '<option value="all">All Categories</option>' + optList;
+            unitCatFilter.value = cur || 'all';
+        }
+        if (unitCat) {
+            const cur = unitCat.value;
+            unitCat.innerHTML = '<option value="">-- Select to filter lessons --</option>' + optList;
+            unitCat.value = cur || '';
+        }
+    }
+
+    function updateUnitSelects(selectedCat = null) {
+        const unitLesFilter = document.getElementById(cfg.unitLesFilterId);
+        const unitLes = document.getElementById(cfg.unitLesId);
+
+        const sortedLessons = [...state.lessons].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        if (unitLesFilter) {
+            const cur = unitLesFilter.value;
+            unitLesFilter.innerHTML = '<option value="all">All Lessons</option>';
+            const filterCatId = document.getElementById(cfg.unitCatFilterId)?.value;
+            const lessonsForFilter = filterCatId && filterCatId !== 'all'
+                ? sortedLessons.filter(l => l.categoryId === filterCatId)
+                : sortedLessons;
+            unitLesFilter.innerHTML += lessonsForFilter.map(l => `<option value="${l.id}">${escapeHtml(l.title)}</option>`).join('');
+            unitLesFilter.value = cur || 'all';
+        }
+
+        if (unitLes) {
+            const cur = unitLes.value;
+            unitLes.innerHTML = '';
+            const lessonsForForm = selectedCat
+                ? sortedLessons.filter(l => l.categoryId === selectedCat)
+                : sortedLessons;
+            unitLes.innerHTML += lessonsForForm.map(l => `<option value="${l.id}">${escapeHtml(l.title)}</option>`).join('');
+            if (cur) unitLes.value = cur;
+        }
+    }
+
+    function renderLessons() {
+        if (!lessonList) return;
+        const filterId = document.getElementById(cfg.filterCatId)?.value || 'all';
+
+        let filtered = filterId !== 'all'
+            ? state.lessons.filter(l => l.categoryId === filterId)
+            : state.lessons;
+        filtered.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        if (!filtered.length) {
+            lessonList.innerHTML = `<tr><td colspan="4" class="empty-row">No lessons yet.</td></tr>`;
+            return;
+        }
+
+        lessonList.innerHTML = filtered.map(les => {
+            const catName = state.categories.find(c => c.id === les.categoryId)?.title || 'Unknown';
+            return `
+            <tr>
+                <td>${les.order || 0}</td>
+                <td><span class="badge">${escapeHtml(catName)}</span></td>
+                <td><strong>${escapeHtml(les.title)}</strong> ${les.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
+                <td>
+                    <button class="btn-secondary btn-small" onclick="${cfg.fnPrefix}EditLesson('${les.id}')">Edit</button>
+                    <button class="btn-danger btn-small" onclick="${cfg.fnPrefix}DeleteLesson('${les.id}')">Delete</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderUnits() {
+        if (!unitList) return;
+        const filterCatId = document.getElementById(cfg.unitCatFilterId)?.value || 'all';
+        const filterLesId = document.getElementById(cfg.unitLesFilterId)?.value || 'all';
+
+        let filtered = state.units;
+        if (filterLesId !== 'all') {
+            filtered = filtered.filter(u => u.lessonId === filterLesId);
+        } else if (filterCatId !== 'all') {
+            const allowedLessons = state.lessons.filter(l => l.categoryId === filterCatId).map(l => l.id);
+            filtered = filtered.filter(u => allowedLessons.includes(u.lessonId));
+        }
+        filtered.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        if (!filtered.length) {
+            unitList.innerHTML = `<tr><td colspan="4" class="empty-row">No units yet.</td></tr>`;
+            return;
+        }
+
+        unitList.innerHTML = filtered.map(unit => {
+            const lessonName = state.lessons.find(l => l.id === unit.lessonId)?.title || 'Unknown';
+            return `
+            <tr>
+                <td>${unit.order || 0}</td>
+                <td><span class="badge badge-muted">${escapeHtml(lessonName)}</span></td>
+                <td><strong>${escapeHtml(unit.title)}</strong> ${unit.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
+                <td>
+                    <button class="btn-secondary btn-small" onclick="${cfg.fnPrefix}EditUnit('${unit.id}')">Edit</button>
+                    <button class="btn-danger btn-small" onclick="${cfg.fnPrefix}DeleteUnit('${unit.id}')">Delete</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    // Wire filters
+    document.getElementById(cfg.filterCatId)?.addEventListener('change', renderLessons);
+    document.getElementById(cfg.unitCatFilterId)?.addEventListener('change', () => {
+        updateUnitSelects();
+        renderUnits();
+        updateDashboardStats();
+    });
+    document.getElementById(cfg.unitLesFilterId)?.addEventListener('change', renderUnits);
+    document.getElementById(cfg.unitCatId)?.addEventListener('change', (e) => updateUnitSelects(e.target.value));
+
+    // Add buttons
+    document.getElementById(cfg.addCatBtnId)?.addEventListener('click', () => {
+        document.getElementById(cfg.catFormId).reset();
+        document.getElementById(cfg.catIdField).value = '';
+        document.getElementById(cfg.catOrderField).value = state.categories.length > 0 ? Math.max(...state.categories.map(c => c.order || 0)) + 1 : 1;
+        document.getElementById(cfg.catTitleFieldId).innerText = 'Add Category';
+        openModal(document.getElementById(cfg.catModalId));
+    });
+
+    document.getElementById(cfg.addLessonBtnId)?.addEventListener('click', () => {
+        const lastCat = document.getElementById(cfg.lessonCatId).value;
+        document.getElementById(cfg.lessonFormId).reset();
+        if (lastCat) document.getElementById(cfg.lessonCatId).value = lastCat;
+        document.getElementById(cfg.lessonIdField).value = '';
+        document.getElementById(cfg.lessonOrderField).value = state.lessons.length > 0 ? Math.max(...state.lessons.map(l => l.order || 0)) + 1 : 1;
+        document.getElementById(cfg.lessonStatusId).value = 'published';
+        if (typeof tinymce !== 'undefined' && tinymce.get(cfg.lessonContentId)) {
+            tinymce.get(cfg.lessonContentId).setContent('');
+        } else {
+            const ta = document.getElementById(cfg.lessonContentId);
+            if (ta) ta.value = '';
+        }
+        document.getElementById(cfg.lessonTitleFieldId).innerText = 'Add Lesson';
+        openModal(document.getElementById(cfg.lessonModalId));
+    });
+
+    document.getElementById(cfg.addUnitBtnId)?.addEventListener('click', () => {
+        const lastLes = document.getElementById(cfg.unitLesId).value;
+        const lastCat = document.getElementById(cfg.unitCatId).value;
+        document.getElementById(cfg.unitFormId).reset();
+        if (lastLes) document.getElementById(cfg.unitLesId).value = lastLes;
+        if (lastCat) document.getElementById(cfg.unitCatId).value = lastCat;
+        document.getElementById(cfg.unitIdField).value = '';
+        document.getElementById(cfg.unitOrderField).value = state.units.length > 0 ? Math.max(...state.units.map(u => u.order || 0)) + 1 : 1;
+        document.getElementById(cfg.unitStatusId).value = 'published';
+        if (typeof tinymce !== 'undefined' && tinymce.get(cfg.unitContentId)) {
+            tinymce.get(cfg.unitContentId).setContent('');
+        } else {
+            const ta = document.getElementById(cfg.unitContentId);
+            if (ta) ta.value = '';
+        }
+        document.getElementById(cfg.unitTitleFieldId).innerText = 'Add Unit';
+        openModal(document.getElementById(cfg.unitModalId));
+    });
+
+    // Category submit
+    const catForm = document.getElementById(cfg.catFormId);
+    onSubmit(catForm, async () => {
+        const id = document.getElementById(cfg.catIdField).value;
+        const title = document.getElementById(cfg.catTitleInputId).value.trim();
+        const order = parseInt(document.getElementById(cfg.catOrderField).value) || 0;
+        if (!title) { window.showToast('Category title is required.', 'error'); return; }
+        if (isDuplicate(state.categories, c => (c.title || '').toLowerCase() === title.toLowerCase(), id)) {
+            dupToast('category'); return;
+        }
+        if (id) {
+            await updateDoc(doc(db, cfg.categories, id), stampUpdate({ title, order }));
+        } else {
+            await addDoc(collection(db, cfg.categories), stampCreate({ title, order }));
+        }
+        window.closeModalOverlay(document.getElementById(cfg.catModalId));
+        await loadData();
+        window.showToast('Saved!', 'success');
+    });
+
+    // Lesson submit
+    const lessonForm = document.getElementById(cfg.lessonFormId);
+    onSubmit(lessonForm, async () => {
+        const id = document.getElementById(cfg.lessonIdField).value;
+        const categoryId = document.getElementById(cfg.lessonCatId).value;
+        const title = document.getElementById(cfg.lessonTitleInputId).value.trim();
+        const author = '';
+        const order = parseInt(document.getElementById(cfg.lessonOrderField).value) || 0;
+        const status = document.getElementById(cfg.lessonStatusId).value;
+        const rawContent = typeof tinymce !== 'undefined' && tinymce.get(cfg.lessonContentId)
+            ? tinymce.get(cfg.lessonContentId).getContent()
+            : (document.getElementById(cfg.lessonContentId)?.value || '');
+        const content = sanitizeRichText(rawContent);
+
+        if (!categoryId) { window.showToast('Please select a category.', 'error'); return; }
+        if (!title) { window.showToast('Lesson title is required.', 'error'); return; }
+        if (isDuplicate(state.lessons, l => l.categoryId === categoryId && (l.title || '').toLowerCase() === title.toLowerCase(), id)) {
+            dupToast('lesson'); return;
+        }
+
+        if (id) {
+            await updateDoc(doc(db, cfg.lessons, id), stampUpdate({ categoryId, title, author, order, content, status }));
+        } else {
+            await addDoc(collection(db, cfg.lessons), stampCreate({ categoryId, title, author, order, content, status }));
+        }
+        window.closeModalOverlay(document.getElementById(cfg.lessonModalId));
+        await loadData();
+        window.showToast('Saved!', 'success');
+    });
+
+    // Unit submit
+    const unitForm = document.getElementById(cfg.unitFormId);
+    onSubmit(unitForm, async () => {
+        const id = document.getElementById(cfg.unitIdField).value;
+        const lessonId = document.getElementById(cfg.unitLesId).value;
+        const title = document.getElementById(cfg.unitTitleInputId).value.trim();
+        const author = '';
+        const order = parseInt(document.getElementById(cfg.unitOrderField).value) || 0;
+        const status = document.getElementById(cfg.unitStatusId).value;
+        const rawContent = typeof tinymce !== 'undefined' && tinymce.get(cfg.unitContentId)
+            ? tinymce.get(cfg.unitContentId).getContent()
+            : (document.getElementById(cfg.unitContentId)?.value || '');
+        const content = sanitizeRichText(rawContent);
+
+        if (!lessonId) { window.showToast('Please select a Lesson.', 'error'); return; }
+        if (!title) { window.showToast('Unit title is required.', 'error'); return; }
+        if (isDuplicate(state.units, u => u.lessonId === lessonId && (u.title || '').toLowerCase() === title.toLowerCase(), id)) {
+            dupToast('unit'); return;
+        }
+
+        if (id) {
+            await updateDoc(doc(db, cfg.units, id), stampUpdate({ lessonId, title, author, order, content, status }));
+        } else {
+            await addDoc(collection(db, cfg.units), stampCreate({ lessonId, title, author, order, content, status }));
+        }
+        window.closeModalOverlay(document.getElementById(cfg.unitModalId));
+        await loadData();
+        window.showToast('Saved!', 'success');
+    });
+
+    // Edit/delete exposed functions
+    window[cfg.fnPrefix + 'EditCat'] = function (id) {
+        const cat = state.categories.find(c => c.id === id);
+        if (!cat) return;
+        document.getElementById(cfg.catIdField).value = cat.id;
+        document.getElementById(cfg.catTitleInputId).value = cat.title || '';
+        document.getElementById(cfg.catOrderField).value = cat.order || 0;
+        document.getElementById(cfg.catTitleFieldId).innerText = 'Edit Category';
+        openModal(document.getElementById(cfg.catModalId));
+    };
+
+    window[cfg.fnPrefix + 'DeleteCat'] = async function (id) {
+        const childCount = state.lessons.filter(l => l.categoryId === id).length;
+        const warning = childCount > 0 ? `${childCount} lesson${childCount > 1 ? 's' : ''} in this category will be orphaned.` : '';
+        await performDelete(cfg.categories, id, 'category', warning);
+    };
+
+    window[cfg.fnPrefix + 'EditLesson'] = async function (id) {
+        const les = state.lessons.find(l => l.id === id);
+        if (!les) return;
+        document.getElementById(cfg.lessonIdField).value = les.id;
+        document.getElementById(cfg.lessonCatId).value = les.categoryId || '';
+        document.getElementById(cfg.lessonTitleInputId).value = les.title || '';
+        document.getElementById(cfg.lessonOrderField).value = les.order || 0;
+        document.getElementById(cfg.lessonStatusId).value = les.status || 'published';
+
+        if (typeof tinymce !== 'undefined' && tinymce.get(cfg.lessonContentId)) {
+            tinymce.get(cfg.lessonContentId).setContent(les.content || '');
+        } else {
+            const ta = document.getElementById(cfg.lessonContentId);
+            if (ta) ta.value = les.content || '';
+        }
+        document.getElementById(cfg.lessonTitleFieldId).innerText = 'Edit Lesson';
+        openModal(document.getElementById(cfg.lessonModalId));
+    };
+
+    window[cfg.fnPrefix + 'DeleteLesson'] = async function (id) {
+        const childCount = state.units.filter(u => u.lessonId === id).length;
+        const warning = childCount > 0 ? `${childCount} unit${childCount > 1 ? 's' : ''} in this lesson will be orphaned.` : '';
+        await performDelete(cfg.lessons, id, 'lesson', warning);
+    };
+
+    window[cfg.fnPrefix + 'EditUnit'] = async function (id) {
+        const unit = state.units.find(u => u.id === id);
+        if (!unit) return;
+        document.getElementById(cfg.unitIdField).value = unit.id;
+
+        const lesson = state.lessons.find(l => l.id === unit.lessonId);
+        if (lesson) {
+            document.getElementById(cfg.unitCatId).value = lesson.categoryId;
+            updateUnitSelects(lesson.categoryId);
+        }
+
+        document.getElementById(cfg.unitLesId).value = unit.lessonId || '';
+        document.getElementById(cfg.unitTitleInputId).value = unit.title || '';
+        document.getElementById(cfg.unitOrderField).value = unit.order || 0;
+        document.getElementById(cfg.unitStatusId).value = unit.status || 'published';
+
+        if (typeof tinymce !== 'undefined' && tinymce.get(cfg.unitContentId)) {
+            tinymce.get(cfg.unitContentId).setContent(unit.content || '');
+        } else {
+            const ta = document.getElementById(cfg.unitContentId);
+            if (ta) ta.value = unit.content || '';
+        }
+        document.getElementById(cfg.unitTitleFieldId).innerText = 'Edit Unit';
+        openModal(document.getElementById(cfg.unitModalId));
+    };
+
+    window[cfg.fnPrefix + 'DeleteUnit'] = async function (id) {
+        await performDelete(cfg.units, id, 'unit');
+    };
+
+    return { loadData, state };
+}
+
+/* ---- TinyMCE init (kept config) ---- */
 let tinymceInitialized = false;
 function initTinyMCE() {
     if (tinymceInitialized || typeof tinymce === 'undefined') return;
@@ -1598,45 +2160,18 @@ function initTinyMCE() {
         font_size_formats: '10pt 12pt 14pt 16pt 18pt 20pt 22pt 24pt 26pt 28pt 30pt 32pt 34pt 36pt',
         font_family_formats: 'Zeequada=Zeequada,sans-serif; Urbanist=Urbanist,sans-serif; Playfair Display=Playfair Display,serif; Roboto=Roboto,sans-serif; Open Sans="Open Sans",sans-serif; Lato=Lato,sans-serif; Montserrat=Montserrat,sans-serif; Oswald=Oswald,sans-serif; Arial=arial,helvetica,sans-serif; Comic Sans MS=comic sans ms,sans-serif; Courier New=courier new,courier; Georgia=georgia,palatino; Helvetica=helvetica; Impact=impact,chicago; Tahoma=tahoma,arial,helvetica,sans-serif; Times New Roman=times new roman,times; Trebuchet MS=trebuchet ms,geneva; Verdana=verdana,geneva',
         color_map: [
-            "000000", "Black",
-            "993300", "Burnt orange",
-            "333300", "Dark olive",
-            "003300", "Dark green",
-            "003366", "Dark azure",
-            "000080", "Navy Blue",
-            "333399", "Indigo",
-            "333333", "Very dark gray",
-            "800000", "Maroon",
-            "FF6600", "Orange",
-            "808000", "Olive",
-            "008000", "Green",
-            "008080", "Teal",
-            "0000FF", "Blue",
-            "666699", "Grayish blue",
-            "808080", "Gray",
-            "FF0000", "Red",
-            "FF9900", "Amber",
-            "99CC00", "Yellow green",
-            "339966", "Sea green",
-            "33CCCC", "Turquoise",
-            "3366FF", "Royal blue",
-            "800080", "Purple",
-            "999999", "Medium gray",
-            "FF00FF", "Magenta",
-            "FFCC00", "Gold",
-            "FFFF00", "Yellow",
-            "00FF00", "Lime",
-            "00FFFF", "Aqua",
-            "00CCFF", "Sky blue",
-            "993366", "Red violet",
-            "FFFFFF", "White",
-            "FF99CC", "Pink",
-            "FFCC99", "Peach",
-            "FFFF99", "Light yellow",
-            "CCFFCC", "Pale green",
-            "CCFFFF", "Pale cyan",
-            "99CCFF", "Light sky blue",
-            "CC99FF", "Plum"
+            "000000", "Black", "993300", "Burnt orange", "333300", "Dark olive",
+            "003300", "Dark green", "003366", "Dark azure", "000080", "Navy Blue",
+            "333399", "Indigo", "333333", "Very dark gray", "800000", "Maroon",
+            "FF6600", "Orange", "808000", "Olive", "008000", "Green", "008080", "Teal",
+            "0000FF", "Blue", "666699", "Grayish blue", "808080", "Gray", "FF0000", "Red",
+            "FF9900", "Amber", "99CC00", "Yellow green", "339966", "Sea green",
+            "33CCCC", "Turquoise", "3366FF", "Royal blue", "800080", "Purple",
+            "999999", "Medium gray", "FF00FF", "Magenta", "FFCC00", "Gold",
+            "FFFF00", "Yellow", "00FF00", "Lime", "00FFFF", "Aqua", "00CCFF", "Sky blue",
+            "993366", "Red violet", "FFFFFF", "White", "FF99CC", "Pink", "FFCC99", "Peach",
+            "FFFF99", "Light yellow", "CCFFCC", "Pale green", "CCFFFF", "Pale cyan",
+            "99CCFF", "Light sky blue", "CC99FF", "Plum"
         ],
         custom_colors: true,
         extended_valid_elements: 'span[style|class|id]',
@@ -1645,7 +2180,7 @@ function initTinyMCE() {
         promotion: false,
         image_advtab: true,
         media_live_embeds: true,
-        content_style: "@font-face { font-family: 'Zeequada'; src: url('../assets/fonts/Zeequada-Regular.otf'); } @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600;700&display=swap'); body { font-family: 'Urbanist', sans-serif; font-size: 1.15rem; line-height: 1.6; } h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', serif; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 600; }",
+        content_style: "@font-face { font-family: 'Zeequada'; src: url('../assets/fonts/Zeequada-Regular.otf'); } @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap'); body { font-family: 'Urbanist', sans-serif; font-size: 1.15rem; line-height: 1.6; } h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', serif; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 600; }",
         setup: function (editor) {
             editor.on('change keyup', function () {
                 window.isModalDirty = true;
@@ -1655,884 +2190,164 @@ function initTinyMCE() {
     tinymceInitialized = true;
 }
 
-// Ensure TinyMCE is initialized when switching to Grammar or Pronunciation tab
-document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-        if (item.dataset.tab === 'tab-grammar') {
-            initTinyMCE();
-            loadGrammarData();
-        } else if (item.dataset.tab === 'tab-pronunciation') {
-            initTinyMCE();
-            if (typeof loadPronunciationData === 'function') loadPronunciationData(); // Assuming loadPronData is the function for Pronunciation
+/* ---- Instantiate managers ---- */
+const grammarManager = makeTreeManager({
+    label: 'Grammar',
+    fnPrefix: 'g',
+    categories: 'grammar_categories', lessons: 'grammar_lessons', units: 'grammar_units',
+    catListId: 'grammar-cat-list', lessonListId: 'grammar-lesson-list', unitListId: 'grammar-unit-list',
+    filterCatId: 'filter-grammar-cat', lessonCatId: 'grammar-lesson-category',
+    unitCatFilterId: 'filter-grammar-unit-cat', unitCatId: 'grammar-unit-category',
+    unitLesFilterId: 'filter-grammar-unit-les', unitLesId: 'grammar-unit-lesson',
+    catModalId: 'grammar-cat-modal', catFormId: 'grammar-cat-form', catIdField: 'grammar-cat-id',
+    catTitleInputId: 'grammar-cat-title', catOrderField: 'grammar-cat-order', catTitleFieldId: 'grammar-cat-modal-title',
+    lessonModalId: 'grammar-lesson-modal', lessonFormId: 'grammar-lesson-form', lessonIdField: 'grammar-lesson-id',
+    lessonTitleInputId: 'grammar-lesson-title', lessonOrderField: 'grammar-lesson-order',
+    lessonStatusId: 'grammar-lesson-status', lessonContentId: 'grammar-lesson-content', lessonTitleFieldId: 'grammar-lesson-modal-title',
+    unitModalId: 'grammar-unit-modal', unitFormId: 'grammar-unit-form', unitIdField: 'grammar-unit-id',
+    unitTitleInputId: 'grammar-unit-title', unitOrderField: 'grammar-unit-order',
+    unitStatusId: 'grammar-unit-status', unitContentId: 'grammar-unit-content', unitTitleFieldId: 'grammar-unit-modal-title',
+    addCatBtnId: 'add-grammar-cat-btn', addLessonBtnId: 'add-grammar-lesson-btn', addUnitBtnId: 'add-grammar-unit-btn'
+});
+loadGrammarData = () => grammarManager.loadData();
+
+const pronunciationManager = makeTreeManager({
+    label: 'Pronunciation',
+    fnPrefix: 'p',
+    categories: 'pronunciation_categories', lessons: 'pronunciation_lessons', units: 'pronunciation_units',
+    catListId: 'pronunciation-cat-list', lessonListId: 'pronunciation-lesson-list', unitListId: 'pronunciation-unit-list',
+    filterCatId: 'filter-pronunciation-cat', lessonCatId: 'pronunciation-lesson-category',
+    unitCatFilterId: 'filter-pronunciation-unit-cat', unitCatId: 'pronunciation-unit-category',
+    unitLesFilterId: 'filter-pronunciation-unit-les', unitLesId: 'pronunciation-unit-lesson',
+    catModalId: 'pronunciation-cat-modal', catFormId: 'pronunciation-cat-form', catIdField: 'pronunciation-cat-id',
+    catTitleInputId: 'pronunciation-cat-title', catOrderField: 'pronunciation-cat-order', catTitleFieldId: 'pronunciation-cat-modal-title',
+    lessonModalId: 'pronunciation-lesson-modal', lessonFormId: 'pronunciation-lesson-form', lessonIdField: 'pronunciation-lesson-id',
+    lessonTitleInputId: 'pronunciation-lesson-title', lessonOrderField: 'pronunciation-lesson-order',
+    lessonStatusId: 'pronunciation-lesson-status', lessonContentId: 'pronunciation-lesson-content', lessonTitleFieldId: 'pronunciation-lesson-modal-title',
+    unitModalId: 'pronunciation-unit-modal', unitFormId: 'pronunciation-unit-form', unitIdField: 'pronunciation-unit-id',
+    unitTitleInputId: 'pronunciation-unit-title', unitOrderField: 'pronunciation-unit-order',
+    unitStatusId: 'pronunciation-unit-status', unitContentId: 'pronunciation-unit-content', unitTitleFieldId: 'pronunciation-unit-modal-title',
+    addCatBtnId: 'add-pronunciation-cat-btn', addLessonBtnId: 'add-pronunciation-lesson-btn', addUnitBtnId: 'add-pronunciation-unit-btn'
+});
+loadPronunciationData = () => pronunciationManager.loadData();
+
+/* =========================================================
+   DATA TOOLS — Export / Import JSON
+   ========================================================= */
+const ALL_COLLECTIONS = [
+    'books', 'units', 'vocabularies', 'phrasal_verbs', 'prep_phrases',
+    'word_formations', 'word_patterns', 'lexical_expansions',
+    'grammar_categories', 'grammar_lessons', 'grammar_units',
+    'pronunciation_categories', 'pronunciation_lessons', 'pronunciation_units'
+];
+
+document.getElementById('export-all-btn')?.addEventListener('click', async () => {
+    try {
+        window.showToast('Collecting data…', 'info');
+        const dump = {};
+        for (const name of ALL_COLLECTIONS) {
+            const snap = await getDocs(collection(db, name));
+            dump[name] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }
-    });
+        const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `thors-notes-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        window.showToast('Export complete.', 'success');
+    } catch (err) {
+        console.error(err);
+        window.showToast(friendlyError(err), 'error');
+    }
 });
 
-async function loadGrammarData() {
+function stripMeta(obj) {
+    const { id, createdAt, updatedAt, ...clean } = obj;
+    return clean;
+}
+
+document.getElementById('import-btn')?.addEventListener('click', async () => {
+    const collName = document.getElementById('import-collection')?.value;
+    const fileInput = document.getElementById('import-file');
+    const file = fileInput?.files?.[0];
+    if (!collName || !file) {
+        window.showToast('Choose a collection and a JSON file first.', 'info');
+        return;
+    }
     try {
-        // Load Categories
-        const catSnap = await getDocs(collection(db, 'grammar_categories'));
-        grammarCategoriesData = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        grammarCategoriesData.sort((a,b) => (a.order || 0) - (b.order || 0));
-        
-        renderGrammarCategories();
-        updateGrammarCatSelects();
-
-        // Load Lessons
-        const lesSnap = await getDocs(collection(db, 'grammar_lessons'));
-        grammarLessonsData = lesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        // Load Units
-        const uniSnap = await getDocs(collection(db, 'grammar_units'));
-        grammarUnitsData = uniSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        renderGrammarLessons();
-        renderGrammarUnits();
-        updateDashboardStats();
-        updateGrammarUnitSelects();
-    } catch (e) {
-        console.error("Error loading Grammar Data:", e);
-    }
-}
-
-function renderGrammarCategories() {
-    if (!grammarCatList) return;
-    grammarCatList.innerHTML = '';
-    grammarCategoriesData.forEach(cat => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${cat.order || 0}</td>
-            <td><strong>${cat.title}</strong></td>
-            <td>
-                <button class="btn-secondary btn-small" onclick="editGrammarCat('${cat.id}')">Edit</button>
-                <button class="btn-secondary btn-danger btn-small" onclick="deleteGrammarCat('${cat.id}')">Delete</button>
-            </td>
-        `;
-        grammarCatList.appendChild(tr);
-    });
-}
-
-function updateGrammarCatSelects() {
-    const filterCat = document.getElementById('filter-grammar-cat');
-    const lessonCat = document.getElementById('grammar-lesson-category');
-    const unitCatFilter = document.getElementById('filter-grammar-unit-cat');
-    const unitCat = document.getElementById('grammar-unit-category');
-    
-    if (filterCat) {
-        const currentFilter = filterCat.value;
-        filterCat.innerHTML = '<option value="all">All Categories</option>';
-        grammarCategoriesData.forEach(cat => {
-            filterCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
-        });
-        filterCat.value = currentFilter || 'all';
-    }
-
-    if (lessonCat) {
-        const currentLessonCat = lessonCat.value;
-        lessonCat.innerHTML = '';
-        grammarCategoriesData.forEach(cat => {
-            lessonCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
-        });
-        if (currentLessonCat) lessonCat.value = currentLessonCat;
-    }
-
-    if (unitCatFilter) {
-        const currentFilter = unitCatFilter.value;
-        unitCatFilter.innerHTML = '<option value="all">All Categories</option>';
-        grammarCategoriesData.forEach(cat => {
-            unitCatFilter.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
-        });
-        unitCatFilter.value = currentFilter || 'all';
-    }
-    
-    if (unitCat) {
-        const currentFilter = unitCat.value;
-        unitCat.innerHTML = '<option value="">-- Select to filter lessons --</option>';
-        grammarCategoriesData.forEach(cat => {
-            unitCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
-        });
-        unitCat.value = currentFilter || '';
-    }
-}
-
-function updateGrammarUnitSelects(selectedCat = null) {
-    const unitLesFilter = document.getElementById('filter-grammar-unit-les');
-    const unitLes = document.getElementById('grammar-unit-lesson');
-    
-    let filteredLessons = grammarLessonsData;
-    filteredLessons.sort((a,b) => (a.order || 0) - (b.order || 0));
-
-    if (unitLesFilter) {
-        const currentFilter = unitLesFilter.value;
-        unitLesFilter.innerHTML = '<option value="all">All Lessons</option>';
-        let filterCatId = document.getElementById('filter-grammar-unit-cat')?.value;
-        let lessonsForFilter = filterCatId && filterCatId !== 'all' ? filteredLessons.filter(l => l.categoryId === filterCatId) : filteredLessons;
-        lessonsForFilter.forEach(les => {
-            unitLesFilter.innerHTML += `<option value="${les.id}">${les.title}</option>`;
-        });
-        unitLesFilter.value = currentFilter || 'all';
-    }
-
-    if (unitLes) {
-        const currentLes = unitLes.value;
-        unitLes.innerHTML = '';
-        let lessonsForForm = selectedCat ? filteredLessons.filter(l => l.categoryId === selectedCat) : filteredLessons;
-        lessonsForForm.forEach(les => {
-            unitLes.innerHTML += `<option value="${les.id}">${les.title}</option>`;
-        });
-        if (currentLes) unitLes.value = currentLes;
-    }
-}
-
-function renderGrammarLessons() {
-    if (!grammarLessonList) return;
-    const filterId = document.getElementById('filter-grammar-cat')?.value || 'all';
-    
-    let filtered = grammarLessonsData;
-    if (filterId !== 'all') {
-        filtered = filtered.filter(l => l.categoryId === filterId);
-    }
-    
-    filtered.sort((a,b) => (a.order || 0) - (b.order || 0));
-
-    grammarLessonList.innerHTML = '';
-    filtered.forEach(les => {
-        const catName = grammarCategoriesData.find(c => c.id === les.categoryId)?.title || 'Unknown';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${les.order || 0}</td>
-            <td><span class="badge">${catName}</span></td>
-            <td><strong>${les.title}</strong></td>
-            <td>
-                <button class="btn-secondary btn-small" onclick="editGrammarLesson('${les.id}')">Edit</button>
-                <button class="btn-secondary btn-danger btn-small" onclick="deleteGrammarLesson('${les.id}')">Delete</button>
-            </td>
-        `;
-        grammarLessonList.appendChild(tr);
-    });
-}
-
-function renderGrammarUnits() {
-    if (!grammarUnitList) return;
-    const filterCatId = document.getElementById('filter-grammar-unit-cat')?.value || 'all';
-    const filterLesId = document.getElementById('filter-grammar-unit-les')?.value || 'all';
-    
-    let filtered = grammarUnitsData;
-    
-    if (filterLesId !== 'all') {
-        filtered = filtered.filter(u => u.lessonId === filterLesId);
-    } else if (filterCatId !== 'all') {
-        const allowedLessons = grammarLessonsData.filter(l => l.categoryId === filterCatId).map(l => l.id);
-        filtered = filtered.filter(u => allowedLessons.includes(u.lessonId));
-    }
-    
-    filtered.sort((a,b) => (a.order || 0) - (b.order || 0));
-
-    grammarUnitList.innerHTML = '';
-    filtered.forEach(unit => {
-        const lesson = grammarLessonsData.find(l => l.id === unit.lessonId);
-        const lessonName = lesson ? lesson.title : 'Unknown';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${unit.order || 0}</td>
-            <td><span class="badge" style="background: #eef2f6; color: #4a7578;">${lessonName}</span></td>
-            <td><strong>${unit.title}</strong></td>
-            <td>
-                <button class="btn-secondary btn-small" onclick="editGrammarUnit('${unit.id}')">Edit</button>
-                <button class="btn-secondary btn-danger btn-small" onclick="deleteGrammarUnit('${unit.id}')">Delete</button>
-            </td>
-        `;
-        grammarUnitList.appendChild(tr);
-    });
-}
-
-if (filterGrammarCat) {
-    filterGrammarCat.addEventListener('change', renderGrammarLessons);
-}
-if (filterGrammarUnitCat) {
-    filterGrammarUnitCat.addEventListener('change', () => {
-        updateGrammarUnitSelects();
-        renderGrammarUnits();
-        updateDashboardStats();
-    });
-}
-if (filterGrammarUnitLes) {
-    filterGrammarUnitLes.addEventListener('change', renderGrammarUnits);
-}
-if (document.getElementById('grammar-unit-category')) {
-    document.getElementById('grammar-unit-category').addEventListener('change', (e) => {
-        updateGrammarUnitSelects(e.target.value);
-    });
-}
-
-// Category CRUD
-if (document.getElementById('add-grammar-cat-btn')) {
-    document.getElementById('add-grammar-cat-btn').addEventListener('click', () => {
-        grammarCatForm.reset();
-        document.getElementById('grammar-cat-id').value = '';
-        document.getElementById('grammar-cat-order').value = grammarCategoriesData.length > 0 ? Math.max(...grammarCategoriesData.map(c => c.order || 0)) + 1 : 1;
-        document.getElementById('grammar-cat-modal-title').innerText = 'Add Category';
-        openModal(grammarCatModal);
-    });
-}
-
-if (grammarCatForm) {
-    grammarCatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('grammar-cat-id').value;
-        const title = document.getElementById('grammar-cat-title').value.trim();
-        const order = parseInt(document.getElementById('grammar-cat-order').value) || 0;
-
-        try {
-            if (id) {
-                await updateDoc(doc(db, "grammar_categories", id), { title, order });
-            } else {
-                await addDoc(collection(db, "grammar_categories"), { title, order });
-            }
-            grammarCatModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-            loadGrammarData();
-            window.showToast('Saved!', 'success');
-        } catch (err) { console.error(err); window.showToast("Error saving category!: " + (err.message || err), 'error'); }
-    });
-}
-
-window.editGrammarCat = function(id) {
-    const cat = grammarCategoriesData.find(c => c.id === id);
-    if (!cat) return;
-    document.getElementById('grammar-cat-id').value = cat.id;
-    document.getElementById('grammar-cat-title').value = cat.title;
-    document.getElementById('grammar-cat-order').value = cat.order || 0;
-    document.getElementById('grammar-cat-modal-title').innerText = 'Edit Category';
-    openModal(grammarCatModal);
-};
-
-window.deleteGrammarCat = async function(id) {
-    if (confirm("Are you sure you want to delete this category? Lessons in this category might be orphaned.")) {
-        try {
-            await deleteDoc(doc(db, "grammar_categories", id));
-            loadGrammarData();
-            window.showToast('Deleted!', 'success');
-        } catch (e) {
-            console.error(e);
-            window.showToast("Error deleting category!", 'error');
-        }
-    }
-};
-
-// Lesson CRUD
-if (document.getElementById('add-grammar-lesson-btn')) {
-    document.getElementById('add-grammar-lesson-btn').addEventListener('click', () => {
-        const lastCat = document.getElementById('grammar-lesson-category').value;
-        grammarLessonForm.reset();
-        if(lastCat) document.getElementById('grammar-lesson-category').value = lastCat;
-        document.getElementById('grammar-lesson-id').value = '';
-        document.getElementById('grammar-lesson-order').value = grammarLessonsData.length > 0 ? Math.max(...grammarLessonsData.map(l => l.order || 0)) + 1 : 1;
-        if (tinymce.get('grammar-lesson-content')) {
-            tinymce.get('grammar-lesson-content').setContent('');
-        }
-        document.getElementById('grammar-lesson-modal-title').innerText = 'Add Lesson';
-        openModal(grammarLessonModal);
-    });
-}
-
-if (grammarLessonForm) {
-    grammarLessonForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('grammar-lesson-id').value;
-        const categoryId = document.getElementById('grammar-lesson-category').value;
-        const title = document.getElementById('grammar-lesson-title').value.trim();
-        const author = '';
-        const order = parseInt(document.getElementById('grammar-lesson-order').value) || 0;
-        const content = tinymce.get('grammar-lesson-content') ? tinymce.get('grammar-lesson-content').getContent() : document.getElementById('grammar-lesson-content').value;
-
-        try {
-            if (id) {
-                await updateDoc(doc(db, "grammar_lessons", id), { categoryId, title, author, order, content });
-            } else {
-                await addDoc(collection(db, "grammar_lessons"), { categoryId, title, author, order, content });
-            }
-            grammarLessonModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-            loadGrammarData();
-            window.showToast('Saved!', 'success');
-        } catch (err) { console.error(err); window.showToast("Error saving lesson!: " + (err.message || err), 'error'); }
-    });
-}
-
-window.editGrammarLesson = async function(id) {
-    const les = grammarLessonsData.find(l => l.id === id);
-    if (!les) return;
-    document.getElementById('grammar-lesson-id').value = les.id;
-    document.getElementById('grammar-lesson-category').value = les.categoryId;
-    document.getElementById('grammar-lesson-title').value = les.title;
-    document.getElementById('grammar-lesson-order').value = les.order || 0;
-    
-    if (tinymce.get('grammar-lesson-content')) {
-        tinymce.get('grammar-lesson-content').setContent(les.content || '');
-    } else {
-        document.getElementById('grammar-lesson-content').value = les.content || '';
-    }
-    
-    document.getElementById('grammar-lesson-modal-title').innerText = 'Edit Lesson';
-    openModal(grammarLessonModal);
-};
-
-// Unit CRUD
-if (document.getElementById('add-grammar-unit-btn')) {
-    document.getElementById('add-grammar-unit-btn').addEventListener('click', () => {
-        const lastLes = document.getElementById('grammar-unit-lesson').value;
-        const lastCat = document.getElementById('grammar-unit-category').value;
-        grammarUnitForm.reset();
-        if(lastLes) document.getElementById('grammar-unit-lesson').value = lastLes;
-        if(lastCat) document.getElementById('grammar-unit-category').value = lastCat;
-        document.getElementById('grammar-unit-id').value = '';
-        document.getElementById('grammar-unit-order').value = grammarUnitsData.length > 0 ? Math.max(...grammarUnitsData.map(u => u.order || 0)) + 1 : 1;
-        if (tinymce.get('grammar-unit-content')) {
-            tinymce.get('grammar-unit-content').setContent('');
-        }
-        document.getElementById('grammar-unit-modal-title').innerText = 'Add Unit';
-        openModal(grammarUnitModal);
-    });
-}
-
-if (grammarUnitForm) {
-    grammarUnitForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('grammar-unit-id').value;
-        const lessonId = document.getElementById('grammar-unit-lesson').value;
-        const title = document.getElementById('grammar-unit-title').value.trim();
-        const author = '';
-        const order = parseInt(document.getElementById('grammar-unit-order').value) || 0;
-        const content = tinymce.get('grammar-unit-content') ? tinymce.get('grammar-unit-content').getContent() : document.getElementById('grammar-unit-content').value;
-
-        if (!lessonId) {
-            window.showToast("Please select a Lesson.", 'error');
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        let docs = Array.isArray(parsed) ? parsed : (Array.isArray(parsed[collName]) ? parsed[collName] : null);
+        if (!docs) {
+            window.showToast('JSON format not recognised — expected an array of documents.', 'error');
             return;
         }
+        docs = docs.filter(d => d && typeof d === 'object');
+        if (!docs.length) { window.showToast('The file contains no documents.', 'error'); return; }
 
-        try {
-            if (id) {
-                await updateDoc(doc(db, "grammar_units", id), { lessonId, title, author, order, content });
-            } else {
-                await addDoc(collection(db, "grammar_units"), { lessonId, title, author, order, content });
+        const existingIds = new Set((await fetchAll(collName)).map(d => d.id));
+        const newCount = docs.filter(d => !d.id || !existingIds.has(d.id)).length;
+        const updateCount = docs.length - newCount;
+
+        const ok = await confirmDialog({
+            title: `Import into "${collName}"?`,
+            message: `${docs.length} documents found — ${newCount} will be created, ${updateCount} existing will be overwritten by ID.`,
+            confirmText: 'Import'
+        });
+        if (!ok) return;
+
+        let done = 0;
+        const CHUNK = 300;
+        for (let i = 0; i < docs.length; i += CHUNK) {
+            const batch = writeBatch(db);
+            for (const raw of docs.slice(i, i + CHUNK)) {
+                const data = { ...stripMeta(raw), updatedAt: serverTimestamp() };
+                const isNew = !raw.id || !existingIds.has(raw.id);
+                if (isNew) data.createdAt = serverTimestamp();
+                const ref = raw.id ? doc(db, collName, raw.id) : doc(collection(db, collName));
+                batch.set(ref, data, { merge: false });
             }
-            grammarUnitModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-            loadGrammarData();
-            window.showToast('Saved!', 'success');
-        } catch (err) { console.error(err); window.showToast("Error saving unit!: " + (err.message || err), 'error'); }
-    });
-}
-
-window.editGrammarUnit = async function(id) {
-    const unit = grammarUnitsData.find(u => u.id === id);
-    if (!unit) return;
-    document.getElementById('grammar-unit-id').value = unit.id;
-    
-    // Find category from lesson to populate filter dropdown
-    const lesson = grammarLessonsData.find(l => l.id === unit.lessonId);
-    if (lesson) {
-        document.getElementById('grammar-unit-category').value = lesson.categoryId;
-        updateGrammarUnitSelects(lesson.categoryId);
-    }
-    
-    document.getElementById('grammar-unit-lesson').value = unit.lessonId;
-    document.getElementById('grammar-unit-title').value = unit.title;
-    document.getElementById('grammar-unit-order').value = unit.order || 0;
-    
-    if (tinymce.get('grammar-unit-content')) {
-        tinymce.get('grammar-unit-content').setContent(unit.content || '');
-    } else {
-        document.getElementById('grammar-unit-content').value = unit.content || '';
-    }
-    
-    document.getElementById('grammar-unit-modal-title').innerText = 'Edit Unit';
-    openModal(grammarUnitModal);
-};
-
-window.deleteGrammarLesson = async function(id) {
-    if (confirm("Are you sure you want to delete this lesson?")) {
-        try {
-            await deleteDoc(doc(db, "grammar_lessons", id));
-            loadGrammarData();
-            window.showToast('Deleted!', 'success');
-        } catch (e) {
-            console.error(e);
-            window.showToast("Error deleting lesson!", 'error');
+            await batch.commit();
+            done += Math.min(CHUNK, docs.length - i);
+            window.showToast(`Imported ${done}/${docs.length}…`, 'info');
         }
+        fileInput.value = '';
+        await reloadDataFor(null);
+        window.showToast(`Import complete — ${docs.length} documents written.`, 'success');
+    } catch (err) {
+        console.error(err);
+        window.showToast(friendlyError(err), 'error');
     }
-};
+});
 
-window.deleteGrammarUnit = async function(id) {
-    if (confirm("Are you sure you want to delete this unit?")) {
-        try {
-            await deleteDoc(doc(db, "grammar_units", id));
-            loadGrammarData();
-            window.showToast('Deleted!', 'success');
-        } catch (e) {
-            console.error(e);
-            window.showToast("Error deleting unit!", 'error');
-        }
-    }
-};
-
-window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; window.closeTinyMCEPopups(); };
-
-
-// GRAMMAR MANAGEMENT LOGIC
-// =========================================================
-
-// State
-let pronunciationCategoriesData = [];
-let pronunciationLessonsData = [];
-let pronunciationUnitsData = [];
-
-// DOM Elements
-const pronunciationCatList = document.getElementById('pronunciation-cat-list');
-const pronunciationLessonList = document.getElementById('pronunciation-lesson-list');
-const pronunciationUnitList = document.getElementById('pronunciation-unit-list');
-const filterPronunciationCat = document.getElementById('filter-pronunciation-cat');
-const filterPronunciationUnitCat = document.getElementById('filter-pronunciation-unit-cat');
-const filterPronunciationUnitLes = document.getElementById('filter-pronunciation-unit-les');
-
-const pronunciationCatModal = document.getElementById('pronunciation-cat-modal');
-const pronunciationCatForm = document.getElementById('pronunciation-cat-form');
-
-const pronunciationLessonModal = document.getElementById('pronunciation-lesson-modal');
-const pronunciationLessonForm = document.getElementById('pronunciation-lesson-form');
-
-const pronunciationUnitModal = document.getElementById('pronunciation-unit-modal');
-const pronunciationUnitForm = document.getElementById('pronunciation-unit-form');
-
-
-
-async function loadPronunciationData() {
-    try {
-        // Load Categories
-        const catSnap = await getDocs(collection(db, 'pronunciation_categories'));
-        pronunciationCategoriesData = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        pronunciationCategoriesData.sort((a,b) => (a.order || 0) - (b.order || 0));
-        
-        renderPronunciationCategories();
-        updatePronunciationCatSelects();
-
-        // Load Lessons
-        const lesSnap = await getDocs(collection(db, 'pronunciation_lessons'));
-        pronunciationLessonsData = lesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        // Load Units
-        const uniSnap = await getDocs(collection(db, 'pronunciation_units'));
-        pronunciationUnitsData = uniSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        renderPronunciationLessons();
-        renderPronunciationUnits();
-        updatePronunciationUnitSelects();
-    } catch (e) {
-        console.error("Error loading Pronunciation Data:", e);
-    }
-}
-
-function renderPronunciationCategories() {
-    if (!pronunciationCatList) return;
-    pronunciationCatList.innerHTML = '';
-    pronunciationCategoriesData.forEach(cat => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${cat.order || 0}</td>
-            <td><strong>${cat.title}</strong></td>
-            <td>
-                <button class="btn-secondary btn-small" onclick="editPronunciationCat('${cat.id}')">Edit</button>
-                <button class="btn-secondary btn-danger btn-small" onclick="deletePronunciationCat('${cat.id}')">Delete</button>
-            </td>
-        `;
-        pronunciationCatList.appendChild(tr);
-    });
-}
-
-function updatePronunciationCatSelects() {
-    const filterCat = document.getElementById('filter-pronunciation-cat');
-    const lessonCat = document.getElementById('pronunciation-lesson-category');
-    const unitCatFilter = document.getElementById('filter-pronunciation-unit-cat');
-    const unitCat = document.getElementById('pronunciation-unit-category');
-    
-    if (filterCat) {
-        const currentFilter = filterCat.value;
-        filterCat.innerHTML = '<option value="all">All Categories</option>';
-        pronunciationCategoriesData.forEach(cat => {
-            filterCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
-        });
-        filterCat.value = currentFilter || 'all';
-    }
-
-    if (lessonCat) {
-        const currentLessonCat = lessonCat.value;
-        lessonCat.innerHTML = '';
-        pronunciationCategoriesData.forEach(cat => {
-            lessonCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
-        });
-        if (currentLessonCat) lessonCat.value = currentLessonCat;
-    }
-
-    if (unitCatFilter) {
-        const currentFilter = unitCatFilter.value;
-        unitCatFilter.innerHTML = '<option value="all">All Categories</option>';
-        pronunciationCategoriesData.forEach(cat => {
-            unitCatFilter.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
-        });
-        unitCatFilter.value = currentFilter || 'all';
-    }
-    
-    if (unitCat) {
-        const currentFilter = unitCat.value;
-        unitCat.innerHTML = '<option value="">-- Select to filter lessons --</option>';
-        pronunciationCategoriesData.forEach(cat => {
-            unitCat.innerHTML += `<option value="${cat.id}">${cat.title}</option>`;
-        });
-        unitCat.value = currentFilter || '';
-    }
-}
-
-function updatePronunciationUnitSelects(selectedCat = null) {
-    const unitLesFilter = document.getElementById('filter-pronunciation-unit-les');
-    const unitLes = document.getElementById('pronunciation-unit-lesson');
-    
-    let filteredLessons = pronunciationLessonsData;
-    filteredLessons.sort((a,b) => (a.order || 0) - (b.order || 0));
-
-    if (unitLesFilter) {
-        const currentFilter = unitLesFilter.value;
-        unitLesFilter.innerHTML = '<option value="all">All Lessons</option>';
-        let filterCatId = document.getElementById('filter-pronunciation-unit-cat')?.value;
-        let lessonsForFilter = filterCatId && filterCatId !== 'all' ? filteredLessons.filter(l => l.categoryId === filterCatId) : filteredLessons;
-        lessonsForFilter.forEach(les => {
-            unitLesFilter.innerHTML += `<option value="${les.id}">${les.title}</option>`;
-        });
-        unitLesFilter.value = currentFilter || 'all';
-    }
-
-    if (unitLes) {
-        const currentLes = unitLes.value;
-        unitLes.innerHTML = '';
-        let lessonsForForm = selectedCat ? filteredLessons.filter(l => l.categoryId === selectedCat) : filteredLessons;
-        lessonsForForm.forEach(les => {
-            unitLes.innerHTML += `<option value="${les.id}">${les.title}</option>`;
-        });
-        if (currentLes) unitLes.value = currentLes;
-    }
-}
-
-function renderPronunciationLessons() {
-    if (!pronunciationLessonList) return;
-    const filterId = document.getElementById('filter-pronunciation-cat')?.value || 'all';
-    
-    let filtered = pronunciationLessonsData;
-    if (filterId !== 'all') {
-        filtered = filtered.filter(l => l.categoryId === filterId);
-    }
-    
-    filtered.sort((a,b) => (a.order || 0) - (b.order || 0));
-
-    pronunciationLessonList.innerHTML = '';
-    filtered.forEach(les => {
-        const catName = pronunciationCategoriesData.find(c => c.id === les.categoryId)?.title || 'Unknown';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${les.order || 0}</td>
-            <td><span class="badge">${catName}</span></td>
-            <td><strong>${les.title}</strong></td>
-            <td>
-                <button class="btn-secondary btn-small" onclick="editPronunciationLesson('${les.id}')">Edit</button>
-                <button class="btn-secondary btn-danger btn-small" onclick="deletePronunciationLesson('${les.id}')">Delete</button>
-            </td>
-        `;
-        pronunciationLessonList.appendChild(tr);
-    });
-}
-
-function renderPronunciationUnits() {
-    if (!pronunciationUnitList) return;
-    const filterCatId = document.getElementById('filter-pronunciation-unit-cat')?.value || 'all';
-    const filterLesId = document.getElementById('filter-pronunciation-unit-les')?.value || 'all';
-    
-    let filtered = pronunciationUnitsData;
-    
-    if (filterLesId !== 'all') {
-        filtered = filtered.filter(u => u.lessonId === filterLesId);
-    } else if (filterCatId !== 'all') {
-        const allowedLessons = pronunciationLessonsData.filter(l => l.categoryId === filterCatId).map(l => l.id);
-        filtered = filtered.filter(u => allowedLessons.includes(u.lessonId));
-    }
-    
-    filtered.sort((a,b) => (a.order || 0) - (b.order || 0));
-
-    pronunciationUnitList.innerHTML = '';
-    filtered.forEach(unit => {
-        const lesson = pronunciationLessonsData.find(l => l.id === unit.lessonId);
-        const lessonName = lesson ? lesson.title : 'Unknown';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${unit.order || 0}</td>
-            <td><span class="badge" style="background: #eef2f6; color: #4a7578;">${lessonName}</span></td>
-            <td><strong>${unit.title}</strong></td>
-            <td>
-                <button class="btn-secondary btn-small" onclick="editPronunciationUnit('${unit.id}')">Edit</button>
-                <button class="btn-secondary btn-danger btn-small" onclick="deletePronunciationUnit('${unit.id}')">Delete</button>
-            </td>
-        `;
-        pronunciationUnitList.appendChild(tr);
-    });
-}
-
-if (filterPronunciationCat) {
-    filterPronunciationCat.addEventListener('change', renderPronunciationLessons);
-}
-if (filterPronunciationUnitCat) {
-    filterPronunciationUnitCat.addEventListener('change', () => {
-        updatePronunciationUnitSelects();
-        renderPronunciationUnits();
-    });
-}
-if (filterPronunciationUnitLes) {
-    filterPronunciationUnitLes.addEventListener('change', renderPronunciationUnits);
-}
-if (document.getElementById('pronunciation-unit-category')) {
-    document.getElementById('pronunciation-unit-category').addEventListener('change', (e) => {
-        updatePronunciationUnitSelects(e.target.value);
-    });
-}
-
-// Category CRUD
-if (document.getElementById('add-pronunciation-cat-btn')) {
-    document.getElementById('add-pronunciation-cat-btn').addEventListener('click', () => {
-        pronunciationCatForm.reset();
-        document.getElementById('pronunciation-cat-id').value = '';
-        document.getElementById('pronunciation-cat-order').value = pronunciationCategoriesData.length > 0 ? Math.max(...pronunciationCategoriesData.map(c => c.order || 0)) + 1 : 1;
-        document.getElementById('pronunciation-cat-modal-title').innerText = 'Add Category';
-        openModal(pronunciationCatModal);
-    });
-}
-
-if (pronunciationCatForm) {
-    pronunciationCatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('pronunciation-cat-id').value;
-        const title = document.getElementById('pronunciation-cat-title').value.trim();
-        const order = parseInt(document.getElementById('pronunciation-cat-order').value) || 0;
-
-        try {
-            if (id) {
-                await updateDoc(doc(db, "pronunciation_categories", id), { title, order });
-            } else {
-                await addDoc(collection(db, "pronunciation_categories"), { title, order });
-            }
-            pronunciationCatModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-            loadPronunciationData();
-            window.showToast('Saved!', 'success');
-        } catch (err) { console.error(err); window.showToast("Error saving category!: " + (err.message || err), 'error'); }
-    });
-}
-
-window.editPronunciationCat = function(id) {
-    const cat = pronunciationCategoriesData.find(c => c.id === id);
-    if (!cat) return;
-    document.getElementById('pronunciation-cat-id').value = cat.id;
-    document.getElementById('pronunciation-cat-title').value = cat.title;
-    document.getElementById('pronunciation-cat-order').value = cat.order || 0;
-    document.getElementById('pronunciation-cat-modal-title').innerText = 'Edit Category';
-    openModal(pronunciationCatModal);
-};
-
-window.deletePronunciationCat = async function(id) {
-    if (confirm("Are you sure you want to delete this category? Lessons in this category might be orphaned.")) {
-        try {
-            await deleteDoc(doc(db, "pronunciation_categories", id));
-            loadPronunciationData();
-            window.showToast('Deleted!', 'success');
-        } catch (e) {
-            console.error(e);
-            window.showToast("Error deleting category!", 'error');
-        }
-    }
-};
-
-// Lesson CRUD
-if (document.getElementById('add-pronunciation-lesson-btn')) {
-    document.getElementById('add-pronunciation-lesson-btn').addEventListener('click', () => {
-        const lastCat = document.getElementById('pronunciation-lesson-category').value;
-        pronunciationLessonForm.reset();
-        if(lastCat) document.getElementById('pronunciation-lesson-category').value = lastCat;
-        document.getElementById('pronunciation-lesson-id').value = '';
-        document.getElementById('pronunciation-lesson-order').value = pronunciationLessonsData.length > 0 ? Math.max(...pronunciationLessonsData.map(l => l.order || 0)) + 1 : 1;
-        if (tinymce.get('pronunciation-lesson-content')) {
-            tinymce.get('pronunciation-lesson-content').setContent('');
-        }
-        document.getElementById('pronunciation-lesson-modal-title').innerText = 'Add Lesson';
-        openModal(pronunciationLessonModal);
-    });
-}
-
-if (pronunciationLessonForm) {
-    pronunciationLessonForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('pronunciation-lesson-id').value;
-        const categoryId = document.getElementById('pronunciation-lesson-category').value;
-        const title = document.getElementById('pronunciation-lesson-title').value.trim();
-        const author = '';
-        const order = parseInt(document.getElementById('pronunciation-lesson-order').value) || 0;
-        const content = tinymce.get('pronunciation-lesson-content') ? tinymce.get('pronunciation-lesson-content').getContent() : document.getElementById('pronunciation-lesson-content').value;
-
-        try {
-            if (id) {
-                await updateDoc(doc(db, "pronunciation_lessons", id), { categoryId, title, author, order, content });
-            } else {
-                await addDoc(collection(db, "pronunciation_lessons"), { categoryId, title, author, order, content });
-            }
-            pronunciationLessonModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-            loadPronunciationData();
-            window.showToast('Saved!', 'success');
-        } catch (err) { console.error(err); window.showToast("Error saving lesson!: " + (err.message || err), 'error'); }
-    });
-}
-
-window.editPronunciationLesson = async function(id) {
-    const les = pronunciationLessonsData.find(l => l.id === id);
-    if (!les) return;
-    document.getElementById('pronunciation-lesson-id').value = les.id;
-    document.getElementById('pronunciation-lesson-category').value = les.categoryId;
-    document.getElementById('pronunciation-lesson-title').value = les.title;
-    document.getElementById('pronunciation-lesson-order').value = les.order || 0;
-    
-    if (tinymce.get('pronunciation-lesson-content')) {
-        tinymce.get('pronunciation-lesson-content').setContent(les.content || '');
-    } else {
-        document.getElementById('pronunciation-lesson-content').value = les.content || '';
-    }
-    
-    document.getElementById('pronunciation-lesson-modal-title').innerText = 'Edit Lesson';
-    openModal(pronunciationLessonModal);
-};
-
-// Unit CRUD
-if (document.getElementById('add-pronunciation-unit-btn')) {
-    document.getElementById('add-pronunciation-unit-btn').addEventListener('click', () => {
-        const lastLes = document.getElementById('pronunciation-unit-lesson').value;
-        const lastCat = document.getElementById('pronunciation-unit-category').value;
-        pronunciationUnitForm.reset();
-        if(lastLes) document.getElementById('pronunciation-unit-lesson').value = lastLes;
-        if(lastCat) document.getElementById('pronunciation-unit-category').value = lastCat;
-        document.getElementById('pronunciation-unit-id').value = '';
-        document.getElementById('pronunciation-unit-order').value = pronunciationUnitsData.length > 0 ? Math.max(...pronunciationUnitsData.map(u => u.order || 0)) + 1 : 1;
-        if (tinymce.get('pronunciation-unit-content')) {
-            tinymce.get('pronunciation-unit-content').setContent('');
-        }
-        document.getElementById('pronunciation-unit-modal-title').innerText = 'Add Unit';
-        openModal(pronunciationUnitModal);
-    });
-}
-
-if (pronunciationUnitForm) {
-    pronunciationUnitForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('pronunciation-unit-id').value;
-        const lessonId = document.getElementById('pronunciation-unit-lesson').value;
-        const title = document.getElementById('pronunciation-unit-title').value.trim();
-        const author = '';
-        const order = parseInt(document.getElementById('pronunciation-unit-order').value) || 0;
-        const content = tinymce.get('pronunciation-unit-content') ? tinymce.get('pronunciation-unit-content').getContent() : document.getElementById('pronunciation-unit-content').value;
-
-        if (!lessonId) {
-            window.showToast("Please select a Lesson.", 'error');
-            return;
-        }
-
-        try {
-            if (id) {
-                await updateDoc(doc(db, "pronunciation_units", id), { lessonId, title, author, order, content });
-            } else {
-                await addDoc(collection(db, "pronunciation_units"), { lessonId, title, author, order, content });
-            }
-            pronunciationUnitModal.style.display = 'none'; document.body.classList.remove('modal-open'); window.closeTinyMCEPopups(); window.isModalDirty = false;
-            loadPronunciationData();
-            window.showToast('Saved!', 'success');
-        } catch (err) { console.error(err); window.showToast("Error saving unit!: " + (err.message || err), 'error'); }
-    });
-}
-
-window.editPronunciationUnit = async function(id) {
-    const unit = pronunciationUnitsData.find(u => u.id === id);
-    if (!unit) return;
-    document.getElementById('pronunciation-unit-id').value = unit.id;
-    
-    // Find category from lesson to populate filter dropdown
-    const lesson = pronunciationLessonsData.find(l => l.id === unit.lessonId);
-    if (lesson) {
-        document.getElementById('pronunciation-unit-category').value = lesson.categoryId;
-        updatePronunciationUnitSelects(lesson.categoryId);
-    }
-    
-    document.getElementById('pronunciation-unit-lesson').value = unit.lessonId;
-    document.getElementById('pronunciation-unit-title').value = unit.title;
-    document.getElementById('pronunciation-unit-order').value = unit.order || 0;
-    
-    if (tinymce.get('pronunciation-unit-content')) {
-        tinymce.get('pronunciation-unit-content').setContent(unit.content || '');
-    } else {
-        document.getElementById('pronunciation-unit-content').value = unit.content || '';
-    }
-    
-    document.getElementById('pronunciation-unit-modal-title').innerText = 'Edit Unit';
-    openModal(pronunciationUnitModal);
-};
-
-window.deletePronunciationLesson = async function(id) {
-    if (confirm("Are you sure you want to delete this lesson?")) {
-        try {
-            await deleteDoc(doc(db, "pronunciation_lessons", id));
-            loadPronunciationData();
-            window.showToast('Deleted!', 'success');
-        } catch (e) {
-            console.error(e);
-            window.showToast("Error deleting lesson!", 'error');
-        }
-    }
-};
-
-window.deletePronunciationUnit = async function(id) {
-    if (confirm("Are you sure you want to delete this unit?")) {
-        try {
-            await deleteDoc(doc(db, "pronunciation_units", id));
-            loadPronunciationData();
-            window.showToast('Deleted!', 'success');
-        } catch (e) {
-            console.error(e);
-            window.showToast("Error deleting unit!", 'error');
-        }
-    }
-};
-
-window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; window.closeTinyMCEPopups(); };
-
-
+/* =========================================================
+   DASHBOARD STATS
+   ========================================================= */
 function updateDashboardStats() {
-    const elBooks = document.getElementById('stat-books');
-    const elUnits = document.getElementById('stat-units');
-    const elVocab = document.getElementById('stat-vocab');
-    const elGrammar = document.getElementById('stat-grammar');
-    
-    if (elBooks) elBooks.innerText = (typeof booksData !== 'undefined') ? booksData.length : 0;
-    if (elUnits) elUnits.innerText = (typeof unitsData !== 'undefined') ? unitsData.length : 0;
-    if (elVocab) elVocab.innerText = (typeof vocabData !== 'undefined') ? vocabData.length : 0;
-    if (elGrammar) elGrammar.innerText = (typeof grammarLessonsData !== 'undefined') ? grammarLessonsData.length : 0;
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val ?? 0;
+    };
+    set('stat-books', booksData.length);
+    set('stat-units', unitsData.length);
+    set('stat-vocab', vocabData.length);
+    set('stat-phrasal', phrasalData.length);
+    set('stat-grammar', grammarManager?.state.lessons.length ?? '...');
+    set('stat-pronunciation', pronunciationManager?.state.lessons.length ?? '...');
 }
 
+// Load grammar/pronunciation once at startup so dashboard stats are accurate
+setTimeout(() => {
+    if (auth.currentUser) {
+        loadGrammarData();
+        loadPronunciationData();
+    }
+}, 2500);
 
-window.renderVocab = renderVocab;
-window.renderPhrasal = renderPhrasal;
-window.renderPrep = renderPrep;
-window.renderWordform = renderWordform;
-window.renderPattern = renderPattern;
-window.renderLexical = renderLexical;
-
-
-// Dark mode logic
+/* =========================================================
+   DARK MODE
+   ========================================================= */
 const dmBtn = document.getElementById('admin-dark-mode-btn');
 if (dmBtn) {
     dmBtn.addEventListener('click', () => {

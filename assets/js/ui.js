@@ -4,6 +4,7 @@
  *          Vocab Highlight (#14), Flashcard Mode (#10),
  *          Progress Indicator (#11), Breadcrumb (#5), Stats (#8)
  */
+import { escapeHtml, formatTime } from './utils.js';
 
 /* ==============================================
    #7 — DARK MODE TOGGLE
@@ -17,7 +18,7 @@ function initDarkMode() {
 
     const applyTheme = (dark) => {
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-        if (icon) icon.textContent = dark ? '☀️' : '🌙';
+        if (icon) icon.textContent = dark ? '\u2600\uFE0F' : '\uD83C\uDF19';
         if (label) label.textContent = dark ? 'Light Mode' : 'Dark Mode';
         toggle.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
     };
@@ -37,7 +38,7 @@ function initDarkMode() {
    #9 — INTERSECTION OBSERVER FADE-IN
    ============================================== */
 function initRevealAnimations() {
-    const elements = document.querySelectorAll('.reveal');
+    const elements = document.querySelectorAll('.reveal:not(.visible)');
     if (!elements.length) return;
 
     const observer = new IntersectionObserver((entries) => {
@@ -50,84 +51,155 @@ function initRevealAnimations() {
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
     elements.forEach((el, i) => {
-        el.style.transitionDelay = `${i * 0.05}s`;
+        el.style.transitionDelay = `${Math.min(i, 8) * 0.05}s`;
         observer.observe(el);
     });
 }
 
 /* ==============================================
    #5 — BREADCRUMB GENERATION
+   Usage: <nav class="breadcrumb-container" id="breadcrumb-container"
+             data-crumbs='[{"label":"Home","href":"index.html"},...]'></nav>
+   Dynamic pages may instead call window.renderBreadcrumb([{label, href}...]).
    ============================================== */
+window.renderBreadcrumb = function (crumbs) {
+    const container = document.getElementById('breadcrumb-container');
+    if (!container || !crumbs?.length) return;
+
+    const items = crumbs.map((c, i) => {
+        const isLast = i === crumbs.length - 1;
+        const label = escapeHtml(c.label);
+        if (isLast || !c.href) {
+            return `<span class="bc-current" aria-current="page">${label}</span>`;
+        }
+        return `<a href="${escapeHtml(c.href)}">${label}</a><span class="bc-sep" aria-hidden="true">›</span>`;
+    });
+
+    container.hidden = false;
+    container.innerHTML = `<nav class="breadcrumb" aria-label="Breadcrumb">${items.join('')}</nav>`;
+};
+
 function initBreadcrumb() {
     const container = document.getElementById('breadcrumb-container');
     if (!container) return;
 
-    const crumbs = JSON.parse(container.dataset.crumbs || '[]');
-    if (!crumbs.length) return;
-
-    const items = crumbs.map((c, i) => {
-        const isLast = i === crumbs.length - 1;
-        if (isLast) {
-            return `<span class="bc-current">${c.label}</span>`;
+    let crumbs = [];
+    try { crumbs = JSON.parse(container.dataset.crumbs || '[]'); } catch { crumbs = []; }
+    if (!crumbs.length) {
+        // Dynamic pages fill this container themselves after their data loads
+        if (!container.dataset.section && !container.id.includes('dynamic')) {
+            container.hidden = true;
         }
-        return `<a href="${c.href}">${c.label}</a><span class="bc-sep">›</span>`;
-    });
-
-    container.innerHTML = `<nav class="breadcrumb" aria-label="Breadcrumb">${items.join('')}</nav>`;
+        return;
+    }
+    window.renderBreadcrumb(crumbs);
 }
 
 /* ==============================================
    #13 — CUSTOM AUDIO PLAYER
    ============================================== */
-function buildCustomAudioPlayer(src) {
+const _PLAY_SVG = '<polygon points="5 3 19 12 5 21 5 3"/>';
+const _PAUSE_SVG = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+
+function ttsButton(text) {
+    if (!text || !('speechSynthesis' in window)) {
+        return '<span class="audio-none">No audio</span>';
+    }
+    return `
+        <button class="audio-tts-btn" type="button" title="Text-to-speech"
+            onclick="window.speakText(this)" data-say="${escapeHtml(text)}"
+            aria-label="Read aloud">&#128266;</button>
+    `;
+}
+
+function buildCustomAudioPlayer(src, ttsText) {
     if (!src) {
-        return `<span style="font-size:0.8rem;color:var(--text-secondary);font-style:italic;">No audio</span>`;
+        return `<span class="audio-group-tts">${ttsButton(ttsText)}</span>`;
     }
 
-    const id = 'ap-' + Math.random().toString(36).substr(2, 8);
+    const id = 'ap-' + Math.random().toString(36).slice(2, 10);
+    const safeSrc = escapeHtml(src);
     return `
-        <div class="custom-audio-player" id="${id}" data-src="${src}">
+        <div class="custom-audio-player" id="${id}" data-src="${safeSrc}">
             <button class="audio-play-btn" aria-label="Play audio" type="button"
                 onclick="window.toggleAudio('${id}')">
-                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <svg viewBox="0 0 24 24">${_PLAY_SVG}</svg>
             </button>
-            <div class="audio-waveform" aria-hidden="true">
-                <span></span><span></span><span></span><span></span>
-                <span></span><span></span><span></span>
-            </div>
-            <span class="audio-duration" id="${id}-dur">0:00</span>
+            <input type="range" class="audio-seek-slider" id="${id}-seek" min="0" max="100" step="0.1"
+                value="0" aria-label="Seek" oninput="window.seekAudio('${id}', this.value)">
+            <span class="audio-duration" id="${id}-dur">--:--</span>
             <div class="audio-controls-extra">
-                <button class="audio-speed-btn" type="button" onclick="window.toggleAudioSpeed('${id}')" title="Playback Speed">1x</button>
-                <input type="range" class="audio-vol-slider" id="${id}-vol" min="0" max="1" step="0.1" value="1" oninput="window.changeAudioVolume('${id}', this.value)" title="Volume">
+                <button class="audio-speed-btn" type="button" onclick="window.toggleAudioSpeed('${id}')" title="Playback speed" aria-label="Playback speed">1x</button>
+                <button class="audio-loop-btn" type="button" onclick="window.toggleAudioLoop('${id}')" title="Repeat" aria-label="Repeat" aria-pressed="false">&#128257;</button>
+                <a class="audio-download-btn" href="${safeSrc}" download title="Download" aria-label="Download audio">&#11015;</a>
             </div>
-            <audio id="${id}-audio" preload="none" src="${src}"></audio>
+            <audio id="${id}-audio" preload="metadata" src="${safeSrc}"></audio>
         </div>
     `;
 }
 
+/** Lazily attach long-lived media events exactly once per player. */
+function ensureAudioBound(playerId) {
+    const container = document.getElementById(playerId);
+    const audio = document.getElementById(playerId + '-audio');
+    if (!container || !audio || audio.dataset.uiBound === '1') return;
+    audio.dataset.uiBound = '1';
+
+    const durEl = document.getElementById(playerId + '-dur');
+    const seekEl = document.getElementById(playerId + '-seek');
+    const btnSvg = container.querySelector('.audio-play-btn svg');
+
+    const resetBtn = () => {
+        container.classList.remove('playing');
+        if (btnSvg) btnSvg.innerHTML = _PLAY_SVG;
+    };
+
+    audio.addEventListener('loadedmetadata', () => {
+        if (durEl && isFinite(audio.duration)) durEl.textContent = formatTime(audio.duration);
+    });
+
+    audio.addEventListener('ended', () => {
+        resetBtn();
+        if (seekEl) seekEl.value = 0;
+        if (durEl && isFinite(audio.duration)) durEl.textContent = formatTime(audio.duration);
+    });
+
+    audio.addEventListener('play', () => {
+        container.classList.add('playing');
+        if (btnSvg) btnSvg.innerHTML = _PAUSE_SVG;
+    });
+
+    audio.addEventListener('pause', resetBtn);
+
+    audio.addEventListener('timeupdate', () => {
+        if (durEl && isFinite(audio.duration)) {
+            durEl.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+        }
+        if (seekEl && isFinite(audio.duration) && seekEl.dataset.dragging !== '1') {
+            seekEl.value = (audio.currentTime / audio.duration) * 100 || 0;
+        }
+    });
+
+    audio.addEventListener('error', () => {
+        if (durEl) durEl.textContent = 'unavailable';
+        container.classList.add('audio-error');
+    });
+}
+
 window._audioInstances = {};
 
-window.toggleAudio = function(playerId) {
+window.toggleAudio = function (playerId) {
     const container = document.getElementById(playerId);
-    if (!container) return;
-
     const audio = document.getElementById(playerId + '-audio');
-    const btn = container.querySelector('.audio-play-btn svg');
-    const durEl = document.getElementById(playerId + '-dur');
+    if (!container || !audio) return;
+
+    ensureAudioBound(playerId);
 
     // Pause all other players
     Object.keys(window._audioInstances).forEach(id => {
         if (id !== playerId) {
             const other = window._audioInstances[id];
-            if (other && !other.paused) {
-                other.pause();
-                const otherContainer = document.getElementById(id);
-                if (otherContainer) {
-                    otherContainer.classList.remove('playing');
-                    const otherBtn = otherContainer.querySelector('.audio-play-btn svg');
-                    if (otherBtn) otherBtn.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
-                }
-            }
+            if (other && !other.paused) other.pause();
         }
     });
 
@@ -135,33 +207,23 @@ window.toggleAudio = function(playerId) {
 
     if (audio.paused) {
         audio.play().catch(() => {});
-        container.classList.add('playing');
-        btn.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
     } else {
         audio.pause();
-        container.classList.remove('playing');
-        btn.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
     }
-
-    audio.addEventListener('ended', () => {
-        container.classList.remove('playing');
-        btn.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
-    }, { once: true });
-
-    audio.addEventListener('loadedmetadata', () => {
-        const mins = Math.floor(audio.duration / 60);
-        const secs = Math.floor(audio.duration % 60).toString().padStart(2, '0');
-        if (durEl && !isNaN(audio.duration)) durEl.textContent = `${mins}:${secs}`;
-    });
-
-    audio.addEventListener('timeupdate', () => {
-        const mins = Math.floor(audio.currentTime / 60);
-        const secs = Math.floor(audio.currentTime % 60).toString().padStart(2, '0');
-        if (durEl) durEl.textContent = `${mins}:${secs}`;
-    });
 };
 
-window.toggleAudioSpeed = function(playerId) {
+window.seekAudio = function (playerId, value) {
+    const audio = document.getElementById(playerId + '-audio');
+    const seekEl = document.getElementById(playerId + '-seek');
+    if (!audio || !isFinite(audio.duration)) return;
+    if (seekEl) seekEl.dataset.dragging = '1';
+    audio.currentTime = (parseFloat(value) / 100) * audio.duration;
+    // Release dragging shortly after so timeupdate can resume syncing
+    clearTimeout(seekEl?._dragT);
+    if (seekEl) seekEl._dragT = setTimeout(() => { seekEl.dataset.dragging = '0'; }, 250);
+};
+
+window.toggleAudioSpeed = function (playerId) {
     const audio = document.getElementById(playerId + '-audio');
     const container = document.getElementById(playerId);
     if (!audio || !container) return;
@@ -180,10 +242,28 @@ window.toggleAudioSpeed = function(playerId) {
     btn.textContent = speed + 'x';
 };
 
-window.changeAudioVolume = function(playerId, volume) {
+window.toggleAudioLoop = function (playerId) {
     const audio = document.getElementById(playerId + '-audio');
-    if (!audio) return;
-    audio.volume = parseFloat(volume);
+    const container = document.getElementById(playerId);
+    if (!audio || !container) return;
+
+    audio.loop = !audio.loop;
+    const btn = container.querySelector('.audio-loop-btn');
+    if (btn) {
+        btn.setAttribute('aria-pressed', String(audio.loop));
+        btn.classList.toggle('active', audio.loop);
+    }
+};
+
+window.speakText = function (btn) {
+    if (!('speechSynthesis' in window)) return;
+    const text = btn?.dataset.say;
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text.replace(/\s*\([^)]*\)\s*$/g, '').trim());
+    utter.lang = 'en-US';
+    utter.rate = 0.95;
+    window.speechSynthesis.speak(utter);
 };
 
 /* ==============================================
@@ -195,7 +275,8 @@ function highlightWordInExample(exampleEl, word) {
     if (!cleanWord) return;
 
     const escaped = cleanWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Match word boundaries (case insensitive)
+    // Match word boundaries (case insensitive); textContent is safe here —
+    // we only wrap matched plain text, never inject raw data.
     const regex = new RegExp(`(${escaped}(?:ed|ing|s|d|er|est|ly)?)`, 'gi');
     const text = exampleEl.textContent;
     if (regex.test(text)) {
@@ -204,16 +285,24 @@ function highlightWordInExample(exampleEl, word) {
 }
 
 /* ==============================================
-   #11 — PROGRESS INDICATOR
+   #11 — PROGRESS INDICATOR (driven by flashcard results)
    ============================================== */
-function buildProgressBadge(unitId, total) {
-    const key = `progress-${unitId}`;
-    const seen = JSON.parse(localStorage.getItem(key) || '[]');
-    const count = Math.min(seen.length, total);
-    const pct = total > 0 ? (count / total) * 100 : 0;
+export function getKnownWords(unitId) {
+    try { return new Set(JSON.parse(localStorage.getItem(`progress-${unitId}`) || '[]')); }
+    catch { return new Set(); }
+}
 
-    return `
-        <div class="unit-progress-badge" title="${count}/${total} words reviewed">
+export function saveKnownWords(unitId, knownSet) {
+    localStorage.setItem(`progress-${unitId}`, JSON.stringify([...knownSet]));
+}
+
+function renderProgressBadge(unitId, total) {
+    const badge = document.getElementById(`progress-badge-${unitId}`);
+    if (!badge) return;
+    const count = Math.min(getKnownWords(unitId).size, total);
+    const pct = total > 0 ? (count / total) * 100 : 0;
+    badge.innerHTML = `
+        <div class="unit-progress-badge" title="${count}/${total} words marked as known">
             <div class="unit-progress-bar-wrap">
                 <div class="unit-progress-bar-fill" style="width:${pct}%"></div>
             </div>
@@ -222,60 +311,179 @@ function buildProgressBadge(unitId, total) {
     `;
 }
 
+window.renderProgressBadge = renderProgressBadge;
+
 /* ==============================================
    #10 — FLASHCARD MODE
+   Keyboard: Space/Enter/F = flip · ←/→ = navigate ·
+             1 = still learning · 2 = known · Esc = close
    ============================================== */
 let _flashcardData = [];
 let _flashcardIndex = 0;
 let _flashcardRevealed = false;
+let _flashcardUnitId = null;
+let _fcKnown = new Set();
+let _fcSessionDone = false;
+let _lastFocused = null;
 
-function initFlashcard(vocabs) {
+function fcOpen() {
+    return document.getElementById('flashcard-overlay')?.classList.contains('active');
+}
+
+function initFlashcard(vocabs, unitId) {
     if (!vocabs || !vocabs.length) return;
     _flashcardData = [...vocabs].sort(() => Math.random() - 0.5);
+    _flashcardUnitId = unitId || vocabs[0]?.unitId || null;
+    _fcKnown = getKnownWords(_flashcardUnitId);
 
     const btn = document.getElementById('flashcard-toggle-btn');
     const overlay = document.getElementById('flashcard-overlay');
-    const closeBtn = document.getElementById('flashcard-close');
-    const prevBtn = document.getElementById('fc-prev');
-    const nextBtn = document.getElementById('fc-next');
-    const cardArea = document.getElementById('flashcard-card-area');
 
     if (!btn || !overlay) return;
 
-    btn.addEventListener('click', () => {
-        _flashcardIndex = 0;
-        _flashcardRevealed = false;
-        renderFlashcard();
-        overlay.classList.add('active');
-    });
+    // Guard against double-binding when the section is reloaded via Retry
+    if (btn.dataset.fcBound !== '1') {
+        btn.dataset.fcBound = '1';
+        bindFlashcardEvents(btn, overlay);
+    }
+}
 
-    closeBtn?.addEventListener('click', () => overlay.classList.remove('active'));
+function bindFlashcardEvents(btn, overlay) {
+    btn.addEventListener('click', () => openFlashcards());
+    // Delegated handling: action buttons are re-rendered on every card
     overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.classList.remove('active');
+        const actionEl = e.target.closest('[data-fc-action]');
+        if (actionEl) {
+            e.stopPropagation();
+            handleFcAction(actionEl.dataset.fcAction);
+            return;
+        }
+        if (e.target === overlay) closeFlashcards();
     });
-
-    cardArea?.addEventListener('click', () => {
+    document.getElementById('flashcard-card-area')?.addEventListener('click', (e) => {
+        if (e.target.closest('[data-fc-action]')) return;
         _flashcardRevealed = !_flashcardRevealed;
         renderFlashcard();
     });
 
-    prevBtn?.addEventListener('click', () => {
-        if (_flashcardIndex > 0) {
-            _flashcardIndex--;
-            _flashcardRevealed = false;
-            renderFlashcard();
+    document.addEventListener('keydown', (e) => {
+        if (!fcOpen()) return;
+        switch (e.key) {
+            case ' ': case 'Enter': case 'f': case 'F':
+                e.preventDefault(); _flashcardRevealed = !_flashcardRevealed; renderFlashcard(); break;
+            case 'ArrowRight': e.preventDefault(); handleFcAction('next'); break;
+            case 'ArrowLeft': e.preventDefault(); handleFcAction('prev'); break;
+            case '1': handleFcAction('unknown'); break;
+            case '2': handleFcAction('known'); break;
+            case 'Escape': closeFlashcards(); break;
         }
     });
+}
 
-    nextBtn?.addEventListener('click', () => {
-        if (_flashcardIndex < _flashcardData.length - 1) {
-            _flashcardIndex++;
-            _flashcardRevealed = false;
-            renderFlashcard();
-        } else {
-            overlay.classList.remove('active');
+function openFlashcards() {
+    const overlay = document.getElementById('flashcard-overlay');
+    if (!overlay) return;
+    _lastFocused = document.activeElement;
+    _flashcardIndex = 0;
+    _flashcardRevealed = false;
+    _fcSessionDone = false;
+    renderFlashcard();
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    overlay.querySelector('.flashcard-modal')?.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.getElementById('flashcard-close')?.focus();
+}
+
+function closeFlashcards() {
+    const overlay = document.getElementById('flashcard-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    persistKnown();
+    if (_lastFocused instanceof HTMLElement) _lastFocused.focus();
+}
+
+function persistKnown() {
+    if (_flashcardUnitId) saveKnownWords(_flashcardUnitId, _fcKnown);
+    if (_flashcardUnitId) {
+        renderProgressBadge(_flashcardUnitId, document.querySelectorAll('.vocab-item').length || _flashcardData.length);
+    }
+}
+
+function handleFcAction(action) {
+    switch (action) {
+        case 'close': closeFlashcards(); break;
+        case 'flip': _flashcardRevealed = !_flashcardRevealed; renderFlashcard(); break;
+        case 'prev':
+            if (_fcSessionDone) { restartFlashcards(_flashcardData); return; }
+            if (_flashcardIndex > 0) { _flashcardIndex--; _flashcardRevealed = false; renderFlashcard(); }
+            break;
+        case 'next':
+            if (_fcSessionDone) { restartFlashcards(_flashcardData); return; }
+            if (_flashcardIndex < _flashcardData.length - 1) { _flashcardIndex++; _flashcardRevealed = false; renderFlashcard(); }
+            else finishSession();
+            break;
+        case 'known':
+            if (_fcSessionDone) return;
+            _fcKnown.add(_flashcardData[_flashcardIndex].id);
+            advanceOrFinish();
+            break;
+        case 'unknown':
+            if (_fcSessionDone) return;
+            _fcKnown.delete(_flashcardData[_flashcardIndex].id);
+            advanceOrFinish();
+            break;
+        case 'restart-all': restartFlashcards(_flashcardData); break;
+        case 'restart-unknown': {
+            const rest = _flashcardData.filter(v => !_fcKnown.has(v.id));
+            restartFlashcards(rest.length ? rest : _flashcardData);
+            break;
         }
-    });
+    }
+}
+
+function advanceOrFinish() {
+    if (_flashcardIndex < _flashcardData.length - 1) {
+        _flashcardIndex++;
+        _flashcardRevealed = false;
+        renderFlashcard();
+    } else {
+        finishSession();
+    }
+}
+
+function finishSession() {
+    _fcSessionDone = true;
+    persistKnown();
+    const cardArea = document.getElementById('flashcard-card-area');
+    const counter = document.getElementById('fc-counter');
+    const fill = document.getElementById('fc-progress-fill');
+    if (counter) counter.textContent = 'Done!';
+    if (fill) fill.style.width = '100%';
+    const knownCount = _fcKnown.size;
+    const total = _flashcardData.length;
+    if (cardArea) {
+        cardArea.innerHTML = `
+            <div class="flashcard-summary">
+                <div class="fc-summary-title">Session complete!</div>
+                <p class="fc-summary-text">${knownCount} / ${total} words marked as known.</p>
+                <div class="fc-summary-actions">
+                    <button class="fc-btn" type="button" data-fc-action="restart-unknown">Retry unknown</button>
+                    <button class="fc-btn fc-btn-secondary" type="button" data-fc-action="restart-all">Restart all</button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function restartFlashcards(data) {
+    _flashcardData = [...data].sort(() => Math.random() - 0.5);
+    _flashcardIndex = 0;
+    _flashcardRevealed = false;
+    _fcSessionDone = false;
+    renderFlashcard();
 }
 
 function renderFlashcard() {
@@ -285,38 +493,197 @@ function renderFlashcard() {
     const counter = document.getElementById('fc-counter');
     const fill = document.getElementById('fc-progress-fill');
     const cardArea = document.getElementById('flashcard-card-area');
+    const actionsBar = document.querySelector('.flashcard-actions');
 
     const total = _flashcardData.length;
     const idx = _flashcardIndex + 1;
-    const pct = (idx / total) * 100;
 
     if (counter) counter.textContent = `${idx} / ${total}`;
-    if (fill) fill.style.width = pct + '%';
+    if (fill) fill.style.width = ((idx / total) * 100) + '%';
 
     const cleanWord = (v.word || '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
     const escaped = cleanWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const exHighlight = v.example
-        ? v.example.replace(new RegExp(`(${escaped}(?:ed|ing|s|d|er|est|ly)?)`, 'gi'), '<span class="highlight-word">$1</span>')
+    const rawExample = v.example ? escapeHtml(v.example) : '';
+    const exHighlight = rawExample
+        ? rawExample.replace(new RegExp(`(${escaped}(?:ed|ing|s|d|er|est|ly)?)`, 'gi'), '<span class="highlight-word">$1</span>')
         : '';
+
+    const isKnown = _fcKnown.has(v.id);
+
+    if (actionsBar) actionsBar.innerHTML = `
+        <button class="fc-btn fc-btn-unknown ${!isKnown ? 'fc-active' : ''}" type="button" data-fc-action="unknown" title="Still learning (1)">&#10007; Learning</button>
+        <button class="fc-btn fc-btn-prev" type="button" data-fc-action="prev" title="Previous (&larr;)">&larr; Prev</button>
+        <button class="fc-btn fc-btn-flip" type="button" data-fc-action="flip" title="Flip (Space)">Flip</button>
+        <button class="fc-btn fc-btn-next" type="button" data-fc-action="next" title="Next (&rarr;)">Next &rarr;</button>
+        <button class="fc-btn fc-btn-known ${isKnown ? 'fc-active' : ''}" type="button" data-fc-action="known" title="Known (2)">&#10003; Known</button>
+    `;
 
     if (cardArea) {
         if (!_flashcardRevealed) {
             cardArea.innerHTML = `
-                <div class="flashcard-front">
-                    <div class="flashcard-word">${v.word || ''}</div>
-                    <div class="flashcard-pron">${v.pron || ''}</div>
-                    <div class="flashcard-hint">Tap to reveal meaning</div>
+                <div class="flashcard-front ${isKnown ? 'fc-marked-known' : ''}">
+                    <div class="flashcard-word">${escapeHtml(v.word || '')}</div>
+                    <div class="flashcard-pron">${escapeHtml(v.pron || '')}</div>
+                    <button class="fc-tts" type="button" title="Read aloud" onclick="event.stopPropagation();window.speakText(this)" data-say="${escapeHtml(cleanWord)}">&#128266;</button>
+                    <div class="flashcard-hint">Tap card or press Space to reveal meaning</div>
                 </div>
             `;
         } else {
             cardArea.innerHTML = `
                 <div class="flashcard-back">
-                    <div class="flashcard-def">${v.def || ''}</div>
+                    <div class="flashcard-def">${escapeHtml(v.def || '')}</div>
                     ${exHighlight ? `<div class="flashcard-example">${exHighlight}</div>` : ''}
+                    <div class="flashcard-hint">Press <strong>2</strong> if you know it, <strong>1</strong> to review later</div>
                 </div>
             `;
         }
     }
+}
+
+/* ==============================================
+   #12 — QUIZ MODE (multiple choice from unit vocabulary)
+   ============================================== */
+let _quizData = [];
+let _quizIndex = 0;
+let _quizScore = 0;
+let _quizAnswered = false;
+
+function initQuiz(vocabs) {
+    if (!vocabs || vocabs.length < 4) return;
+
+    const btn = document.getElementById('quiz-toggle-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => openQuiz(vocabs));
+}
+
+function ensureQuizOverlay() {
+    if (document.getElementById('quiz-overlay')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+        <div class="flashcard-overlay" id="quiz-overlay" aria-hidden="true">
+            <div class="flashcard-modal quiz-modal" role="dialog" aria-modal="true" aria-label="Vocabulary quiz">
+                <button class="flashcard-close" id="quiz-close" aria-label="Close">&times;</button>
+                <div class="flashcard-counter" id="quiz-counter" aria-live="polite">1 / 1</div>
+                <div class="flashcard-progress-bar">
+                    <div class="flashcard-progress-fill" id="quiz-progress-fill" style="width:0%"></div>
+                </div>
+                <div class="quiz-question-area" id="quiz-question-area"></div>
+            </div>
+        </div>
+    `);
+    const overlay = document.getElementById('quiz-overlay');
+    document.getElementById('quiz-close').addEventListener('click', closeQuiz);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeQuiz(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) closeQuiz();
+        // Number keys 1-4 pick an answer
+        if (/^[1-4]$/.test(e.key) && overlay.classList.contains('active')) {
+            const opt = document.querySelector(`.quiz-option[data-index="${+e.key - 1}"]`);
+            if (opt) opt.click();
+        }
+    });
+}
+
+function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function openQuiz(vocabs) {
+    ensureQuizOverlay();
+    const eligible = vocabs.filter(v => v.word && v.def);
+    if (eligible.length < 4) return;
+    _quizData = shuffle(eligible).slice(0, Math.min(10, eligible.length)).map(v => ({
+        ...v,
+        options: buildOptions(v, eligible)
+    }));
+    _quizIndex = 0;
+    _quizScore = 0;
+    const overlay = document.getElementById('quiz-overlay');
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    renderQuizQuestion();
+}
+
+function buildOptions(current, pool) {
+    const distractors = shuffle(pool.filter(v => v.id !== current.id))
+        .slice(0, 3)
+        .map(v => v.def);
+    return shuffle([current.def, ...distractors]);
+}
+
+function closeQuiz() {
+    const overlay = document.getElementById('quiz-overlay');
+    overlay?.classList.remove('active');
+    overlay?.setAttribute('aria-hidden', 'true');
+}
+
+function renderQuizQuestion() {
+    const q = _quizData[_quizIndex];
+    const area = document.getElementById('quiz-question-area');
+    const counter = document.getElementById('quiz-counter');
+    const fill = document.getElementById('quiz-progress-fill');
+    if (!q || !area) return;
+
+    _quizAnswered = false;
+    if (counter) counter.textContent = `${_quizIndex + 1} / ${_quizData.length}`;
+    if (fill) fill.style.width = ((_quizIndex / _quizData.length) * 100) + '%';
+
+    area.innerHTML = `
+        <div class="quiz-prompt">What does <strong>&ldquo;${escapeHtml((q.word || '').replace(/\s*\([^)]*\)\s*$/g, '').trim())}&rdquo;</strong> mean?</div>
+        <div class="quiz-options">
+            ${q.options.map((opt, i) => `
+                <button type="button" class="quiz-option" data-correct="${opt === q.def ? '1' : '0'}" data-index="${i}">
+                    <span class="quiz-option-key">${i + 1}</span>
+                    <span>${escapeHtml(opt)}</span>
+                </button>`).join('')}
+        </div>
+        <div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>
+    `;
+
+    area.querySelectorAll('.quiz-option').forEach(optBtn => {
+        optBtn.addEventListener('click', () => {
+            if (_quizAnswered) return;
+            _quizAnswered = true;
+            const correct = optBtn.dataset.correct === '1';
+            if (correct) _quizScore++;
+            area.querySelectorAll('.quiz-option').forEach(b => {
+                b.disabled = true;
+                if (b.dataset.correct === '1') b.classList.add('correct');
+            });
+            if (!correct) optBtn.classList.add('wrong');
+            const fb = document.getElementById('quiz-feedback');
+            if (fb) fb.textContent = correct ? 'Correct!' : `Answer: ${(q.word || '').replace(/\s*\([^)]*\)\s*$/g, '').trim()}`;
+            setTimeout(() => {
+                if (_quizIndex < _quizData.length - 1) { _quizIndex++; renderQuizQuestion(); }
+                else renderQuizSummary();
+            }, correct ? 700 : 1600);
+        });
+    });
+}
+
+function renderQuizSummary() {
+    const area = document.getElementById('quiz-question-area');
+    const counter = document.getElementById('quiz-counter');
+    const fill = document.getElementById('quiz-progress-fill');
+    if (counter) counter.textContent = 'Done!';
+    if (fill) fill.style.width = '100%';
+    if (!area) return;
+    const pct = Math.round((_quizScore / _quizData.length) * 100);
+    area.innerHTML = `
+        <div class="flashcard-summary">
+            <div class="fc-summary-title">${pct >= 80 ? 'Excellent!' : pct >= 50 ? 'Good job!' : 'Keep practising!'}</div>
+            <p class="fc-summary-text">You scored ${_quizScore} / ${_quizData.length} (${pct}%).</p>
+            <div class="fc-summary-actions">
+                <button class="fc-btn" type="button" id="quiz-restart">Play again</button>
+                <button class="fc-btn fc-btn-secondary" type="button" id="quiz-close-2">Close</button>
+            </div>
+        </div>`;
+    document.getElementById('quiz-restart')?.addEventListener('click', () => openQuiz(_quizData.map(q => ({ ...q, options: undefined }))));
+    document.getElementById('quiz-close-2')?.addEventListener('click', closeQuiz);
 }
 
 /* ==============================================
@@ -340,18 +707,73 @@ function updateIndexStats(vocabCount, unitCount, grammarCount) {
 }
 
 /* ==============================================
+   SHARED — SIDEBAR / MOBILE MENU
+   Previously copy-pasted in main.js, grammar.js, pronunciation.js
+   ============================================== */
+function initSidebar() {
+    const sidebarToggle = document.getElementById('sidebar-toggle-expanded');
+    const sidebarBrandContainer = document.querySelector('.sidebar-brand-container');
+    const sidebar = document.querySelector('.sidebar');
+
+    if (sidebar) {
+        // Apply collapsed state immediately (no-transition to avoid flash)
+        if (localStorage.getItem('sidebar-collapsed') === 'true') {
+            sidebar.classList.add('collapsed', 'no-transition');
+        }
+        // Remove the pre-collapse class from <html> and re-enable transitions
+        document.documentElement.classList.remove('sidebar-will-collapse');
+        setTimeout(() => sidebar.classList.remove('no-transition'), 50);
+
+        const toggleSidebar = () => {
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebar-collapsed', String(sidebar.classList.contains('collapsed')));
+        };
+
+        if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+
+        // When sidebar is collapsed, clicking the logo area expands it
+        if (sidebarBrandContainer) {
+            sidebarBrandContainer.addEventListener('click', (e) => {
+                if (sidebar.classList.contains('collapsed')) {
+                    e.preventDefault();
+                    toggleSidebar();
+                }
+            });
+        }
+    }
+
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    if (mobileMenuBtn && sidebar) {
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('mobile-open');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && sidebar.classList.contains('mobile-open')) {
+                if (!sidebar.contains(e.target) && e.target !== mobileMenuBtn) {
+                    sidebar.classList.remove('mobile-open');
+                }
+            }
+        });
+    }
+}
+
+/* ==============================================
    INIT
    ============================================== */
 document.addEventListener('DOMContentLoaded', () => {
     initDarkMode();
     initRevealAnimations();
     initBreadcrumb();
+    initSidebar();
 });
 
 // Export functions to window for use in main.js
 window.buildCustomAudioPlayer = buildCustomAudioPlayer;
 window.highlightWordInExample = highlightWordInExample;
-window.buildProgressBadge = buildProgressBadge;
+window.getKnownWords = getKnownWords;
 window.initFlashcard = initFlashcard;
+window.initQuiz = initQuiz;
 window.updateIndexStats = updateIndexStats;
 window.initRevealAnimations = initRevealAnimations;
