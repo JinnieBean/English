@@ -5,6 +5,11 @@
  *          Progress Indicator (#11), Breadcrumb (#5), Stats (#8)
  */
 import { escapeHtml, formatTime, applyAudioVersion } from './utils.js';
+import {
+    initStore, getKnownSet, markKnown, allBookmarks, getBookmark, setBookmark,
+    srsGrade, srsDueList, getUser, signInWithGoogle, signOutUser,
+    onStoreAuthChanged, onAuthError, recordActivity
+} from './progress-store.js';
 
 /* ==============================================
    #7 — DARK MODE TOGGLE
@@ -370,21 +375,13 @@ function highlightWordInExample(exampleEl, word) {
 }
 
 /* ==============================================
-   #11 — PROGRESS INDICATOR (driven by flashcard results)
+   #11 — PROGRESS INDICATOR (driven by flashcard/SRS results)
+   Backed by progress-store.js (local-first, cloud-synced when signed in)
    ============================================== */
-export function getKnownWords(unitId) {
-    try { return new Set(JSON.parse(localStorage.getItem(`progress-${unitId}`) || '[]')); }
-    catch { return new Set(); }
-}
-
-export function saveKnownWords(unitId, knownSet) {
-    localStorage.setItem(`progress-${unitId}`, JSON.stringify([...knownSet]));
-}
-
 function renderProgressBadge(unitId, total) {
     const badge = document.getElementById(`progress-badge-${unitId}`);
     if (!badge) return;
-    const count = Math.min(getKnownWords(unitId).size, total);
+    const count = Math.min(getKnownSet(unitId).size, total);
     const pct = total > 0 ? (count / total) * 100 : 0;
     badge.innerHTML = `
         <div class="unit-progress-badge" title="${count}/${total} words marked as known">
@@ -419,7 +416,7 @@ function initFlashcard(vocabs, unitId) {
     if (!vocabs || !vocabs.length) return;
     _flashcardData = [...vocabs].sort(() => Math.random() - 0.5);
     _flashcardUnitId = unitId || vocabs[0]?.unitId || null;
-    _fcKnown = getKnownWords(_flashcardUnitId);
+    _fcKnown = getKnownSet(_flashcardUnitId);
 
     const btn = document.getElementById('flashcard-toggle-btn');
     const overlay = document.getElementById('flashcard-overlay');
@@ -437,12 +434,6 @@ function bindFlashcardEvents(btn, overlay) {
     btn.addEventListener('click', () => openFlashcards());
     // Delegated handling: action buttons are re-rendered on every card
     overlay.addEventListener('click', (e) => {
-        const ttsBtn = e.target.closest('.fc-tts');
-        if (ttsBtn) {
-            e.stopPropagation();
-            window.speakText(ttsBtn);
-            return;
-        }
         const actionEl = e.target.closest('[data-fc-action]');
         if (actionEl) {
             e.stopPropagation();
@@ -452,7 +443,9 @@ function bindFlashcardEvents(btn, overlay) {
         if (e.target === overlay) closeFlashcards();
     });
     document.getElementById('flashcard-card-area')?.addEventListener('click', (e) => {
-        if (e.target.closest('[data-fc-action]')) return;
+        // Don't flip when interacting with action buttons or the shared
+        // Longman/TTS audio player rendered on the card.
+        if (e.target.closest('[data-fc-action], .custom-audio-player, .audio-tts-btn')) return;
         _flashcardRevealed = !_flashcardRevealed;
         renderFlashcard();
     });
@@ -492,14 +485,23 @@ function closeFlashcards() {
     overlay.classList.remove('active');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    pauseAllAudio();
     persistKnown();
     if (_lastFocused instanceof HTMLElement) _lastFocused.focus();
 }
 
+/** Stop every playing audio instance (used when leaving a flashcard). */
+function pauseAllAudio() {
+    Object.values(window._audioInstances || {}).forEach(a => {
+        if (a && !a.paused) { try { a.pause(); } catch { /* noop */ } }
+    });
+}
+
 function persistKnown() {
-    if (_flashcardUnitId) saveKnownWords(_flashcardUnitId, _fcKnown);
     if (_flashcardUnitId) {
         renderProgressBadge(_flashcardUnitId, document.querySelectorAll('.vocab-item').length || _flashcardData.length);
+        // refresh the review-count badge in the sidebar too
+        updateReviewBadge();
     }
 }
 
@@ -508,26 +510,31 @@ function handleFcAction(action) {
         case 'close': closeFlashcards(); break;
         case 'flip': _flashcardRevealed = !_flashcardRevealed; renderFlashcard(); break;
         case 'prev':
+            pauseAllAudio();
             if (_fcSessionDone) { restartFlashcards(_flashcardData); return; }
             if (_flashcardIndex > 0) { _flashcardIndex--; _flashcardRevealed = false; renderFlashcard(); }
             break;
         case 'next':
+            pauseAllAudio();
             if (_fcSessionDone) { restartFlashcards(_flashcardData); return; }
             if (_flashcardIndex < _flashcardData.length - 1) { _flashcardIndex++; _flashcardRevealed = false; renderFlashcard(); }
             else finishSession();
             break;
         case 'known':
             if (_fcSessionDone) return;
+            pauseAllAudio();
             _fcKnown.add(_flashcardData[_flashcardIndex].id);
             advanceOrFinish();
             break;
         case 'unknown':
             if (_fcSessionDone) return;
+            pauseAllAudio();
             _fcKnown.delete(_flashcardData[_flashcardIndex].id);
             advanceOrFinish();
             break;
-        case 'restart-all': restartFlashcards(_flashcardData); break;
+        case 'restart-all': pauseAllAudio(); restartFlashcards(_flashcardData); break;
         case 'restart-unknown': {
+            pauseAllAudio();
             const rest = _flashcardData.filter(v => !_fcKnown.has(v.id));
             restartFlashcards(rest.length ? rest : _flashcardData);
             break;
@@ -611,11 +618,16 @@ function renderFlashcard() {
 
     if (cardArea) {
         if (!_flashcardRevealed) {
+            // Same Longman audio as the vocabulary list; TTS only as fallback
+            // when the word has no stored audio URL.
+            const audioHtml = v.audio
+                ? `<div class="flashcard-audio">${buildCustomAudioPlayer(v.audio)}</div>`
+                : ttsButton(cleanWord);
             cardArea.innerHTML = `
                 <div class="flashcard-front ${isKnown ? 'fc-marked-known' : ''}">
                     <div class="flashcard-word">${escapeHtml(v.word || '')}</div>
                     <div class="flashcard-pron">${escapeHtml(v.pron || '')}</div>
-                    <button class="fc-tts" type="button" title="Read aloud" data-say="${escapeHtml(cleanWord)}" aria-label="Read aloud">&#128266;</button>
+                    ${audioHtml}
                     <div class="flashcard-hint">Tap card or press Space to reveal meaning</div>
                 </div>
             `;
@@ -632,19 +644,23 @@ function renderFlashcard() {
 }
 
 /* ==============================================
-   #12 — QUIZ MODE (multiple choice from unit vocabulary)
+   #12 — QUIZ HUB (Multiple choice · Typing · Listening)
+   One button opens a mode menu; each mode runs a 10-question
+   session over the unit's vocabulary.
    ============================================== */
 let _quizData = [];
 let _quizIndex = 0;
 let _quizScore = 0;
 let _quizAnswered = false;
+let _quizMode = 'choice';
+let _quizAudio = null;
+let _quizSourcePool = [];
 
 function initQuiz(vocabs) {
     if (!vocabs || vocabs.length < 4) return;
-
     const btn = document.getElementById('quiz-toggle-btn');
     if (!btn) return;
-    btn.addEventListener('click', () => openQuiz(vocabs));
+    btn.addEventListener('click', () => openQuizMenu(vocabs));
 }
 
 function ensureQuizOverlay() {
@@ -665,11 +681,14 @@ function ensureQuizOverlay() {
     document.getElementById('quiz-close').addEventListener('click', closeQuiz);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeQuiz(); });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlay.classList.contains('active')) closeQuiz();
-        // Number keys 1-4 pick an answer
-        if (/^[1-4]$/.test(e.key) && overlay.classList.contains('active')) {
-            const opt = document.querySelector(`.quiz-option[data-index="${+e.key - 1}"]`);
-            if (opt) opt.click();
+        const openNow = overlay.classList.contains('active');
+        if (!openNow) return;
+        if (e.key === 'Escape') closeQuiz();
+        if (_quizMode === 'choice' && /^[1-4]$/.test(e.key)) {
+            document.querySelector(`.quiz-option[data-index="${+e.key - 1}"]`)?.click();
+        }
+        if (_quizMode === 'typing' && e.key === 'Enter') {
+            document.getElementById('typing-check-btn')?.click();
         }
     });
 }
@@ -683,48 +702,127 @@ function shuffle(arr) {
     return a;
 }
 
-function openQuiz(vocabs) {
+function openQuizMenu(vocabs) {
     ensureQuizOverlay();
+    _quizMode = 'menu';
+    stopQuizAudio();
     const eligible = vocabs.filter(v => v.word && v.def);
-    if (eligible.length < 4) return;
-    _quizData = shuffle(eligible).slice(0, Math.min(10, eligible.length)).map(v => ({
-        ...v,
-        options: buildOptions(v, eligible)
-    }));
-    _quizIndex = 0;
-    _quizScore = 0;
+    const listenOk = vocabs.filter(v => v.audio).length >= 4;
     const overlay = document.getElementById('quiz-overlay');
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
+    const counter = document.getElementById('quiz-counter');
+    const fill = document.getElementById('quiz-progress-fill');
+    if (counter) counter.textContent = 'Choose a mode';
+    if (fill) fill.style.width = '0%';
+    const area = document.getElementById('quiz-question-area');
+    if (!area) return;
+    area.innerHTML = `
+        <div class="quiz-mode-menu">
+            <div class="quiz-mode-title">Practice this unit</div>
+            <button type="button" class="quiz-mode-btn" data-quiz-mode="choice">
+                <span class="qmi">&#9998;</span>
+                <span><strong>Multiple choice</strong><small>Read the definition, pick the right word</small></span>
+            </button>
+            <button type="button" class="quiz-mode-btn" data-quiz-mode="typing">
+                <span class="qmi">&#183;&#183;&#183;</span>
+                <span><strong>Typing test</strong><small>See the meaning, type the word</small></span>
+            </button>
+            <button type="button" class="quiz-mode-btn ${listenOk ? '' : 'disabled'}" data-quiz-mode="listening" ${listenOk ? '' : 'aria-disabled="true"'}>
+                <span class="qmi">&#9835;</span>
+                <span><strong>Listening quiz</strong><small>Hear the pronunciation, pick the word</small></span>
+            </button>
+            ${listenOk ? '' : '<p class="qa-hint" style="text-align:center">Listening needs at least 4 words with audio in this unit.</p>'}
+        </div>`;
+    area.querySelectorAll('[data-quiz-mode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.classList.contains('disabled')) return;
+            startQuiz(vocabs, btn.dataset.quizMode);
+        });
+    });
+}
+
+function startQuiz(vocabs, mode) {
+    _quizMode = mode;
+    _quizSourcePool = vocabs;
+    let pool = vocabs.filter(v => v.word && v.def);
+    if (mode === 'listening') pool = vocabs.filter(v => v.word && v.audio);
+    if (pool.length < 4) { renderQuizSummary(); return; }
+
+    _quizData = shuffle(pool).slice(0, Math.min(10, pool.length)).map(v => ({
+        ...v,
+        options: mode === 'choice'
+            ? buildOptions(v, pool)
+            : mode === 'listening'
+                ? buildWordOptions(v, pool)
+                : []
+    }));
+    _quizIndex = 0;
+    _quizScore = 0;
     renderQuizQuestion();
 }
 
 function buildOptions(current, pool) {
-    const distractors = shuffle(pool.filter(v => v.id !== current.id))
-        .slice(0, 3)
-        .map(v => v.def);
-    return shuffle([current.def, ...distractors]);
+    return shuffle([current.def,
+        ...shuffle(pool.filter(v => v.id !== current.id)).slice(0, 3).map(v => v.def)]);
+}
+function buildWordOptions(current, pool) {
+    return shuffle([current.word,
+        ...shuffle(pool.filter(v => v.id !== current.id)).slice(0, 3).map(v => v.word)]);
 }
 
 function closeQuiz() {
+    stopQuizAudio();
     const overlay = document.getElementById('quiz-overlay');
     overlay?.classList.remove('active');
     overlay?.setAttribute('aria-hidden', 'true');
 }
 
+function stopQuizAudio() {
+    try { _quizAudio?.pause(); } catch {}
+    _quizAudio = null;
+}
+
+const stripPos = (w) => String(w || '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
+const normAns = (s) => String(s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+
+function levenshtein(a, b) {
+    if (Math.abs(a.length - b.length) > 1) return 2;
+    const m = [...a], n = [...b];
+    let prev = Array.from({ length: n.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= m.length; i++) {
+        const cur = [i];
+        for (let j = 1; j <= n.length; j++) {
+            cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (m[i - 1] === n[j - 1] ? 0 : 1));
+        }
+        prev = cur;
+    }
+    return prev[n.length];
+}
+
+function setQuizChrome(idx, total) {
+    const counter = document.getElementById('quiz-counter');
+    const fill = document.getElementById('quiz-progress-fill');
+    if (counter) counter.textContent = `${idx + 1} / ${total}`;
+    if (fill) fill.style.width = ((idx / total) * 100) + '%';
+}
+
 function renderQuizQuestion() {
     const q = _quizData[_quizIndex];
     const area = document.getElementById('quiz-question-area');
-    const counter = document.getElementById('quiz-counter');
-    const fill = document.getElementById('quiz-progress-fill');
     if (!q || !area) return;
-
     _quizAnswered = false;
-    if (counter) counter.textContent = `${_quizIndex + 1} / ${_quizData.length}`;
-    if (fill) fill.style.width = ((_quizIndex / _quizData.length) * 100) + '%';
+    setQuizChrome(_quizIndex, _quizData.length);
 
+    if (_quizMode === 'choice') renderChoiceQuestion(q, area);
+    else if (_quizMode === 'typing') renderTypingQuestion(q, area);
+    else renderListeningQuestion(q, area);
+}
+
+/* ---------- mode: multiple choice ---------- */
+function renderChoiceQuestion(q, area) {
     area.innerHTML = `
-        <div class="quiz-prompt">What does <strong>&ldquo;${escapeHtml((q.word || '').replace(/\s*\([^)]*\)\s*$/g, '').trim())}&rdquo;</strong> mean?</div>
+        <div class="quiz-prompt">What does <strong>&ldquo;${escapeHtml(stripPos(q.word))}&rdquo;</strong> mean?</div>
         <div class="quiz-options">
             ${q.options.map((opt, i) => `
                 <button type="button" class="quiz-option" data-correct="${opt === q.def ? '1' : '0'}" data-index="${i}">
@@ -732,48 +830,134 @@ function renderQuizQuestion() {
                     <span>${escapeHtml(opt)}</span>
                 </button>`).join('')}
         </div>
-        <div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>
-    `;
+        <div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>`;
 
-    area.querySelectorAll('.quiz-option').forEach(optBtn => {
-        optBtn.addEventListener('click', () => {
+    area.querySelectorAll('.quiz-option').forEach(btn => {
+        btn.addEventListener('click', () => {
             if (_quizAnswered) return;
             _quizAnswered = true;
-            const correct = optBtn.dataset.correct === '1';
-            if (correct) _quizScore++;
-            area.querySelectorAll('.quiz-option').forEach(b => {
-                b.disabled = true;
-                if (b.dataset.correct === '1') b.classList.add('correct');
-            });
-            if (!correct) optBtn.classList.add('wrong');
-            const fb = document.getElementById('quiz-feedback');
-            if (fb) fb.textContent = correct ? 'Correct!' : `Answer: ${(q.word || '').replace(/\s*\([^)]*\)\s*$/g, '').trim()}`;
-            setTimeout(() => {
-                if (_quizIndex < _quizData.length - 1) { _quizIndex++; renderQuizQuestion(); }
-                else renderQuizSummary();
-            }, correct ? 700 : 1600);
+            const correct = btn.dataset.correct === '1';
+            settleChoice(area, correct, btn, q);
         });
     });
 }
 
+function settleChoice(area, correct, chosenBtn, q) {
+    _quizAnswered = true;
+    if (correct) _quizScore++;
+    area.querySelectorAll('.quiz-option').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.correct === '1') b.classList.add('correct');
+    });
+    if (!correct) chosenBtn.classList.add('wrong');
+    const fb = document.getElementById('quiz-feedback');
+    if (fb) fb.textContent = correct ? 'Correct!' : `Answer: ${stripPos(q.word)}`;
+    setTimeout(advanceQuiz, correct ? 700 : 1600);
+}
+
+/* ---------- mode: typing ---------- */
+function renderTypingQuestion(q, area) {
+    area.innerHTML = `
+        <div class="quiz-prompt">Type the word for this meaning:</div>
+        <div class="quiz-typing-def">${escapeHtml(q.def)}</div>
+        <div class="quiz-typing-row">
+            <input type="text" id="typing-input" class="quiz-typing-input" autocomplete="off"
+                autocapitalize="off" spellcheck="false" placeholder="Type the word…" aria-label="Your answer">
+            <button type="button" class="fc-btn fc-btn-flip" id="typing-check-btn">Check</button>
+        </div>
+        <div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>`;
+    const input = document.getElementById('typing-input');
+    input?.focus();
+    document.getElementById('typing-check-btn')?.addEventListener('click', () => {
+        if (_quizAnswered) return;
+        const guess = normAns(input.value);
+        const answer = normAns(stripPos(q.word));
+        if (!guess) return;
+        const exact = guess === answer;
+        const near = !exact && levenshtein(guess, answer) <= 1;
+        gradeTyping(area, q, exact, near, answer);
+    });
+}
+
+function gradeTyping(area, q, exact, near, answer) {
+    _quizAnswered = true;
+    const fb = document.getElementById('quiz-feedback');
+    if (exact || near) {
+        _quizScore++;
+        if (fb) fb.textContent = near ? `Correct — “${stripPos(q.word)}” (close enough!)` : 'Correct!';
+        area.querySelector('.quiz-typing-def')?.classList.add('correct');
+    } else {
+        if (fb) fb.innerHTML = `Not quite — the answer was <strong>${escapeHtml(stripPos(q.word))}</strong>`;
+        area.querySelector('.quiz-typing-def')?.classList.add('wrong');
+    }
+    document.getElementById('typing-input')?.setAttribute('readonly', 'true');
+    setTimeout(advanceQuiz, exact ? 700 : 1600);
+}
+
+/* ---------- mode: listening ---------- */
+function playQuizAudio(src) {
+    stopQuizAudio();
+    try {
+        _quizAudio = new Audio(applyAudioVersion(src));
+        _quizAudio.play().catch(() => {});
+    } catch { /* noop */ }
+}
+
+function renderListeningQuestion(q, area) {
+    area.innerHTML = `
+        <div class="quiz-prompt">Listen and choose the word:</div>
+        <div class="quiz-listen-controls">
+            <button type="button" class="audio-tts-btn quiz-replay-btn" title="Replay audio" aria-label="Replay audio">&#128266;</button>
+        </div>
+        <div class="quiz-options">
+            ${q.options.map((opt, i) => `
+                <button type="button" class="quiz-option" data-correct="${opt === stripPos(q.word) ? '1' : '0'}" data-index="${i}">
+                    <span class="quiz-option-key">${i + 1}</span>
+                    <span class="quiz-option-word">${escapeHtml(stripPos(opt))}</span>
+                </button>`).join('')}
+        </div>
+        <div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>`;
+
+    playQuizAudio(q.audio);
+    area.querySelector('.quiz-replay-btn')?.addEventListener('click', () => playQuizAudio(q.audio));
+    area.querySelectorAll('.quiz-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (_quizAnswered) return;
+            const correct = btn.dataset.correct === '1';
+            settleChoice(area, correct, btn, q);
+        });
+    });
+}
+
+function advanceQuiz() {
+    stopQuizAudio();
+    if (_quizIndex < _quizData.length - 1) { _quizIndex++; renderQuizQuestion(); }
+    else renderQuizSummary();
+}
+
 function renderQuizSummary() {
+    stopQuizAudio();
+    recordActivity(Math.max(1, Math.round(_quizScore / 2)));
     const area = document.getElementById('quiz-question-area');
     const counter = document.getElementById('quiz-counter');
     const fill = document.getElementById('quiz-progress-fill');
     if (counter) counter.textContent = 'Done!';
     if (fill) fill.style.width = '100%';
     if (!area) return;
-    const pct = Math.round((_quizScore / _quizData.length) * 100);
+    const pct = _quizData.length ? Math.round((_quizScore / _quizData.length) * 100) : 0;
+    const titles = { choice: 'Multiple choice', typing: 'Typing test', listening: 'Listening quiz' };
     area.innerHTML = `
         <div class="flashcard-summary">
             <div class="fc-summary-title">${pct >= 80 ? 'Excellent!' : pct >= 50 ? 'Good job!' : 'Keep practising!'}</div>
-            <p class="fc-summary-text">You scored ${_quizScore} / ${_quizData.length} (${pct}%).</p>
+            <p class="fc-summary-text">${titles[_quizMode] || 'Quiz'} — you scored ${_quizScore} / ${_quizData.length} (${pct}%).</p>
             <div class="fc-summary-actions">
                 <button class="fc-btn" type="button" id="quiz-restart">Play again</button>
+                <button class="fc-btn fc-btn-secondary" type="button" id="quiz-menu-btn">Other modes</button>
                 <button class="fc-btn fc-btn-secondary" type="button" id="quiz-close-2">Close</button>
             </div>
         </div>`;
-    document.getElementById('quiz-restart')?.addEventListener('click', () => openQuiz(_quizData.map(q => ({ ...q, options: undefined }))));
+    document.getElementById('quiz-restart')?.addEventListener('click', () => startQuiz(_quizSourcePool, _quizMode));
+    document.getElementById('quiz-menu-btn')?.addEventListener('click', () => openQuizMenu(_quizSourcePool));
     document.getElementById('quiz-close-2')?.addEventListener('click', closeQuiz);
 }
 
@@ -795,6 +979,341 @@ function updateIndexStats(vocabCount, unitCount, grammarCount) {
     animateNumber(document.getElementById('stat-vocab'), vocabCount);
     animateNumber(document.getElementById('stat-units'), unitCount);
     animateNumber(document.getElementById('stat-grammar'), grammarCount);
+}
+
+/* ==============================================
+   GLOBAL SEARCH (site-wide instant search)
+   ============================================== */
+let _gsItems = null;
+let _gsLoading = false;
+const GS_CACHE_KEY = 'tn-search-cache-v1';
+const GS_TTL = 30 * 60 * 1000;
+
+async function ensureSearchIndex() {
+    if (_gsItems || _gsLoading) return _gsItems;
+    _gsLoading = true;
+    try {
+        const cached = JSON.parse(sessionStorage.getItem(GS_CACHE_KEY) || 'null');
+        if (cached && Date.now() - cached.t < GS_TTL) {
+            _gsItems = cached.items;
+        } else {
+            const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const { db } = await import('./firebase-config.js');
+            const grab = async (n) => (await getDocs(collection(db, n))).docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(x => x.status !== 'draft');
+
+            const [vocabs, phrasals, preps, patterns, gLessons, gUnits, pLessons, pUnits, units] =
+                await Promise.all([
+                    grab('vocabularies'), grab('phrasal_verbs'), grab('prep_phrases'),
+                    grab('word_patterns'), grab('grammar_lessons'), grab('grammar_units'),
+                    grab('pronunciation_lessons'), grab('pronunciation_units'),
+                    grab('units')
+                ]);
+            const unitTitle = {};
+            units.forEach(u => { unitTitle[u.id] = u.title; });
+            const inUnit = (id) => unitTitle[id] || '';
+
+            const items = [];
+            vocabs.forEach(v => v.word && items.push({ t: 'Vocabulary', label: v.word, sub: inUnit(v.unitId), url: `unit_detail.html?id=${v.unitId}` }));
+            phrasals.forEach(v => v.word && items.push({ t: 'Phrasal Verbs', label: v.word, sub: inUnit(v.unitId), url: `unit_phrasal.html?id=${v.unitId}` }));
+            preps.forEach(v => v.word && items.push({ t: 'Prepositional Phrases', label: v.word, sub: inUnit(v.unitId), url: `unit_prep.html?id=${v.unitId}` }));
+            patterns.forEach(v => v.word && items.push({ t: 'Word Patterns', label: v.word, sub: inUnit(v.unitId), url: `unit_pattern.html?id=${v.unitId}` }));
+            gLessons.forEach(l => l.title && items.push({ t: 'Grammar', label: l.title, sub: 'Lesson', url: `grammar_lesson.html?id=${l.id}&type=lesson` }));
+            gUnits.forEach(u => u.title && items.push({ t: 'Grammar', label: u.title, sub: 'Unit', url: `grammar_lesson.html?id=${u.id}&type=unit` }));
+            pLessons.forEach(l => l.title && items.push({ t: 'Pronunciation', label: l.title, sub: 'Lesson', url: `pronunciation_lesson.html?id=${l.id}&type=lesson` }));
+            pUnits.forEach(u => u.title && items.push({ t: 'Pronunciation', label: u.title, sub: 'Unit', url: `pronunciation_lesson.html?id=${u.id}&type=unit` }));
+
+            _gsItems = items;
+            try { sessionStorage.setItem(GS_CACHE_KEY, JSON.stringify({ t: Date.now(), items })); } catch {}
+        }
+    } catch (e) {
+        console.warn('[search] index failed:', e);
+    } finally {
+        _gsLoading = false;
+    }
+    return _gsItems;
+}
+
+function initGlobalSearch() {
+    const headerContent = document.querySelector('.main-header .header-content');
+    if (!headerContent) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'global-search';
+    wrap.innerHTML = `
+        <svg class="gs-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input type="search" class="gs-input" placeholder="Search words, grammar…" aria-label="Search the whole site">
+        <div class="gs-results" hidden></div>`;
+    headerContent.appendChild(wrap);
+
+    const input = wrap.querySelector('.gs-input');
+    const box = wrap.querySelector('.gs-results');
+    let activeIdx = -1;
+    let currentResults = [];
+    let debounceT;
+
+    const close = () => { box.hidden = true; activeIdx = -1; };
+
+    const renderResults = () => {
+        const term = input.value.toLowerCase().trim();
+        if (!term || !currentResults) { close(); return; }
+        const scored = [];
+        for (const it of currentResults) {
+            const lbl = (it.label || '').toLowerCase();
+            let score = 0;
+            if (lbl === term) score = 100;
+            else if (lbl.startsWith(term)) score = 80;
+            else if (lbl.includes(term)) score = 60;
+            else if ((it.sub || '').toLowerCase().includes(term)) score = 30;
+            if (score) scored.push({ score, it });
+        }
+        scored.sort((a, b) => b.score - a.score);
+        const top = scored.slice(0, 12).map(x => x.it);
+
+        if (!top.length) {
+            box.innerHTML = '<div class="gs-empty">No matches found.</div>';
+            box.hidden = false;
+            return;
+        }
+
+        const hl = (t) => {
+            const s2 = String(t);
+            const idx = s2.toLowerCase().indexOf(term);
+            if (idx === -1) return escapeHtml(s2);
+            return escapeHtml(s2.slice(0, idx)) + '<mark>' +
+                escapeHtml(s2.slice(idx, idx + term.length)) + '</mark>' +
+                escapeHtml(s2.slice(idx + term.length));
+        };
+        let lastType = '';
+        activeIdx = Math.min(activeIdx, top.length - 1);
+        box.innerHTML = top.map((it, i) => {
+            const header = it.t !== lastType ? `<div class="gs-group">${escapeHtml(it.t)}</div>` : '';
+            lastType = it.t;
+            return `${header}
+                <a class="gs-item ${i === activeIdx ? 'active' : ''}" href="${escapeHtml(it.url)}">
+                    <span class="gs-label">${hl(it.label)}</span>
+                    ${it.sub ? `<span class="gs-sub">${escapeHtml(it.sub)}</span>` : ''}
+                </a>`;
+        }).join('');
+        box.hidden = false;
+    };
+
+    input.addEventListener('input', () => {
+        clearTimeout(debounceT);
+        debounceT = setTimeout(async () => {
+            await ensureSearchIndex();
+            renderResults();
+        }, 180);
+    });
+
+    input.addEventListener('focus', () => { ensureSearchIndex(); });
+
+    input.addEventListener('keydown', (e) => {
+        if (box.hidden) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const items = [...box.querySelectorAll('.gs-item')];
+            if (!items.length) return;
+            activeIdx = e.key === 'ArrowDown'
+                ? Math.min(activeIdx + 1, items.length - 1)
+                : Math.max(activeIdx - 1, 0);
+            items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+            items[activeIdx]?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            const target = box.querySelectorAll('.gs-item')[Math.max(activeIdx, 0)];
+            if (target) window.location.href = target.getAttribute('href');
+        } else if (e.key === 'Escape') {
+            close(); input.blur();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!wrap.contains(e.target)) close();
+    });
+}
+
+/* ==============================================
+   DICTIONARY POPUP — double-click any word inside
+   examples / definitions to look it up.
+   ============================================== */
+function initDictPopup() {
+    let pop = null;
+    const dismiss = () => { pop?.remove(); pop = null; };
+
+    const baseForms = (w) => {
+        const out = new Set([w]);
+        if (w.endsWith('ies')) out.add(w.slice(0, -3) + 'y');
+        if (w.endsWith('es')) out.add(w.slice(0, -2));
+        if (w.endsWith('s')) out.add(w.slice(0, -1));
+        if (w.endsWith('ed')) { out.add(w.slice(0, -2)); out.add(w.slice(0, -1)); }
+        if (w.endsWith('ing')) { out.add(w.slice(0, -3)); out.add(w.slice(0, -3) + 'e'); }
+        return out;
+    };
+
+    document.addEventListener('dblclick', (e) => {
+        const zone = e.target.closest('.vocab-example, .phrasal-example, .wf-example-line');
+        if (!zone) return;
+        const sel = window.getSelection();
+        const wordRaw = String(sel || '').trim().replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, '');
+        if (!wordRaw || wordRaw.split(/\s+/).length > 3) return;
+
+        const lexicon = window.__unitLexicon || {};
+        const lower = wordRaw.toLowerCase();
+        let hit = null;
+        for (const cand of baseForms(lower)) {
+            if (lexicon[cand]) { hit = lexicon[cand]; break; }
+        }
+        showDictPop(e, sel, wordRaw, hit);
+    });
+
+    function showDictPop(e, sel, wordRaw, hit) {
+        dismiss();
+        pop = document.createElement('div');
+        pop.className = 'dict-pop';
+        const slug = encodeURIComponent(wordRaw.toLowerCase());
+        const audioBtn = hit
+            ? `<button type="button" class="audio-tts-btn" data-say="${escapeHtml(hit.word)}" title="Read aloud">&#128266;</button>`
+            : '';
+        pop.innerHTML = `
+            <div class="dp-word">${escapeHtml(wordRaw)} ${audioBtn}</div>
+            ${hit?.def
+                ? `<div class="dp-def">${escapeHtml(hit.def)}</div>`
+                : '<div class="dp-def dp-muted">Not in this unit&rsquo;s vocabulary.</div>'}
+            <div class="dp-links">
+                <a href="https://www.ldoceonline.com/dictionary/${slug}" target="_blank" rel="noopener">Longman &#8599;</a>
+                <a href="https://dictionary.cambridge.org/dictionary/english/${slug}" target="_blank" rel="noopener">Cambridge &#8599;</a>
+            </div>`;
+
+        document.body.appendChild(pop);
+        const pw = pop.offsetWidth, ph = pop.offsetHeight;
+        const rect = sel?.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : { left: e.clientX, top: e.clientY, width: 0, bottom: e.clientY };
+        let left = rect.left + window.scrollX + rect.width / 2 - pw / 2;
+        let top = rect.top + window.scrollY - ph - 8;
+        if (top < window.scrollY + 8) top = (rect.bottom || e.clientY) + window.scrollY + 8;
+        const vw = document.documentElement.clientWidth;
+        if (vw < 480) left = Math.max(8, (vw - pw) / 2); else left = Math.max(window.scrollX + 8, left);
+        pop.style.left = left + 'px';
+        pop.style.top = top + 'px';
+
+        pop.querySelector('.audio-tts-btn')?.addEventListener('click', function () {
+            window.speakText(this);
+        });
+
+        setTimeout(() => {
+            const off = (ev) => {
+                if (pop && !pop.contains(ev.target)) { dismiss(); document.removeEventListener('click', off, true); }
+            };
+            document.addEventListener('click', off, true);
+        }, 10);
+        window.addEventListener('scroll', dismiss, { once: true, passive: true });
+    }
+}
+
+/* ==============================================
+   LEARNER AUTH BOX (sidebar footer) — Google sign-in
+   ============================================== */
+function buildAuthBox() {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    const box = document.createElement('div');
+    box.className = 'tn-auth-box';
+    box.innerHTML = `
+        <div class="tn-auth-status" role="status"></div>
+        <div class="tn-auth-actions"></div>`;
+    sidebar.appendChild(box);
+
+    const statusEl = box.querySelector('.tn-auth-status');
+    const actionsEl = box.querySelector('.tn-auth-actions');
+
+    const GOOGLE_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M21.35 11.1H12v3.9h5.4c-.55 2.5-2.7 3.9-5.4 3.9a6 6 0 1 1 0-12c1.5 0 2.9.55 4 1.45l2.9-2.9A10 10 0 1 0 22 12c0-.3-.03-.6-.06-.9z"/></svg>';
+    const EXIT_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>';
+
+    let errorTimer;
+    function showError(msg) {
+        clearTimeout(errorTimer);
+        statusEl.innerHTML = `<span class="tn-auth-error">${escapeHtml(msg)}</span>`;
+        errorTimer = setTimeout(() => render(getUser()), 6000);
+    }
+
+    function render(user) {
+        if (user) {
+            const name = user.displayName || user.email || 'Learner';
+            statusEl.innerHTML = `
+                <span class="tn-avatar" aria-hidden="true">${escapeHtml((name[0] || '?').toUpperCase())}</span>
+                <span class="tn-auth-name" title="${escapeHtml(user.email || '')}">${escapeHtml(name)}</span>`;
+            actionsEl.innerHTML = `
+                <button type="button" class="btn-retry tn-signout-btn" title="Sign out">
+                    ${EXIT_SVG}<span class="tn-full-label">Sign out</span>
+                </button>`;
+            actionsEl.querySelector('.tn-signout-btn').addEventListener('click', () => signOutUser());
+        } else {
+            statusEl.innerHTML = '<span class="tn-auth-name tn-muted">Local progress only</span>';
+            actionsEl.innerHTML = `
+                <button type="button" class="btn-retry tn-signin-btn" title="Sign in with Google">
+                    ${GOOGLE_SVG}<span class="tn-full-label">Sign in</span>
+                </button>`;
+            const btn = actionsEl.querySelector('.tn-signin-btn');
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.classList.add('tn-busy');
+                try {
+                    const result = await signInWithGoogle();
+                    if (result === 'redirecting') {
+                        statusEl.innerHTML = '<span class="tn-auth-name">Redirecting to Google&hellip;</span>';
+                    }
+                    // success path is handled by onStoreAuthChanged
+                } catch (err) {
+                    const code = err?.code || '';
+                    let msg;
+                    if (code === 'auth/unauthorized-domain') {
+                        msg = 'This domain is not authorized for Google sign-in. Open the site via http://localhost:PORT (not 127.0.0.1), or add the domain in Firebase Console → Authentication → Settings → Authorized domains.';
+                    } else if (code === 'auth/popup-closed-by-user') {
+                        msg = 'Sign-in cancelled.';
+                    } else if (code.includes('network')) {
+                        msg = 'Network problem — check your connection and retry.';
+                    } else {
+                        msg = 'Sign-in failed' + (code ? ` (${code})` : '') + '.';
+                    }
+                    showError(msg);
+                } finally {
+                    btn.disabled = false;
+                    btn.classList.remove('tn-busy');
+                }
+            });
+        }
+    }
+
+    onStoreAuthChanged(render);
+    onAuthError((err) => {
+        const code = err?.code || '';
+        if (code === 'auth/unauthorized-domain') {
+            showError('Domain not authorized — use localhost or add it in Firebase Console → Authorized domains.');
+        }
+    });
+}
+
+/* ==============================================
+   REVIEW BADGE (sidebar "Review today" count)
+   ============================================== */
+function updateReviewBadge() {
+    const el = document.getElementById('review-count-badge');
+    if (!el) return;
+    const due = srsDueList().filter(en => en.next !== '9999-12-31').length;
+    el.textContent = due > 99 ? '99+' : String(due);
+    el.hidden = due === 0;
+}
+
+/* ==============================================
+   PWA — service worker registration
+   ============================================== */
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    if (location.protocol === 'file:') return;
+    navigator.serviceWorker.register('sw.js').catch(err => {
+        console.warn('[pwa] SW registration skipped:', err.message);
+    });
 }
 
 /* ==============================================
@@ -854,17 +1373,23 @@ function initSidebar() {
    INIT
    ============================================== */
 document.addEventListener('DOMContentLoaded', () => {
+    initStore();
     initDarkMode();
     initRevealAnimations();
     initBreadcrumb();
     initSidebar();
+    buildAuthBox();
+    initGlobalSearch();
+    initDictPopup();
+    registerServiceWorker();
+    setTimeout(updateReviewBadge, 800);
 });
 
 // Export functions to window for use in main.js
 window.buildCustomAudioPlayer = buildCustomAudioPlayer;
 window.highlightWordInExample = highlightWordInExample;
-window.getKnownWords = getKnownWords;
 window.initFlashcard = initFlashcard;
 window.initQuiz = initQuiz;
+window.updateReviewBadge = updateReviewBadge;
 window.updateIndexStats = updateIndexStats;
 window.initRevealAnimations = initRevealAnimations;

@@ -1,0 +1,14 @@
+{
+  "name": "Thor's Notes",
+  "short_name": "Thor's Notes",
+  "description": "Personal English study hub: vocabulary units, grammar lessons and pronunciation practice.",
+  "start_url": "index.html",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#e8f0ec",
+  "theme_color": "#1a4d4f",
+  "icons": [
+    { "src": "assets/images/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/images/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

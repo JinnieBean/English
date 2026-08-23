@@ -18,6 +18,27 @@
     overflow: hidden;
     border: 1px solid var(--glass-border, rgba(255,255,255,0.4));
     transition: box-shadow 0.3s ease, transform 0.3s ease;
+    /* Reserve the cover's portrait shape before the image arrives so the
+       layout doesn't jump and users see an instant placeholder */
+    aspect-ratio: 2 / 3;
+    position: relative;
+    background: var(--nav-hover-bg);
+}
+
+@keyframes imgShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.book-cover.img-loading {
+    background: linear-gradient(
+        100deg,
+        var(--nav-hover-bg) 40%,
+        var(--line-color) 50%,
+        var(--nav-hover-bg) 60%
+    );
+    background-size: 200% 100%;
+    animation: imgShimmer 1.4s linear infinite;
 }
 
 .book-cover:hover {
@@ -27,8 +48,17 @@
 
 .book-cover img {
     width: 100%;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
     display: block;
+    opacity: 0;
+    transform: scale(1.03);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.book-cover:not(.img-loading) img {
+    opacity: 1;
+    transform: none;
 }
 
 .book-details {
@@ -315,6 +345,10 @@
         flex-direction: column;
         text-align: center;
         gap: 3rem;
+    }
+    .book-cover {
+        flex-basis: auto;
+        width: min(280px, 80%);
     }
     .vocab-item {
         flex-direction: column;

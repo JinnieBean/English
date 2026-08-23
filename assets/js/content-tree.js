@@ -172,11 +172,84 @@ export async function initContentTree(cfg) {
                         ${content}
                     </div>
                 `;
+                enhanceLessonPage();
             } catch (e) {
                 console.error(e);
                 showError(lessonContainer, 'Could not load this lesson. Please check your connection.', loadLesson);
             }
         };
         loadLesson();
+    }
+}
+
+/* ---------- Lesson reading kit: progress bar, TOC, font size ---------- */
+function enhanceLessonPage() {
+    const content = document.querySelector('.lesson-content');
+    if (!content) return;
+
+    /* Reading progress bar */
+    if (!document.getElementById('reading-progress-bar')) {
+        const bar = document.createElement('div');
+        bar.id = 'reading-progress-bar';
+        bar.innerHTML = '<div class="rp-fill"></div>';
+        document.body.appendChild(bar);
+    }
+    const rpFill = document.querySelector('#reading-progress-bar .rp-fill');
+    const onScroll = () => {
+        const doc = document.documentElement;
+        const max = doc.scrollHeight - window.innerHeight;
+        const pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+        if (rpFill) rpFill.style.width = pct + '%';
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    /* Font size controls (persisted) */
+    const SCALE_KEY = 'lesson-font-scale';
+    let scale = parseFloat(localStorage.getItem(SCALE_KEY) || '1') || 1;
+    const applyScale = () => {
+        content.style.fontSize = (1.05 * scale).toFixed(2) + 'rem';
+    };
+    applyScale();
+    if (!document.getElementById('lesson-font-controls')) {
+        const fc = document.createElement('div');
+        fc.id = 'lesson-font-controls';
+        fc.setAttribute('role', 'group');
+        fc.setAttribute('aria-label', 'Text size');
+        fc.innerHTML = `
+            <button type="button" data-fs="-" title="Smaller text" aria-label="Smaller text">A&minus;</button>
+            <button type="button" data-fs="0" title="Reset text size" aria-label="Reset text size">A</button>
+            <button type="button" data-fs="+" title="Larger text" aria-label="Larger text">A+</button>`;
+        document.body.appendChild(fc);
+        fc.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+            scale = b.dataset.fs === '+' ? Math.min(1.6, scale + 0.1)
+                  : b.dataset.fs === '-' ? Math.max(0.8, scale - 0.1)
+                  : 1;
+            localStorage.setItem(SCALE_KEY, String(scale));
+            applyScale();
+        }));
+    }
+
+    /* Table of contents from h2/h3 */
+    const headings = [...content.querySelectorAll('h2, h3')];
+    const existingToc = document.getElementById('lesson-toc');
+    existingToc?.remove();
+    if (headings.length >= 2) {
+        headings.forEach((h, i) => { h.id = h.id || `lesson-h-${i}`; });
+        const toc = document.createElement('nav');
+        toc.id = 'lesson-toc';
+        toc.className = 'lesson-toc';
+        toc.setAttribute('aria-label', 'Table of contents');
+        toc.innerHTML = '<div class="toc-title">On this page</div>' + headings.map(h =>
+            `<a href="#${h.id}" class="${h.tagName.toLowerCase()}">${escapeHtml(h.textContent)}</a>`).join('');
+        content.prepend(toc);
+
+        const links = [...toc.querySelectorAll('a')];
+        const setActive = (id) => links.forEach(a =>
+            a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach(en => { if (en.isIntersecting) setActive(en.target.id); });
+        }, { rootMargin: '-70px 0px -65% 0px' });
+        headings.forEach(h => obs.observe(h));
     }
 }

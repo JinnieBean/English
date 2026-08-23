@@ -1,6 +1,7 @@
 import { collection, getDocs, getDoc, doc, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
 import { escapeHtml } from './utils.js';
+import { allBookmarks, getBookmark, setBookmark, initStore } from './progress-store.js';
 
 /* ---------- Shared page helpers ---------- */
 
@@ -43,6 +44,44 @@ function applyUrlSearchParam(input) {
     const q = new URLSearchParams(window.location.search).get('q') || '';
     if (q) input.value = q;
     return q.toLowerCase().trim();
+}
+
+const truncTitle = (t) => (t && t.length > 44) ? t.slice(0, 43) + '…' : (t || '');
+
+/** Register this unit's words for the double-click dictionary popup. */
+function registerLexicon(items) {
+    const lex = (window.__unitLexicon ||= {});
+    (items || []).forEach(it => {
+        const w = String(it.word || '').toLowerCase().replace(/\s*\([^)]*\)\s*$/g, '').trim();
+        if (w && it.def && !lex[w]) lex[w] = { word: w, def: it.def };
+    });
+}
+
+/** Prev/Next unit footer for the six unit_* pages. */
+async function buildUnitPager(cur) {
+    try {
+        if (!cur || !cur.bookId) return;
+        const snap = await getDocs(query(collection(db, 'units'), where('bookId', '==', cur.bookId)));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .filter(u => !isDraft(u))
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const idx = list.findIndex(u => u.id === cur.id);
+        if (idx === -1) return;
+        const prev = idx > 0 ? list[idx - 1] : null;
+        const next = idx < list.length - 1 ? list[idx + 1] : null;
+        if (!prev && !next) return;
+        const page = location.pathname.split('/').pop() || 'unit_detail.html';
+        const nav = document.createElement('nav');
+        nav.className = 'unit-pager';
+        nav.innerHTML = `
+            ${prev ? `<a class="up-link up-prev" href="${page}?id=${encodeURIComponent(prev.id)}">
+                <span>&larr; Previous unit</span><strong>${escapeHtml(truncTitle(prev.title))}</strong></a>` : '<span></span>'}
+            ${next ? `<a class="up-link up-next" href="${page}?id=${encodeURIComponent(next.id)}">
+                <span>Next unit &rarr;</span><strong>${escapeHtml(truncTitle(next.title))}</strong></a>` : '<span></span>'}`;
+        document.querySelector('.container')?.appendChild(nav);
+    } catch (e) {
+        console.warn('[pager]', e);
+    }
 }
 
 let _urlSearchTimer;
@@ -90,7 +129,8 @@ window.formatWordWithPos = (word) => {
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-    /* Random quote for Homepage */
+    /* Random quote
+    initStore(); for Homepage */
     const quoteContainer = document.querySelector('.index-quote blockquote');
     if (quoteContainer) {
         const slogans = [
@@ -119,6 +159,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const unitData = unitDoc.data();
                     titleEl.innerText = unitData.title || '';
                     document.title = `${unitData.title} — Thor's Notes`;
+
+                    // Next/previous unit navigation for the six unit pages
+                    buildUnitPager({ id: unitId, bookId: unitData.bookId });
 
                     // Dynamic breadcrumb: Home › Vocabulary › Unit
                     if (window.renderBreadcrumb) {
@@ -175,11 +218,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     booksListContainer.innerHTML = '<p class="empty-state">No books have been created yet.</p>';
                     return;
                 }
-                booksListContainer.innerHTML = books.map(book => `
+                booksListContainer.innerHTML = books.map((book, i) => `
                     <div class="book-container reveal">
-                        <div class="book-cover">
-                            <img src="${escapeHtml(book.image || 'assets/images/book_cover.png')}" alt="Cover of ${escapeHtml(book.title)}" loading="lazy" decoding="async"
-                                onerror="this.src='assets/images/book_cover.png'">
+                        <div class="book-cover img-loading">
+                            <img src="${escapeHtml(book.image || 'assets/images/book_cover.png')}"
+                                alt="Cover of ${escapeHtml(book.title)}"
+                                ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'}
+                                decoding="async">
                         </div>
                         <div class="book-details">
                             <h2 class="book-title">${escapeHtml(book.title)}</h2>
@@ -189,7 +234,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                 `).join('');
-                requestAnimationFrame(() => window.initRevealAnimations?.());
+
+                // Fade covers in as they arrive; fall back to the local
+                // placeholder cover when a remote image fails.
+                requestAnimationFrame(() => {
+                    booksListContainer.querySelectorAll('.book-cover').forEach(cover => {
+                        const img = cover.querySelector('img');
+                        if (!img) return;
+                        const reveal = () => cover.classList.remove('img-loading');
+                        if (img.complete && img.naturalWidth > 0) { reveal(); return; }
+                        img.addEventListener('load', reveal, { once: true });
+                        img.addEventListener('error', () => {
+                            if (!img.dataset.fallback) {
+                                img.dataset.fallback = '1';
+                                img.src = 'assets/images/book_cover.png';
+                            } else {
+                                reveal();
+                            }
+                        }, { once: true });
+                    });
+                    window.initRevealAnimations?.();
+                });
             } catch (e) {
                 console.error(e);
                 showError(booksListContainer, 'Could not load books. Please check your connection.', loadBooks);
@@ -297,6 +362,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         .filter(v => !isDraft(v));
                     vocabs.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
 
+                    // Expose words to the dictionary popup (double-click lookup)
+                    registerLexicon(vocabs);
+
                     const searchInput = injectSearchBar(vocabListContainer, 'vocab-search-input', 'Search vocabulary…');
                     applyUrlSearchParam(searchInput);
 
@@ -307,6 +375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="vocab-tools-left">
                             <button type="button" id="flashcard-toggle-btn" class="flashcard-toggle-btn">&#127924; Flashcards</button>
                             <button type="button" id="quiz-toggle-btn" class="flashcard-toggle-btn">&#10067; Quiz</button>
+                            <button type="button" id="print-worksheet-btn" class="flashcard-toggle-btn" title="Print a study worksheet">&#128424; Worksheet</button>
                             <label class="starred-filter"><input type="checkbox" id="starred-only-checkbox"> &#9733; Starred</label>
                         </div>
                         <div class="vocab-tools-right">
@@ -324,12 +393,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         vocabListContainer.parentNode.insertBefore(toolbar, vocabListContainer);
                     }
 
-                    const bookmarksKey = 'vocab-bookmarks';
-                    const getBookmarks = () => {
-                        try { return JSON.parse(localStorage.getItem(bookmarksKey) || '{}'); }
-                        catch { return {}; }
-                    };
-
                     const renderVocabList = (filteredVocabs, searching) => {
                         if (vocabs.length === 0) {
                             vocabListContainer.innerHTML = '<p class="empty-state">This unit has no vocabulary yet.</p>';
@@ -341,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 : '<p class="empty-state">No starred words in this unit yet.</p>';
                             return;
                         }
-                        const marks = getBookmarks();
+                        const marks = allBookmarks();
                         vocabListContainer.innerHTML = filteredVocabs.map(v => {
                             const audioHtml = window.buildCustomAudioPlayer
                                 ? window.buildCustomAudioPlayer(v.audio, v.word)
@@ -373,11 +436,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         vocabListContainer.querySelectorAll('.bookmark-btn').forEach(btn => {
                             btn.addEventListener('click', () => {
                                 const id = btn.dataset.id;
-                                const marks = getBookmarks();
                                 const item = vocabs.find(x => x.id === id);
-                                if (marks[id]) delete marks[id];
-                                else if (item) marks[id] = { word: item.word, def: item.def, example: item.example, pron: item.pron, unitId };
-                                localStorage.setItem(bookmarksKey, JSON.stringify(marks));
+                                if (getBookmark(id)) setBookmark(id, null);
+                                else if (item) setBookmark(id, { word: item.word, def: item.def, example: item.example, pron: item.pron, unitId });
                                 rerender();
                             });
                         });
@@ -395,7 +456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Starred-only toggle re-renders using the current search term
                     let starredOnly = false;
                     const rerender = () => {
-                        const base = starredOnly ? vocabs.filter(v => getBookmarks()[v.id]) : vocabs;
+                        const base = starredOnly ? vocabs.filter(v => getBookmark(v.id)) : vocabs;
                         const term = (searchInput?.value || '').toLowerCase().trim();
                         if (!term) return renderVocabList(base, starredOnly);
                         renderVocabList(base.filter(v =>
@@ -409,7 +470,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
 
                     wireSearch(searchInput, vocabs,
-                        (list, searching) => renderVocabList(starredOnly ? list.filter(v => getBookmarks()[v.id]) : list, searching),
+                        (list, searching) => renderVocabList(starredOnly ? list.filter(v => getBookmark(v.id)) : list, searching),
                         (v, term) => (v.word || '').toLowerCase().includes(term) || (v.def || '').toLowerCase().includes(term));
 
                     // Export CSV (Anki-friendly Front/Back)
@@ -425,6 +486,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                         a.download = 'unit-vocabulary.csv';
                         a.click();
                         URL.revokeObjectURL(a.href);
+                    });
+
+                    // Printable worksheet (Part A: word->meaning, Part B: recall)
+                    document.getElementById('print-worksheet-btn')?.addEventListener('click', () => {
+                        if (!vocabs.length) return;
+                        document.getElementById('worksheet-root')?.remove();
+                        const stripPosW = (w) => String(w || '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
+                        const title = document.getElementById('unit-detail-title')?.innerText || 'Unit vocabulary';
+                        const date = new Date().toLocaleDateString();
+                        const rowsA = vocabs.map((v, i) => `
+                            <tr><td class="ws-num">${i + 1}</td>
+                                <td class="ws-word">${escapeHtml(stripPosW(v.word))}</td>
+                                <td>${escapeHtml(v.def || '')}</td></tr>`).join('');
+                        const rowsB = vocabs.map((v, i) => `
+                            <tr><td class="ws-num">${i + 1}</td>
+                                <td>${escapeHtml(v.def || '')}</td>
+                                <td class="ws-blank"></td></tr>`).join('');
+                        const root = document.createElement('div');
+                        root.id = 'worksheet-root';
+                        root.innerHTML = `
+                            <header><h1>${escapeHtml(title)} — Worksheet</h1><span>${date}</span></header>
+                            <section><h2>Part A · Match each word with its meaning</h2>
+                                <table><thead><tr><th>#</th><th>Word</th><th>Meaning</th></tr></thead><tbody>${rowsA}</tbody></table>
+                            </section>
+                            <section class="ws-break"><h2>Part B · Write the word</h2>
+                                <table><thead><tr><th>#</th><th>Meaning</th><th>Your answer</th></tr></thead><tbody>${rowsB}</tbody></table>
+                            </section>`;
+                        document.body.appendChild(root);
+                        document.body.classList.add('printing-worksheet');
+                        const cleanup = () => {
+                            document.body.classList.remove('printing-worksheet');
+                            window.removeEventListener('afterprint', cleanup);
+                            setTimeout(() => root.remove(), 300);
+                        };
+                        window.addEventListener('afterprint', cleanup);
+                        window.print();
                     });
 
                     // Initial render happens inside wireSearch (honours ?q=)
@@ -521,6 +618,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const snap = await getDocs(query(collection(db, cfg.collectionName), where("unitId", "==", unitId)));
                 const items = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
                 items.sort((a, b) => (a[cfg.sortKey] || '').localeCompare(b[cfg.sortKey] || ''));
+                registerLexicon(items);
 
                 const searchInput = injectSearchBar(container, cfg.searchInputId, cfg.placeholder);
                 applyUrlSearchParam(searchInput);
