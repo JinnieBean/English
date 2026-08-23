@@ -2049,3 +2049,82 @@ button.wf-toggle {
     .tn-auth-name { max-width: 140px; }
     .tn-auth-actions .btn-retry { width: auto; padding: .4rem .9rem; font-size: .75rem; }
 }
+
+/* Review page chips */
+.rv-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: .3rem;
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: 18px;
+    padding: .35rem .9rem;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+.rv-chip strong { font-size: 1.05rem; color: var(--accent-color); }
+.rv-sep { color: var(--text-secondary); opacity: .5; margin: 0 .2rem; }
+.rv-secondary { border: 1px solid var(--line-color); background: var(--card-bg); color: var(--text-primary); padding: .55rem 1.1rem; border-radius: 20px; cursor: pointer; font-family: var(--font-body); font-size: var(--text-sm); }
+.rv-secondary:hover { border-color: var(--accent-color); color: var(--accent-color); }
+
+/* Auth box sits directly under the dark-mode toggle — compact & tidy */
+.tn-auth-box {
+    padding: .55rem .9rem .85rem;
+    gap: .45rem;
+    border-top: 1px dashed var(--sidebar-border);
+    background: transparent;
+}
+.sidebar:not(.collapsed) .tn-auth-actions .btn-retry {
+    width: 100%;
+    font-size: .74rem;
+    padding: .38rem .7rem;
+}
+/* keep the dark-mode toggle pinned above it */
+.dark-mode-toggle { flex-shrink: 0; }
+
+/* =========================================
+   SIDEBAR BOTTOM STACK (dark-mode + auth)
+   Replaces the old absolutely-positioned toggle
+   ========================================= */
+.sidebar-bottom {
+    margin-top: auto;
+    padding: .7rem .8rem .9rem;
+    border-top: 1px solid var(--sidebar-border);
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    flex-shrink: 0;
+}
+/* dark-mode button now lives in normal flow inside the stack */
+.sidebar .dark-mode-toggle {
+    position: static;
+    transform: none;
+    left: auto;
+    bottom: auto;
+    margin: 0;
+    width: 100%;
+}
+.sidebar.collapsed .sidebar-bottom {
+    padding: .55rem .25rem;
+    align-items: center;
+    gap: .5rem;
+}
+.sidebar.collapsed .sidebar .dark-mode-toggle,
+.sidebar.collapsed .dark-mode-toggle {
+    width: 36px;
+    padding: .5rem;
+    border-radius: 50%;
+}
+
+/* Mobile bottom-bar mode: single compact row */
+@media (max-width: 768px) {
+    .sidebar-bottom {
+        flex-direction: row;
+        align-items: center;
+        padding: .45rem .8rem;
+        gap: .8rem;
+    }
+    .sidebar .dark-mode-toggle { width: auto; flex-shrink: 0; }
+    .tn-auth-box { flex: 1; min-width: 0; flex-direction: row; padding: 0; border: none; }
+    .tn-auth-status { flex: 1; min-width: 0; }
+}

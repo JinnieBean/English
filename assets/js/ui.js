@@ -415,7 +415,9 @@ function fcOpen() {
 function initFlashcard(vocabs, unitId) {
     if (!vocabs || !vocabs.length) return;
     _flashcardData = [...vocabs].sort(() => Math.random() - 0.5);
-    _flashcardUnitId = unitId || vocabs[0]?.unitId || null;
+    // unitId===undefined  -> infer from words (normal unit page)
+    // unitId===null        -> MIXED units (review page); grade per-card below
+    _flashcardUnitId = (unitId === undefined) ? (vocabs[0]?.unitId || null) : unitId;
     _fcKnown = getKnownSet(_flashcardUnitId);
 
     const btn = document.getElementById('flashcard-toggle-btn');
@@ -520,18 +522,29 @@ function handleFcAction(action) {
             if (_flashcardIndex < _flashcardData.length - 1) { _flashcardIndex++; _flashcardRevealed = false; renderFlashcard(); }
             else finishSession();
             break;
-        case 'known':
+case 'known': {
             if (_fcSessionDone) return;
+            const v = _flashcardData[_flashcardIndex];
+            const cardUnit = _flashcardUnitId || v.unitId || null;
             pauseAllAudio();
-            _fcKnown.add(_flashcardData[_flashcardIndex].id);
+            _fcKnown.add(v.id);
+            // Persist to progress-store (tn-store-v1 + cloud when signed in)
+            if (cardUnit) markKnown(cardUnit, v.id, true);
+            srsGrade(v.id, cardUnit, true);
             advanceOrFinish();
             break;
-        case 'unknown':
+        }
+        case 'unknown': {
             if (_fcSessionDone) return;
+            const v2 = _flashcardData[_flashcardIndex];
+            const cardUnit2 = _flashcardUnitId || v2.unitId || null;
             pauseAllAudio();
-            _fcKnown.delete(_flashcardData[_flashcardIndex].id);
+            _fcKnown.delete(v2.id);
+            if (cardUnit2) markKnown(cardUnit2, v2.id, false);
+            srsGrade(v2.id, cardUnit2, false);
             advanceOrFinish();
             break;
+        }
         case 'restart-all': pauseAllAudio(); restartFlashcards(_flashcardData); break;
         case 'restart-unknown': {
             pauseAllAudio();
@@ -984,18 +997,24 @@ function updateIndexStats(vocabCount, unitCount, grammarCount) {
 /* ==============================================
    GLOBAL SEARCH (site-wide instant search)
    ============================================== */
-let _gsItems = null;
-let _gsLoading = false;
+let _gsPromise = null;
 const GS_CACHE_KEY = 'tn-search-cache-v1';
 const GS_TTL = 30 * 60 * 1000;
 
-async function ensureSearchIndex() {
-    if (_gsItems || _gsLoading) return _gsItems;
-    _gsLoading = true;
+function ensureSearchIndex() {
+    // Share a single in-flight build across concurrent callers
+    if (!_gsPromise) {
+        _gsPromise = buildSearchIndex();
+    }
+    return _gsPromise;
+}
+
+async function buildSearchIndex() {
+    let items = null;
     try {
         const cached = JSON.parse(sessionStorage.getItem(GS_CACHE_KEY) || 'null');
-        if (cached && Date.now() - cached.t < GS_TTL) {
-            _gsItems = cached.items;
+        if (cached && Date.now() - cached.t < GS_TTL && Array.isArray(cached.items)) {
+            items = cached.items;
         } else {
             const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             const { db } = await import('./firebase-config.js');
@@ -1014,7 +1033,8 @@ async function ensureSearchIndex() {
             units.forEach(u => { unitTitle[u.id] = u.title; });
             const inUnit = (id) => unitTitle[id] || '';
 
-            const items = [];
+            // NOTE: assigns the OUTER `items` (no shadowing!)
+            items = [];
             vocabs.forEach(v => v.word && items.push({ t: 'Vocabulary', label: v.word, sub: inUnit(v.unitId), url: `unit_detail.html?id=${v.unitId}` }));
             phrasals.forEach(v => v.word && items.push({ t: 'Phrasal Verbs', label: v.word, sub: inUnit(v.unitId), url: `unit_phrasal.html?id=${v.unitId}` }));
             preps.forEach(v => v.word && items.push({ t: 'Prepositional Phrases', label: v.word, sub: inUnit(v.unitId), url: `unit_prep.html?id=${v.unitId}` }));
@@ -1024,15 +1044,14 @@ async function ensureSearchIndex() {
             pLessons.forEach(l => l.title && items.push({ t: 'Pronunciation', label: l.title, sub: 'Lesson', url: `pronunciation_lesson.html?id=${l.id}&type=lesson` }));
             pUnits.forEach(u => u.title && items.push({ t: 'Pronunciation', label: u.title, sub: 'Unit', url: `pronunciation_lesson.html?id=${u.id}&type=unit` }));
 
-            _gsItems = items;
             try { sessionStorage.setItem(GS_CACHE_KEY, JSON.stringify({ t: Date.now(), items })); } catch {}
         }
     } catch (e) {
         console.warn('[search] index failed:', e);
-    } finally {
-        _gsLoading = false;
+        _gsPromise = null; // allow retry on next keystroke
+        return null;
     }
-    return _gsItems;
+    return items;
 }
 
 function initGlobalSearch() {
@@ -1057,7 +1076,7 @@ function initGlobalSearch() {
 
     const renderResults = () => {
         const term = input.value.toLowerCase().trim();
-        if (!term || !currentResults) { close(); return; }
+        if (!term || !currentResults.length) { close(); return; }
         const scored = [];
         for (const it of currentResults) {
             const lbl = (it.label || '').toLowerCase();
@@ -1102,12 +1121,14 @@ function initGlobalSearch() {
     input.addEventListener('input', () => {
         clearTimeout(debounceT);
         debounceT = setTimeout(async () => {
-            await ensureSearchIndex();
+            currentResults = (await ensureSearchIndex()) || [];
             renderResults();
         }, 180);
     });
 
-    input.addEventListener('focus', () => { ensureSearchIndex(); });
+    input.addEventListener('focus', async () => {
+        currentResults = (await ensureSearchIndex()) || [];
+    });
 
     input.addEventListener('keydown', (e) => {
         if (box.hidden) return;
@@ -1214,15 +1235,12 @@ function initDictPopup() {
    LEARNER AUTH BOX (sidebar footer) — Google sign-in
    ============================================== */
 function buildAuthBox() {
-    const sidebar = document.querySelector('.sidebar');
-    if (!sidebar) return;
-
-    const box = document.createElement('div');
-    box.className = 'tn-auth-box';
-    box.innerHTML = `
-        <div class="tn-auth-status" role="status"></div>
-        <div class="tn-auth-actions"></div>`;
-    sidebar.appendChild(box);
+    // Prefer the static container shipped in page markup
+    // (.sidebar-bottom > #tn-auth-box, directly under the dark-mode toggle)
+    const box = document.getElementById('tn-auth-box');
+    if (!box) return;
+    if (box.dataset.wired === '1') return;
+    box.dataset.wired = '1';
 
     const statusEl = box.querySelector('.tn-auth-status');
     const actionsEl = box.querySelector('.tn-auth-actions');
