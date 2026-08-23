@@ -138,8 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    /* Sidebar Toggle */
-    initSidebar();
+    /* Sidebar toggle lives in ui.js (runs on its own DOMContentLoaded) */
 
     /* Index Page Stats — count on the server instead of downloading collections */
     const statVocab = document.getElementById('stat-vocab');
@@ -838,7 +837,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         render(ranked.map(r => r.lex), true);
                     };
                     searchInput.addEventListener('input', runSearch);
-                    if (!searchInput.value) runSearch();
+                    // Always render once on load (honours any ?q= URL parameter)
+                    runSearch();
                 }
             } catch (e) {
                 console.error(e);

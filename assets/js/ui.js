@@ -97,6 +97,12 @@ function initBreadcrumb() {
 
 /* ==============================================
    #13 — CUSTOM AUDIO PLAYER
+   All wiring is done via DELEGATED listeners on `document`:
+   - clicks are handled with closest() lookups (no inline onclick,
+     immune to CSP/extensions stripping inline handlers)
+   - media events (play/pause/ended/timeupdate/…) do not bubble, but
+     capture-phase document listeners still receive them, so each
+     player needs no per-instance binding at all.
    ============================================== */
 const _PLAY_SVG = '<polygon points="5 3 19 12 5 21 5 3"/>';
 const _PAUSE_SVG = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
@@ -107,8 +113,7 @@ function ttsButton(text) {
     }
     return `
         <button class="audio-tts-btn" type="button" title="Text-to-speech"
-            onclick="window.speakText(this)" data-say="${escapeHtml(text)}"
-            aria-label="Read aloud">&#128266;</button>
+            data-say="${escapeHtml(text)}" aria-label="Read aloud">&#128266;</button>
     `;
 }
 
@@ -121,79 +126,39 @@ function buildCustomAudioPlayer(src, ttsText) {
     const safeSrc = escapeHtml(src);
     return `
         <div class="custom-audio-player" id="${id}" data-src="${safeSrc}">
-            <button class="audio-play-btn" aria-label="Play audio" type="button"
-                onclick="window.toggleAudio('${id}')">
+            <button class="audio-play-btn" aria-label="Play audio" type="button">
                 <svg viewBox="0 0 24 24">${_PLAY_SVG}</svg>
             </button>
             <input type="range" class="audio-seek-slider" id="${id}-seek" min="0" max="100" step="0.1"
-                value="0" aria-label="Seek" oninput="window.seekAudio('${id}', this.value)">
+                value="0" aria-label="Seek">
             <span class="audio-duration" id="${id}-dur">--:--</span>
             <div class="audio-controls-extra">
-                <button class="audio-speed-btn" type="button" onclick="window.toggleAudioSpeed('${id}')" title="Playback speed" aria-label="Playback speed">1x</button>
-                <button class="audio-loop-btn" type="button" onclick="window.toggleAudioLoop('${id}')" title="Repeat" aria-label="Repeat" aria-pressed="false">&#128257;</button>
+                <button class="audio-speed-btn" type="button" title="Playback speed" aria-label="Playback speed">1x</button>
+                <button class="audio-loop-btn" type="button" title="Repeat" aria-label="Repeat" aria-pressed="false">&#128257;</button>
                 <a class="audio-download-btn" href="${safeSrc}" download title="Download" aria-label="Download audio">&#11015;</a>
             </div>
-            <audio id="${id}-audio" preload="metadata" src="${safeSrc}"></audio>
+            <audio id="${id}-audio" preload="none" src="${safeSrc}"></audio>
         </div>
     `;
 }
 
-/** Lazily attach long-lived media events exactly once per player. */
-function ensureAudioBound(playerId) {
-    const container = document.getElementById(playerId);
-    const audio = document.getElementById(playerId + '-audio');
-    if (!container || !audio || audio.dataset.uiBound === '1') return;
-    audio.dataset.uiBound = '1';
+window._audioInstances = {};
 
-    const durEl = document.getElementById(playerId + '-dur');
-    const seekEl = document.getElementById(playerId + '-seek');
-    const btnSvg = container.querySelector('.audio-play-btn svg');
-
-    const resetBtn = () => {
-        container.classList.remove('playing');
-        if (btnSvg) btnSvg.innerHTML = _PLAY_SVG;
-    };
-
-    audio.addEventListener('loadedmetadata', () => {
-        if (durEl && isFinite(audio.duration)) durEl.textContent = formatTime(audio.duration);
-    });
-
-    audio.addEventListener('ended', () => {
-        resetBtn();
-        if (seekEl) seekEl.value = 0;
-        if (durEl && isFinite(audio.duration)) durEl.textContent = formatTime(audio.duration);
-    });
-
-    audio.addEventListener('play', () => {
-        container.classList.add('playing');
-        if (btnSvg) btnSvg.innerHTML = _PAUSE_SVG;
-    });
-
-    audio.addEventListener('pause', resetBtn);
-
-    audio.addEventListener('timeupdate', () => {
-        if (durEl && isFinite(audio.duration)) {
-            durEl.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-        }
-        if (seekEl && isFinite(audio.duration) && seekEl.dataset.dragging !== '1') {
-            seekEl.value = (audio.currentTime / audio.duration) * 100 || 0;
-        }
-    });
-
-    audio.addEventListener('error', () => {
-        if (durEl) durEl.textContent = 'unavailable';
-        container.classList.add('audio-error');
-    });
+function playerIdOfAudio(audioEl) {
+    return audioEl?.id?.replace(/-audio$/, '') || null;
 }
 
-window._audioInstances = {};
+function showAudioError(container) {
+    if (!container) return;
+    container.classList.add('audio-error');
+    const durEl = container.querySelector('.audio-duration');
+    if (durEl) durEl.textContent = 'unavailable';
+}
 
 window.toggleAudio = function (playerId) {
     const container = document.getElementById(playerId);
     const audio = document.getElementById(playerId + '-audio');
     if (!container || !audio) return;
-
-    ensureAudioBound(playerId);
 
     // Pause all other players
     Object.keys(window._audioInstances).forEach(id => {
@@ -206,7 +171,19 @@ window.toggleAudio = function (playerId) {
     window._audioInstances[playerId] = audio;
 
     if (audio.paused) {
-        audio.play().catch(() => {});
+        audio.play().catch(() => {
+            // One retry after forcing a fresh load (helps stale/blocked metadata),
+            // then surface the failure visibly instead of failing silently.
+            if (container.dataset.retry !== '1') {
+                container.dataset.retry = '1';
+                try { audio.load(); } catch { /* noop */ }
+                setTimeout(() => {
+                    audio.play().catch(() => showAudioError(container));
+                }, 200);
+            } else {
+                showAudioError(container);
+            }
+        });
     } else {
         audio.pause();
     }
@@ -215,12 +192,11 @@ window.toggleAudio = function (playerId) {
 window.seekAudio = function (playerId, value) {
     const audio = document.getElementById(playerId + '-audio');
     const seekEl = document.getElementById(playerId + '-seek');
-    if (!audio || !isFinite(audio.duration)) return;
-    if (seekEl) seekEl.dataset.dragging = '1';
+    if (!audio || !seekEl || !isFinite(audio.duration)) return;
+    seekEl.dataset.dragging = '1';
     audio.currentTime = (parseFloat(value) / 100) * audio.duration;
-    // Release dragging shortly after so timeupdate can resume syncing
-    clearTimeout(seekEl?._dragT);
-    if (seekEl) seekEl._dragT = setTimeout(() => { seekEl.dataset.dragging = '0'; }, 250);
+    clearTimeout(seekEl._dragT);
+    seekEl._dragT = setTimeout(() => { seekEl.dataset.dragging = '0'; }, 250);
 };
 
 window.toggleAudioSpeed = function (playerId) {
@@ -265,6 +241,112 @@ window.speakText = function (btn) {
     utter.rate = 0.95;
     window.speechSynthesis.speak(utter);
 };
+
+/** One-time global wiring for every audio player on the page. */
+let _audioGloballyWired = false;
+function wireGlobalAudio() {
+    if (_audioGloballyWired) return;
+    _audioGloballyWired = true;
+
+    /* ---- Control clicks (delegated) ---- */
+    document.addEventListener('click', (e) => {
+        const ttsBtn = e.target.closest('.audio-tts-btn');
+        if (ttsBtn) {
+            e.preventDefault();
+            window.speakText(ttsBtn);
+            return;
+        }
+
+        const player = e.target.closest('.custom-audio-player');
+        if (!player) return;
+        const pid = player.id;
+        if (!pid) return;
+
+        if (e.target.closest('.audio-play-btn')) {
+            e.preventDefault();
+            window.toggleAudio(pid);
+        } else if (e.target.closest('.audio-speed-btn')) {
+            window.toggleAudioSpeed(pid);
+        } else if (e.target.closest('.audio-loop-btn')) {
+            window.toggleAudioLoop(pid);
+        }
+        // .audio-download-btn is a real link — let it behave natively
+    });
+
+    /* ---- Seek slider ---- */
+    document.addEventListener('input', (e) => {
+        if (!e.target.classList?.contains('audio-seek-slider')) return;
+        const player = e.target.closest('.custom-audio-player');
+        if (player) window.seekAudio(player.id, e.target.value);
+    });
+
+    /* ---- Media state events (capture phase; these don't bubble) ---- */
+    const onMedia = (type, fn) => document.addEventListener(type, fn, true);
+
+    onMedia('play', (e) => {
+        const pid = playerIdOfAudio(e.target);
+        if (!pid) return;
+        const container = document.getElementById(pid);
+        container?.classList.add('playing');
+        const svg = container?.querySelector('.audio-play-btn svg');
+        if (svg) svg.innerHTML = _PAUSE_SVG;
+    });
+
+    onMedia('pause', (e) => {
+        const pid = playerIdOfAudio(e.target);
+        if (!pid) return;
+        const container = document.getElementById(pid);
+        container?.classList.remove('playing');
+        const svg = container?.querySelector('.audio-play-btn svg');
+        if (svg) svg.innerHTML = _PLAY_SVG;
+    });
+
+    onMedia('ended', (e) => {
+        const audio = e.target;
+        const pid = playerIdOfAudio(audio);
+        if (!pid) return;
+        const container = document.getElementById(pid);
+        container?.classList.remove('playing');
+        const svg = container?.querySelector('.audio-play-btn svg');
+        if (svg) svg.innerHTML = _PLAY_SVG;
+        const seekEl = document.getElementById(pid + '-seek');
+        if (seekEl) seekEl.value = 0;
+        const durEl = document.getElementById(pid + '-dur');
+        if (durEl && isFinite(audio.duration)) durEl.textContent = formatTime(audio.duration);
+    });
+
+    onMedia('loadedmetadata', (e) => {
+        const audio = e.target;
+        const pid = playerIdOfAudio(audio);
+        if (!pid || !isFinite(audio.duration)) return;
+        const durEl = document.getElementById(pid + '-dur');
+        if (durEl) durEl.textContent = formatTime(audio.duration);
+    });
+
+    onMedia('timeupdate', (e) => {
+        const audio = e.target;
+        const pid = playerIdOfAudio(audio);
+        if (!pid) return;
+        const durEl = document.getElementById(pid + '-dur');
+        if (durEl && isFinite(audio.duration)) {
+            durEl.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+        }
+        const seekEl = document.getElementById(pid + '-seek');
+        if (seekEl && isFinite(audio.duration) && seekEl.dataset.dragging !== '1') {
+            seekEl.value = (audio.currentTime / audio.duration) * 100 || 0;
+        }
+    });
+
+    onMedia('error', (e) => {
+        const pid = playerIdOfAudio(e.target);
+        if (!pid) return;
+        // Only mark the error if the element actually failed to fetch its source.
+        if (e.target?.error) {
+            showAudioError(document.getElementById(pid));
+        }
+    });
+}
+wireGlobalAudio();
 
 /* ==============================================
    #14 — HIGHLIGHT VOCAB WORD IN EXAMPLE
@@ -352,6 +434,12 @@ function bindFlashcardEvents(btn, overlay) {
     btn.addEventListener('click', () => openFlashcards());
     // Delegated handling: action buttons are re-rendered on every card
     overlay.addEventListener('click', (e) => {
+        const ttsBtn = e.target.closest('.fc-tts');
+        if (ttsBtn) {
+            e.stopPropagation();
+            window.speakText(ttsBtn);
+            return;
+        }
         const actionEl = e.target.closest('[data-fc-action]');
         if (actionEl) {
             e.stopPropagation();
@@ -524,7 +612,7 @@ function renderFlashcard() {
                 <div class="flashcard-front ${isKnown ? 'fc-marked-known' : ''}">
                     <div class="flashcard-word">${escapeHtml(v.word || '')}</div>
                     <div class="flashcard-pron">${escapeHtml(v.pron || '')}</div>
-                    <button class="fc-tts" type="button" title="Read aloud" onclick="event.stopPropagation();window.speakText(this)" data-say="${escapeHtml(cleanWord)}">&#128266;</button>
+                    <button class="fc-tts" type="button" title="Read aloud" data-say="${escapeHtml(cleanWord)}" aria-label="Read aloud">&#128266;</button>
                     <div class="flashcard-hint">Tap card or press Space to reveal meaning</div>
                 </div>
             `;

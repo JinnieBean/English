@@ -82,3 +82,44 @@ export function sanitizeRichText(html) {
     out = out.replace(/(href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, '$1="#"');
     return out;
 }
+
+/* =========================================================
+   LONGMAN AUDIO VERSION HANDLING
+   ldoceonline.com rotates its audio URLs' ?version= query
+   (e.g. beat1.mp3?version=1.2.89 -> ?version=1.2.90).
+   Old URLs stored in the database keep working because every
+   player normalises the URL through applyAudioVersion().
+   When Longman bumps the version, ONLY this constant changes.
+   ========================================================= */
+export const AUDIO_VERSION = '1.2.90';
+
+const AUDIO_VERSIONED_HOST = /(^|\.)ldoceonline\.com$/i;
+
+/** Force the current audio version onto a Longman audio URL.
+ *  Non-Longman URLs are returned untouched. */
+export function applyAudioVersion(url) {
+    if (!url || typeof url !== 'string') return url;
+    try {
+        const u = new URL(url);
+        if (!AUDIO_VERSIONED_HOST.test(u.hostname)) return url;
+        u.searchParams.delete('version');
+        u.searchParams.set('version', AUDIO_VERSION);
+        return u.toString();
+    } catch {
+        return url;
+    }
+}
+
+/** Remove the version query entirely (used by the admin bulk-rewrite tool
+ *  as a suggested "normalise" operation). */
+export function stripAudioVersion(url) {
+    if (!url || typeof url !== 'string') return url;
+    try {
+        const u = new URL(url);
+        if (!AUDIO_VERSIONED_HOST.test(u.hostname)) return url;
+        u.searchParams.delete('version');
+        return u.toString();
+    } catch {
+        return url;
+    }
+}
