@@ -1,7 +1,7 @@
 import { collection, getDocs, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
 import { friendlyError, applyAudioVersion, AUDIO_VERSION } from '../../assets/js/utils.js';
-import { hooks, confirmDialog } from './common.js';
+import { hooks, confirmDialog, logAudit } from './common.js';
 import { vocabData, wordformData, lexicalData, fetchAll } from './data.js';
 
 /* =========================================================
@@ -86,6 +86,7 @@ document.getElementById('import-btn')?.addEventListener('click', async () => {
             window.showToast(`Imported ${done}/${docs.length}…`, 'info');
         }
         fileInput.value = '';
+        await logAudit('import', collName, '', `${docs.length} documents (${newCount} new, ${updateCount} overwritten)`);
         await hooks.reload(null);
         window.showToast(`Import complete — ${docs.length} documents written.`, 'success');
     } catch (err) {
@@ -243,6 +244,7 @@ document.getElementById('audio-apply-btn')?.addEventListener('click', async () =
             written += Math.min(CHUNK, pending.length - i);
             window.showToast(`Updated ${written}/${pending.length} documents…`, 'info');
         }
+        await logAudit('audio-rewrite', AUDIO_COLLECTIONS.join(','), '', `${totalDocs} doc(s), ${totalUrls} URL(s)`);
         await hooks.reload(null);
         const statusEl = document.getElementById('audio-tool-status');
         if (statusEl) statusEl.textContent = '';

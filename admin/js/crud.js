@@ -53,6 +53,7 @@ onSubmit(bookForm, async () => {
     } else {
         await addDoc(collection(db, "books"), stampCreate(bookData));
     }
+    await logAudit(id ? 'update' : 'create', 'books', id, bookData.title);
     window.closeModalOverlay(bookModal);
     await hooks.reload(id ? "books" : null);
     window.showToast('Saved!', 'success');
@@ -109,7 +110,8 @@ window.duplicateBook = async (id) => {
     const { id: _omit, createdAt: _c, updatedAt: _u, ...rest } = b;
     rest.title = (b.title || 'Untitled') + ' (copy)';
     try {
-        await addDoc(collection(db, "books"), stampCreate(rest));
+        const ref = await addDoc(collection(db, "books"), stampCreate(rest));
+        await logAudit('duplicate', 'books', ref.id, rest.title);
         await hooks.reload("books");
         window.showToast('Book duplicated.', 'success');
     } catch (err) {
@@ -168,6 +170,7 @@ onSubmit(unitForm, async () => {
     } else {
         await addDoc(collection(db, "units"), stampCreate(unitData));
     }
+    await logAudit(id ? 'update' : 'create', 'units', id, title);
     window.closeModalOverlay(unitModal);
     await hooks.reload("units");
     window.showToast('Saved!', 'success');
@@ -308,6 +311,7 @@ onSubmit(vocabForm, async () => {
     } else {
         await addDoc(collection(db, "vocabularies"), stampCreate(newVocab));
     }
+    await logAudit(id ? 'update' : 'create', 'vocabularies', id, newVocab.word);
     window.closeModalOverlay(vocabModal);
     await hooks.reload("vocabularies");
     window.showToast('Saved!', 'success');
@@ -389,7 +393,8 @@ window.duplicateVocab = async (id) => {
     if (!v) return;
     const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = v;
     try {
-        await addDoc(collection(db, "vocabularies"), stampCreate(rest));
+        const ref = await addDoc(collection(db, "vocabularies"), stampCreate(rest));
+        await logAudit('duplicate', 'vocabularies', ref.id, rest.word);
         await hooks.reload("vocabularies");
         window.showToast('Entry duplicated.', 'success');
     } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
@@ -434,6 +439,7 @@ onSubmit(phrasalForm, async () => {
     } else {
         await addDoc(collection(db, "phrasal_verbs"), stampCreate(newPhrasal));
     }
+    await logAudit(id ? 'update' : 'create', 'phrasal_verbs', id, newPhrasal.word);
     window.closeModalOverlay(phrasalModal);
     await hooks.reload("phrasal_verbs");
     window.showToast('Saved!', 'success');
@@ -502,7 +508,8 @@ window.duplicatePhrasal = async (id) => {
     if (!p) return;
     const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
     try {
-        await addDoc(collection(db, "phrasal_verbs"), stampCreate(rest));
+        const ref = await addDoc(collection(db, "phrasal_verbs"), stampCreate(rest));
+        await logAudit('duplicate', 'phrasal_verbs', ref.id, rest.word);
         await hooks.reload("phrasal_verbs");
         window.showToast('Phrasal verb duplicated.', 'success');
     } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
@@ -546,6 +553,7 @@ onSubmit(prepForm, async () => {
     } else {
         await addDoc(collection(db, "prep_phrases"), stampCreate(newPrep));
     }
+    await logAudit(id ? 'update' : 'create', 'prep_phrases', id, newPrep.word);
     window.closeModalOverlay(prepModal);
     await hooks.reload("prep_phrases");
     window.showToast('Saved!', 'success');
@@ -612,7 +620,8 @@ window.duplicatePrep = async (id) => {
     if (!p) return;
     const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
     try {
-        await addDoc(collection(db, "prep_phrases"), stampCreate(rest));
+        const ref = await addDoc(collection(db, "prep_phrases"), stampCreate(rest));
+        await logAudit('duplicate', 'prep_phrases', ref.id, rest.word);
         await hooks.reload("prep_phrases");
         window.showToast('Phrase duplicated.', 'success');
     } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
@@ -795,6 +804,7 @@ onSubmit(wordformForm, async () => {
     } else {
         await addDoc(collection(db, "word_formations"), stampCreate(newWf));
     }
+    await logAudit(id ? 'update' : 'create', 'word_formations', id, newWf.rootWord);
     window.closeModalOverlay(wordformModal);
     await hooks.reload("word_formations");
     window.showToast('Saved!', 'success');
@@ -873,7 +883,8 @@ window.duplicateWordform = async (id) => {
     const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = w;
     rest.rootWord = (w.rootWord || 'root') + '-copy';
     try {
-        await addDoc(collection(db, "word_formations"), stampCreate(rest));
+        const ref = await addDoc(collection(db, "word_formations"), stampCreate(rest));
+        await logAudit('duplicate', 'word_formations', ref.id, rest.rootWord);
         await hooks.reload("word_formations");
         window.showToast('Word formation duplicated.', 'success');
     } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
@@ -919,6 +930,7 @@ onSubmit(patternForm, async () => {
     } else {
         await addDoc(collection(db, "word_patterns"), stampCreate(payload));
     }
+    await logAudit(id ? 'update' : 'create', 'word_patterns', id, payload.word);
     window.closeModalOverlay(patternModal);
     await hooks.reload("word_patterns");
     window.showToast('Saved!', 'success');
@@ -986,7 +998,8 @@ window.duplicatePattern = async (id) => {
     if (!p) return;
     const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
     try {
-        await addDoc(collection(db, "word_patterns"), stampCreate(rest));
+        const ref = await addDoc(collection(db, "word_patterns"), stampCreate(rest));
+        await logAudit('duplicate', 'word_patterns', ref.id, rest.word);
         await hooks.reload("word_patterns");
         window.showToast('Pattern duplicated.', 'success');
     } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
@@ -1086,6 +1099,7 @@ if (lexicalForm) {
             } else {
                 await addDoc(collection(db, "lexical_expansions"), stampCreate(payload));
             }
+            await logAudit(id ? 'update' : 'create', 'lexical_expansions', id, payload.textLeft);
             window.closeModalOverlay(lexicalModal);
             await hooks.reload("lexical_expansions");
             window.showToast('Saved!', 'success');
@@ -1157,7 +1171,8 @@ window.duplicateLexical = async (id) => {
     if (!p) return;
     const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
     try {
-        await addDoc(collection(db, "lexical_expansions"), stampCreate(rest));
+        const ref = await addDoc(collection(db, "lexical_expansions"), stampCreate(rest));
+        await logAudit('duplicate', 'lexical_expansions', ref.id, rest.textLeft);
         await hooks.reload("lexical_expansions");
         window.showToast('Lexical expansion duplicated.', 'success');
     } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }

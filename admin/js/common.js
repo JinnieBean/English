@@ -206,6 +206,7 @@ export async function performDelete(collName, id, label, extraWarning = '') {
         const ref = doc(db, collName, id);
         const snap = await getDoc(ref);
         await deleteDoc(ref);
+        await logAudit('delete', collName, id, label);
         if (snap.exists()) {
             const saved = snap.data();
             window.showToast(`${label} deleted.`, 'success', {
@@ -213,6 +214,7 @@ export async function performDelete(collName, id, label, extraWarning = '') {
                 onClick: async () => {
                     try {
                         await setDoc(ref, saved);
+                        await logAudit('restore', collName, id, label);
                         await hooks.reload(collName);
                         window.showToast('Delete undone.', 'success');
                     } catch (err) {

@@ -144,6 +144,8 @@ navItems.forEach(item => {
         } else if (item.dataset.tab === 'tab-pronunciation') {
             initTinyMCE();
             loadPronunciationData();
+        } else if (item.dataset.tab === 'tab-settings') {
+            renderAuditLog();
         }
     });
 });
@@ -172,6 +174,7 @@ onAuthStateChanged(auth, async (user) => {
         if (emailEl) emailEl.textContent = user.email || '';
         if (emailEl) emailEl.title = `Signed in as ${user.email || 'unknown'}`;
         loadData();
+        renderAuditLog();
     } else {
         loginSection.style.display = 'flex';
         dashboardSection.style.display = 'none';
@@ -351,7 +354,6 @@ async function renderAuditLog() {
     }
 }
 document.getElementById('audit-refresh-btn')?.addEventListener('click', renderAuditLog);
-setTimeout(renderAuditLog, 4000);
 
 // Load grammar/pronunciation once at startup so dashboard stats are accurate
 setTimeout(() => {

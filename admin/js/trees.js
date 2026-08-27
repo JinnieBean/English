@@ -252,6 +252,7 @@ function makeTreeManager(cfg) {
         } else {
             await addDoc(collection(db, cfg.categories), stampCreate({ title, order }));
         }
+        await logAuditSafe(id ? 'update' : 'create', cfg.categories, id, title);
         window.closeModalOverlay(document.getElementById(cfg.catModalId));
         await loadData();
         window.showToast('Saved!', 'success');
@@ -282,6 +283,7 @@ function makeTreeManager(cfg) {
         } else {
             await addDoc(collection(db, cfg.lessons), stampCreate({ categoryId, title, author, order, content, status }));
         }
+        await logAuditSafe(id ? 'update' : 'create', cfg.lessons, id, title);
         window.closeModalOverlay(document.getElementById(cfg.lessonModalId));
         await loadData();
         window.showToast('Saved!', 'success');
@@ -312,6 +314,7 @@ function makeTreeManager(cfg) {
         } else {
             await addDoc(collection(db, cfg.units), stampCreate({ lessonId, title, author, order, content, status }));
         }
+        await logAuditSafe(id ? 'update' : 'create', cfg.units, id, title);
         window.closeModalOverlay(document.getElementById(cfg.unitModalId));
         await loadData();
         window.showToast('Saved!', 'success');
