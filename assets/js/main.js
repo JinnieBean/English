@@ -1,6 +1,6 @@
 import { collection, getDocs, getDoc, doc, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, normalizeSearch } from './utils.js';
 import { allBookmarks, getBookmark, setBookmark, initStore } from './progress-store.js';
 
 /* ---------- Shared page helpers ---------- */
@@ -96,11 +96,13 @@ function syncUrlSearchParam(value) {
 }
 
 /** Standard search-box wiring: full list when empty, filtered otherwise.
- *  Always performs an initial render honouring any ?q= URL parameter. */
+ *  Always performs an initial render honouring any ?q= URL parameter.
+ *  The typed term is accent-normalised (Vietnamese-friendly) before matching. */
 function wireSearch(input, allItems, renderFn, matchFn) {
     const run = () => {
-        const term = input ? input.value.toLowerCase().trim() : '';
-        syncUrlSearchParam(term);
+        const raw = input ? input.value.trim() : '';
+        syncUrlSearchParam(raw.toLowerCase());
+        const term = normalizeSearch(raw);
         if (!term) { renderFn(allItems, false); return; }
         renderFn(allItems.filter(item => matchFn(item, term)), true);
     };
@@ -455,13 +457,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // Starred-only toggle re-renders using the current search term
                     let starredOnly = false;
+                    const matchVocab = (v, term) =>
+                        normalizeSearch(v.word).includes(term) ||
+                        normalizeSearch(v.def).includes(term) ||
+                        normalizeSearch(v.example).includes(term);
                     const rerender = () => {
                         const base = starredOnly ? vocabs.filter(v => getBookmark(v.id)) : vocabs;
-                        const term = (searchInput?.value || '').toLowerCase().trim();
+                        const term = normalizeSearch(searchInput?.value || '');
                         if (!term) return renderVocabList(base, starredOnly);
-                        renderVocabList(base.filter(v =>
-                            (v.word || '').toLowerCase().includes(term) ||
-                            (v.def || '').toLowerCase().includes(term)), true);
+                        renderVocabList(base.filter(v => matchVocab(v, term)), true);
                     };
 
                     document.getElementById('starred-only-checkbox')?.addEventListener('change', (e) => {
@@ -471,7 +475,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     wireSearch(searchInput, vocabs,
                         (list, searching) => renderVocabList(starredOnly ? list.filter(v => getBookmark(v.id)) : list, searching),
-                        (v, term) => (v.word || '').toLowerCase().includes(term) || (v.def || '').toLowerCase().includes(term));
+                        matchVocab);
 
                     // Export CSV (Anki-friendly Front/Back)
                     document.getElementById('export-csv-btn')?.addEventListener('click', () => {
@@ -642,8 +646,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 wireSearch(searchInput, items, render,
                     (item, term) =>
-                        (item.word || '').toLowerCase().includes(term) ||
-                        (item.def || '').toLowerCase().includes(term));
+                        normalizeSearch(item.word).includes(term) ||
+                        normalizeSearch(item.def).includes(term) ||
+                        normalizeSearch(item.example).includes(term));
 
             } catch (e) {
                 console.error(e);
@@ -751,8 +756,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 wireSearch(searchInput, wordforms, render,
                     (w, term) =>
-                        (w.rootWord || '').toLowerCase().includes(term) ||
-                        (w.forms || []).some(f => (f.title || '').toLowerCase().includes(term)));
+                        normalizeSearch(w.rootWord).includes(term) ||
+                        (w.overviews || []).some(o =>
+                            normalizeSearch(o.words).includes(term) ||
+                            normalizeSearch(o.pos).includes(term)) ||
+                        (w.forms || []).some(f =>
+                            normalizeSearch(f.title).includes(term) ||
+                            normalizeSearch(f.definitions).includes(term) ||
+                            normalizeSearch(f.examples).includes(term)));
 
             } catch (e) {
                 console.error(e);
@@ -813,9 +824,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 wireSearch(searchInput, patterns, render,
                     (p, term) =>
-                        (p.word || '').toLowerCase().includes(term) ||
-                        (p.pattern || '').toLowerCase().includes(term) ||
-                        (p.def || '').toLowerCase().includes(term));
+                        normalizeSearch(p.word).includes(term) ||
+                        normalizeSearch(p.pattern).includes(term) ||
+                        normalizeSearch(p.def).includes(term) ||
+                        normalizeSearch(p.example).includes(term));
 
             } catch (e) {
                 console.error(e);
@@ -842,12 +854,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const searchInput = injectSearchBar(container, 'lexical-search-input', 'Search lexical expansions…');
                 applyUrlSearchParam(searchInput);
-
-                const normalizeSearch = (s) => (s || '')
-                    .toLowerCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .replace(/đ/g, 'd');
 
                 const render = (list, searching) => {
                     if (lexicals.length === 0) {
@@ -912,8 +918,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!searchInput) render(lexicals, false);
                 if (searchInput) {
                     const runSearch = () => {
-                        const term = normalizeSearch(searchInput.value.trim());
-                        syncUrlSearchParam(term);
+                        const raw = searchInput.value.trim();
+                        syncUrlSearchParam(raw.toLowerCase());
+                        const term = normalizeSearch(raw);
                         if (!term) return render(lexicals, false);
 
                         const ranked = [];
