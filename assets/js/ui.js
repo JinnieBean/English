@@ -8,7 +8,7 @@ import { escapeHtml, formatTime, applyAudioVersion } from './utils.js';
 import {
     initStore, getKnownSet, markKnown, allBookmarks, getBookmark, setBookmark,
     srsGrade, srsDueList, getUser, signInWithGoogle, signOutUser,
-    onStoreAuthChanged, onAuthError, recordActivity
+    onStoreAuthChanged, onAuthError, recordActivity, isAuthResolved
 } from './progress-store.js';
 
 /* ==============================================
@@ -1256,6 +1256,12 @@ function buildAuthBox() {
     }
 
     function render(user) {
+        // Session not resolved yet — avoid flashing the signed-out state
+        if (!isAuthResolved()) {
+            statusEl.innerHTML = '<span class="tn-auth-name tn-muted">Loading&hellip;</span>';
+            actionsEl.innerHTML = '';
+            return;
+        }
         if (user) {
             const name = user.displayName || user.email || 'Learner';
             statusEl.innerHTML = `

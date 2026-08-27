@@ -33,6 +33,7 @@ let state = null;
 let currentUser = null;
 let syncTimer = null;
 let initialized = false;
+let authResolved = false; // true once Firebase has restored/confirmed the session
 const authCallbacks = [];
 const authErrorCallbacks = [];
 
@@ -245,6 +246,11 @@ export function srsGrade(wordId, unitId, wasKnown) {
 
 export function getUser() { return currentUser; }
 
+/** True once Firebase has resolved the initial auth state (session restored
+ *  or confirmed signed-out). UI should hold off rendering auth-dependent
+ *  states until then to avoid a "Sign in" flash on navigation. */
+export function isAuthResolved() { return authResolved; }
+
 /**
  * Google sign-in with resilient fallbacks:
  *  1. Try the popup (nicest UX).
@@ -297,6 +303,7 @@ export function initStore() {
     hydrate();
     onAuthStateChanged(auth, async (u) => {
         currentUser = u;
+        authResolved = true;
         if (u) {
             const owner = localOwner();
             if (owner && owner !== u.uid) {

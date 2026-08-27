@@ -4,7 +4,7 @@
  */
 import {
     initStore, onStoreAuthChanged, getUser, totalKnown, srsCounts, getStreak,
-    allProgress, getActivityMap, todayKey
+    allProgress, getActivityMap, todayKey, isAuthResolved
 } from './progress-store.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
@@ -26,6 +26,11 @@ function renderStats() {
 
 function renderSyncStatus() {
     const el = $('ml-sync-status');
+    if (!el) return;
+    if (!isAuthResolved()) {
+        el.innerHTML = 'Checking sync status&hellip;';
+        return;
+    }
     const u = getUser();
     if (u) {
         el.innerHTML = `&#9729; Synced to <strong>${escapeHtml(u.email || 'your account')}</strong>`;

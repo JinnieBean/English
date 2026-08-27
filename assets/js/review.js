@@ -7,7 +7,7 @@
  */
 import {
     initStore, srsDueList, srsCounts, totalKnown, todayKey,
-    onStoreAuthChanged, getUser
+    onStoreAuthChanged, getUser, isAuthResolved
 } from './progress-store.js';
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
@@ -111,6 +111,10 @@ function setStat(id, value) {
 function renderSyncNote() {
     const el = document.getElementById('review-sync-note');
     if (!el) return;
+    if (!isAuthResolved()) {
+        el.innerHTML = 'Checking sync status&hellip;';
+        return;
+    }
     const u = getUser();
     el.innerHTML = u
         ? `&#9729; Synced to <strong>${escapeHtml(u.email || 'your account')}</strong>`
@@ -132,12 +136,21 @@ function renderEmptySchedule() {
 }
 
 function render() {
+    if (!summaryEl || !actionsEl) return;
+
+    // Hold off until the session is resolved so the numbers don't flash
+    // local→cloud. The auth callback re-triggers render() once settled.
+    if (!isAuthResolved()) {
+        summaryEl.innerHTML = 'Checking your schedule&hellip;';
+        actionsEl.innerHTML = '';
+        if (listContainer) listContainer.innerHTML = '';
+        return;
+    }
+
     const todayIso = todayKey();
     const dueEntries = srsDueList(todayIso).filter(e => e.next !== '9999-12-31');
     const counts = srsCounts();
     const upcomingCount = Math.max(0, counts.learning - dueEntries.length);
-
-    if (!summaryEl || !actionsEl) return;
 
     setStat('rv-due', dueEntries.length);
     setStat('rv-rotation', counts.learning);

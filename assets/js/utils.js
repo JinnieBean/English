@@ -91,7 +91,7 @@ export function sanitizeRichText(html) {
    player normalises the URL through applyAudioVersion().
    When Longman bumps the version, ONLY this constant changes.
    ========================================================= */
-export const AUDIO_VERSION = '1.2.90';
+export const AUDIO_VERSION = '1.2.91';
 
 const AUDIO_VERSIONED_HOST = /(^|\.)ldoceonline\.com$/i;
 
