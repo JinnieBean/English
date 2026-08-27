@@ -95,16 +95,31 @@ function syncUrlSearchParam(value) {
     }, 400);
 }
 
+/** Word-first search across prioritised field tiers.
+ *  Items matching an earlier tier are returned exclusively; later tiers
+ *  (definitions, examples…) are only consulted when nothing matches the
+ *  word-like fields. Typing "compe" therefore returns compete/competition
+ *  instead of every word whose definition happens to mention competing.
+ *  All comparisons are accent-insensitive (Vietnamese-friendly). */
+function tieredSearch(items, term, tiers) {
+    for (const fieldsOf of tiers) {
+        const hits = items.filter(it =>
+            fieldsOf(it).some(val => normalizeSearch(val).includes(term)));
+        if (hits.length) return hits;
+    }
+    return [];
+}
+
 /** Standard search-box wiring: full list when empty, filtered otherwise.
  *  Always performs an initial render honouring any ?q= URL parameter.
  *  The typed term is accent-normalised (Vietnamese-friendly) before matching. */
-function wireSearch(input, allItems, renderFn, matchFn) {
+function wireSearch(input, allItems, renderFn, searchFn) {
     const run = () => {
         const raw = input ? input.value.trim() : '';
         syncUrlSearchParam(raw.toLowerCase());
         const term = normalizeSearch(raw);
         if (!term) { renderFn(allItems, false); return; }
-        renderFn(allItems.filter(item => matchFn(item, term)), true);
+        renderFn(searchFn(allItems, term), true);
     };
     if (input) {
         input.addEventListener('input', run);
@@ -457,15 +472,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // Starred-only toggle re-renders using the current search term
                     let starredOnly = false;
-                    const matchVocab = (v, term) =>
-                        normalizeSearch(v.word).includes(term) ||
-                        normalizeSearch(v.def).includes(term) ||
-                        normalizeSearch(v.example).includes(term);
+                    const searchVocab = (list, term) => tieredSearch(list, term, [
+                        v => [v.word],
+                        v => [v.def, v.example]
+                    ]);
                     const rerender = () => {
                         const base = starredOnly ? vocabs.filter(v => getBookmark(v.id)) : vocabs;
                         const term = normalizeSearch(searchInput?.value || '');
                         if (!term) return renderVocabList(base, starredOnly);
-                        renderVocabList(base.filter(v => matchVocab(v, term)), true);
+                        renderVocabList(searchVocab(base, term), true);
                     };
 
                     document.getElementById('starred-only-checkbox')?.addEventListener('change', (e) => {
@@ -475,7 +490,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     wireSearch(searchInput, vocabs,
                         (list, searching) => renderVocabList(starredOnly ? list.filter(v => getBookmark(v.id)) : list, searching),
-                        matchVocab);
+                        searchVocab);
 
                     // Export CSV (Anki-friendly Front/Back)
                     document.getElementById('export-csv-btn')?.addEventListener('click', () => {
@@ -645,10 +660,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
 
                 wireSearch(searchInput, items, render,
-                    (item, term) =>
-                        normalizeSearch(item.word).includes(term) ||
-                        normalizeSearch(item.def).includes(term) ||
-                        normalizeSearch(item.example).includes(term));
+                    (list, term) => tieredSearch(list, term, [
+                        item => [item.word],
+                        item => [item.def, item.example]
+                    ]));
 
             } catch (e) {
                 console.error(e);
@@ -755,15 +770,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
 
                 wireSearch(searchInput, wordforms, render,
-                    (w, term) =>
-                        normalizeSearch(w.rootWord).includes(term) ||
-                        (w.overviews || []).some(o =>
-                            normalizeSearch(o.words).includes(term) ||
-                            normalizeSearch(o.pos).includes(term)) ||
-                        (w.forms || []).some(f =>
-                            normalizeSearch(f.title).includes(term) ||
-                            normalizeSearch(f.definitions).includes(term) ||
-                            normalizeSearch(f.examples).includes(term)));
+                    (list, term) => tieredSearch(list, term, [
+                        w => [
+                            w.rootWord,
+                            ...(w.overviews || []).map(o => o.words),
+                            ...(w.forms || []).map(f => f.title)
+                        ],
+                        w => (w.forms || []).flatMap(f => [f.definitions, f.examples])
+                    ]));
 
             } catch (e) {
                 console.error(e);
@@ -823,11 +837,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
 
                 wireSearch(searchInput, patterns, render,
-                    (p, term) =>
-                        normalizeSearch(p.word).includes(term) ||
-                        normalizeSearch(p.pattern).includes(term) ||
-                        normalizeSearch(p.def).includes(term) ||
-                        normalizeSearch(p.example).includes(term));
+                    (list, term) => tieredSearch(list, term, [
+                        p => [p.word, p.pattern],
+                        p => [p.def, p.example]
+                    ]));
 
             } catch (e) {
                 console.error(e);
@@ -925,21 +938,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         const ranked = [];
                         lexicals.forEach(lex => {
-                            let score = 0;
+                            let wordScore = 0, otherScore = 0;
                             const texts = [normalizeSearch(lex.textLeft), normalizeSearch(lex.textRight)];
                             (lex.words || []).forEach(w => {
                                 const word = normalizeSearch(w.word).replace(/\(.*?\)/g, '').trim();
-                                if (word.startsWith(term)) score = Math.max(score, 100);
-                                else if (word.includes(term)) score = Math.max(score, 80);
-                                else if (texts.some(t => t.includes(term))) score = Math.max(score, 60);
-                                else if (normalizeSearch(w.def).includes(term) || normalizeSearch(w.pron).includes(term)) score = Math.max(score, 40);
+                                if (word.startsWith(term)) wordScore = Math.max(wordScore, 100);
+                                else if (word.includes(term)) wordScore = Math.max(wordScore, 80);
+                                if (texts.some(t => t.includes(term))) otherScore = Math.max(otherScore, 60);
+                                else if (normalizeSearch(w.def).includes(term) || normalizeSearch(w.pron).includes(term)) otherScore = Math.max(otherScore, 40);
                             });
-                            if (!score && texts.some(t => t.includes(term))) score = 60;
-                            if (score) ranked.push({ score, lex });
+                            if (!otherScore && texts.some(t => t.includes(term))) otherScore = 60;
+                            const score = wordScore || otherScore;
+                            if (score) ranked.push({ score, wordHit: wordScore > 0, lex });
                         });
 
-                        ranked.sort((a, b) => b.score - a.score);
-                        render(ranked.map(r => r.lex), true);
+                        // Word matches take priority: when any entry matched on
+                        // its word, hide entries that only matched in text/def.
+                        const wordHits = ranked.filter(r => r.wordHit);
+                        const finalList = (wordHits.length ? wordHits : ranked)
+                            .sort((a, b) => b.score - a.score);
+                        render(finalList.map(r => r.lex), true);
                     };
                     searchInput.addEventListener('input', runSearch);
                     // Always render once on load (honours any ?q= URL parameter)

@@ -2,10 +2,12 @@
  *
  * Strategy:
  *  - Navigation requests: network-first, fall back to cache, then offline.html
- *  - Static assets (css/js/images/fonts): stale-while-revalidate
+ *  - Same-origin js/css: network-first (code fixes appear on the next
+ *    reload), precached copy kept as the offline fallback
+ *  - Other static assets (images/fonts/CDN): stale-while-revalidate
  *  - Never intercept /admin/** (keep the CMS always fresh) or non-GET
  */
-const CACHE = 'tn-cache-v4';
+const CACHE = 'tn-cache-v6';
 const OFFLINE_URL = 'offline.html';
 
 const PRECACHE = [
@@ -81,6 +83,22 @@ self.addEventListener('fetch', (event) => {
                 if (cached) return cached;
                 const offline = await cache.match(OFFLINE_URL);
                 return offline || Response.error();
+            }
+        })());
+        return;
+    }
+
+    // Same-origin app code (js/css): network-first so edits show up on the
+    // very next reload instead of being served stale from cache.
+    if (url.origin === location.origin && /\.(mjs|js|css)$/i.test(url.pathname)) {
+        event.respondWith((async () => {
+            const cache = await caches.open(CACHE);
+            try {
+                const fresh = await fetch(req);
+                if (fresh && fresh.ok) cache.put(req, fresh.clone()).catch(() => {});
+                return fresh;
+            } catch {
+                return (await cache.match(req, { ignoreVary: true })) || Response.error();
             }
         })());
         return;
