@@ -1401,6 +1401,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initDictPopup();
     registerServiceWorker();
     setTimeout(updateReviewBadge, 800);
+    // Refresh the due-today badge once the account's cloud data is merged in
+    onStoreAuthChanged(() => updateReviewBadge());
 });
 
 // Export functions to window for use in main.js

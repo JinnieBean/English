@@ -22,6 +22,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const LS_KEY = 'tn-store-v1';
+const LS_OWNER = 'tn-store-v1-owner'; // uid the local copy belongs to (null = anonymous)
 export const SRS_INTERVALS = [1, 3, 7, 14]; // days per box
 
 function blankState() {
@@ -34,6 +35,16 @@ let syncTimer = null;
 let initialized = false;
 const authCallbacks = [];
 const authErrorCallbacks = [];
+
+function localOwner() {
+    try { return localStorage.getItem(LS_OWNER) || null; } catch { return null; }
+}
+function setLocalOwner(uid) {
+    try {
+        if (uid) localStorage.setItem(LS_OWNER, uid);
+        else localStorage.removeItem(LS_OWNER);
+    } catch { /* ignore */ }
+}
 
 /* ================= local persistence ================= */
 
@@ -286,9 +297,38 @@ export function initStore() {
     hydrate();
     onAuthStateChanged(auth, async (u) => {
         currentUser = u;
-        if (u) await pullAndMerge(u.uid);
+        if (u) {
+            const owner = localOwner();
+            if (owner && owner !== u.uid) {
+                // Another account last used this browser — never merge their
+                // local data into this account; start from the cloud copy.
+                state = blankState();
+                persistNow();
+            }
+            setLocalOwner(u.uid);
+            await pullAndMerge(u.uid);
+        } else {
+            // Signed out: account data lives in the cloud only; this device
+            // starts a fresh anonymous (local-only) state.
+            state = blankState();
+            persistNow();
+            setLocalOwner(null);
+        }
         authCallbacks.forEach(cb => { try { cb(currentUser); } catch {} });
     });
+
+    // Flush pending cloud writes when the page is hidden/closed so the last
+    // graded cards are not lost to the 1.5s debounce.
+    const flushSync = () => {
+        if (!syncTimer) return;
+        clearTimeout(syncTimer);
+        syncTimer = null;
+        pushToCloud();
+    };
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flushSync();
+    });
+    window.addEventListener('pagehide', flushSync);
 
     // Surface errors from the full-page redirect sign-in flow
     try {

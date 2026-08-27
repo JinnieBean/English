@@ -116,8 +116,16 @@
 
         <div class="units-container">
             <h2 class="course-header">Review today</h2>
-            <p class="page-subtitle" id="review-summary">Checking your schedule&hellip;</p>
-            <div id="review-actions" style="display:flex; gap:.8rem; flex-wrap:wrap; align-items:center; margin: 1rem 0 1.5rem;"></div>
+            <p class="page-subtitle rv-sync-note" id="review-sync-note"></p>
+
+            <div class="ml-cards rv-cards">
+                <div class="stat-card"><div class="stat-icon">&#9200;</div><div><h3>Due today</h3><p id="rv-due">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon">&#8635;</div><div><h3>In rotation</h3><p id="rv-rotation">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon">&#10003;</div><div><h3>Known overall</h3><p id="rv-known">&ndash;</p></div></div>
+            </div>
+
+            <p class="page-subtitle" id="review-summary" style="margin-top:1.25rem;">Checking your schedule&hellip;</p>
+            <div id="review-actions" class="rv-actions"></div>
             <div id="review-list-container"></div>
         </div>
             </main>

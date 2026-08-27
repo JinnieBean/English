@@ -5,7 +5,7 @@
  *  - Static assets (css/js/images/fonts): stale-while-revalidate
  *  - Never intercept /admin/** (keep the CMS always fresh) or non-GET
  */
-const CACHE = 'tn-cache-v1';
+const CACHE = 'tn-cache-v2';
 const OFFLINE_URL = 'offline.html';
 
 const PRECACHE = [

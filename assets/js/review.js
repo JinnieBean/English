@@ -6,10 +6,12 @@
  *              ("Practice early" lets learners rehearse before due date)
  */
 import {
-    initStore, srsDueList, srsCounts, totalKnown, todayKey
+    initStore, srsDueList, srsCounts, totalKnown, todayKey,
+    onStoreAuthChanged, getUser
 } from './progress-store.js';
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
+import { escapeHtml } from './utils.js';
 
 const summaryEl = document.getElementById('review-summary');
 const actionsEl = document.getElementById('review-actions');
@@ -64,24 +66,23 @@ async function loadWordsFor(entries) {
 }
 
 function renderPreview(words) {
-    if (!words.length || !listContainer) { listContainer.innerHTML = ''; return; }
+    if (!listContainer) return;
+    if (!words.length) {
+        listContainer.innerHTML = '';
+        return;
+    }
     listContainer.innerHTML = `
-        <div style="margin-top:.5rem;">
+        <section class="rv-panel">
+            <h3 class="rv-panel-title">Due today &mdash; preview</h3>
             ${words.map(v => `
-                <div class="vocab-item">
-                    <div class="vocab-left">
-                        <div class="vocab-word-group">
-                            <span class="vocab-word">${v.word || ''}</span>
-                        </div>
-                        <div class="vocab-audio-group">
-                            <span class="vocab-pronunciation">${v.pron || ''}</span>
-                        </div>
+                <div class="rv-word-row">
+                    <div class="rv-word-main">
+                        <span class="rv-word">${escapeHtml(v.word || '')}</span>
+                        <span class="rv-pron">${escapeHtml(v.pron || '')}</span>
                     </div>
-                    <div class="vocab-right">
-                        <p class="vocab-def">${v.def || ''}</p>
-                    </div>
+                    <p class="rv-def">${escapeHtml(v.def || '')}</p>
                 </div>`).join('')}
-        </div>`;
+        </section>`;
 }
 
 /** Start a mixed-unit flashcard session (unitId=null → per-card grading). */
@@ -102,8 +103,32 @@ function startSession(words) {
 
 /* ---------- rendering ---------- */
 
-function chip(label, value) {
-    return `<span class="rv-chip"><strong>${value}</strong> ${label}</span>`;
+function setStat(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(value);
+}
+
+function renderSyncNote() {
+    const el = document.getElementById('review-sync-note');
+    if (!el) return;
+    const u = getUser();
+    el.innerHTML = u
+        ? `&#9729; Synced to <strong>${escapeHtml(u.email || 'your account')}</strong>`
+        : '&#128190; Local only &mdash; sign in with Google (sidebar) to sync your review schedule across devices.';
+}
+
+function renderEmptySchedule() {
+    summaryEl.innerHTML = '';
+    actionsEl.innerHTML = '';
+    if (listContainer) listContainer.innerHTML = `
+        <div class="rv-empty">
+            <span class="rv-empty-icon">&#128218;</span>
+            <p>Your review schedule is empty. Study a unit first &mdash; open
+            <a href="book.html">Vocabulary</a>, pick a book and practise its flashcards.
+            Words you mark as <em>Known</em> or <em>Still learning</em> will appear here
+            on their scheduled days.</p>
+            <a href="book.html" class="btn-retry">Start learning</a>
+        </div>`;
 }
 
 function render() {
@@ -114,30 +139,28 @@ function render() {
 
     if (!summaryEl || !actionsEl) return;
 
+    setStat('rv-due', dueEntries.length);
+    setStat('rv-rotation', counts.learning);
+    setStat('rv-known', totalKnown());
+    renderSyncNote();
+
     // Nothing studied at all yet
     if (totalKnown() === 0 && counts.learning === 0) {
-        summaryEl.innerHTML =
-            'Your review schedule is empty. Study a unit first &mdash; open ' +
-            '<a href="book.html">Vocabulary</a>, pick a book and practise its flashcards. ' +
-            'Words you mark as <em>Learning</em> or <em>Known</em> will appear here on their scheduled days.';
-        actionsEl.innerHTML = `<a href="book.html" class="btn-retry" style="text-decoration:none;">Start learning</a>`;
-        listContainer.innerHTML = '';
+        renderEmptySchedule();
         _dueWords = []; _upcomingWords = [];
         return;
     }
 
-    summaryEl.innerHTML = [
-        chip('due today', dueEntries.length),
-        chip('in rotation', counts.learning),
-        chip('known overall', totalKnown())
-    ].join('<span class="rv-sep">·</span>');
+    summaryEl.innerHTML = dueEntries.length
+        ? `<strong>${dueEntries.length}</strong> word${dueEntries.length === 1 ? '' : 's'} waiting for you today.`
+        : 'All caught up for today &mdash; nice work!';
 
     const buttons = [];
     if (dueEntries.length) {
-        buttons.push(`<button id="start-review-btn" class="btn-retry" style="text-decoration:none;">Start due review (${dueEntries.length})</button>`);
+        buttons.push(`<button id="start-review-btn" class="btn-retry">Start due review (${dueEntries.length})</button>`);
     }
     if (upcomingCount > 0) {
-        buttons.push(`<button id="practice-upcoming-btn" class="btn-secondary rv-secondary" style="width:auto;">Practice upcoming (${upcomingCount})</button>`);
+        buttons.push(`<button id="practice-upcoming-btn" class="rv-secondary">Practice upcoming (${upcomingCount})</button>`);
     }
     actionsEl.innerHTML = buttons.join(' ');
 
@@ -158,15 +181,19 @@ function render() {
         }
     })();
 
-    listContainer.innerHTML = '';
     if (dueEntries.length) {
         loadWordsFor(dueEntries).then(renderPreview);
+    } else {
+        renderPreview([]);
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     initStore();
     render();
+
+    // Re-render once the cloud copy is merged in after sign-in/sign-out
+    onStoreAuthChanged(() => render());
 
     // Refresh numbers shortly after any flashcard session closes
     let lastOpen = false;
