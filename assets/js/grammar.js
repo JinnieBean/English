@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -206,3 +207,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+=======
+import { initContentTree } from './content-tree.js';
+
+document.addEventListener('DOMContentLoaded', () => {
+    initContentTree({
+        overviewContainerId: 'grammar-overview-container',
+        lessonContainerId: 'grammar-lesson-container',
+        categories: 'grammar_categories',
+        lessons: 'grammar_lessons',
+        units: 'grammar_units',
+        lessonPage: 'grammar_lesson.html',
+        overviewHref: 'grammar.html',
+        cssPrefix: 'grammar',
+        label: 'Grammar'
+    });
+});
+>>>>>>> newFeature

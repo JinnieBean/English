@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* grammar-styles.css — extracted from grammar.html inline styles (#3) */
 
 .grammar-intro {
@@ -90,3 +91,314 @@
     border-color: transparent;
     color: white;
 }
+=======
+/* =========================================================
+   grammar-styles.css — Shared styles for the Grammar and
+   Pronunciation overview + lesson pages (both css prefixes).
+   Previously duplicated as inline <style> blocks on 4 pages.
+   ========================================================= */
+
+/* ---------- Overview page ---------- */
+.grammar-intro,
+.pronunciation-intro {
+    margin: 2rem 0 4rem;
+}
+.grammar-intro-title,
+.pronunciation-intro-title {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent-color);
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+.grammar-intro-desc,
+.pronunciation-intro-desc {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+.grammar-read-more,
+.pronunciation-read-more {
+    display: inline-block;
+    background-color: var(--accent-color);
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: background-color 0.3s;
+}
+.grammar-read-more:hover,
+.pronunciation-read-more:hover {
+    background-color: var(--accent-dark);
+}
+
+.grammar-category,
+.pronunciation-category {
+    margin-bottom: 3rem;
+}
+.grammar-category-title,
+.pronunciation-category-title {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent-color);
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--line-color);
+    padding-bottom: 0.5rem;
+}
+
+.grammar-lesson-link,
+.pronunciation-lesson-link {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.grammar-lesson-link:hover .lesson-title,
+.pronunciation-lesson-link:hover .lesson-title {
+    color: var(--accent-color);
+}
+.lesson-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    transition: color 0.2s;
+}
+
+/* Lesson group + nested unit links (rendered by content-tree.js) */
+.grammar-lesson-group,
+.pronunciation-lesson-group {
+    margin-bottom: 1.5rem;
+}
+.grammar-lesson-link.lesson-heading,
+.pronunciation-lesson-link.lesson-heading {
+    padding-left: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.lesson-heading .lesson-title {
+    font-size: 1.25rem;
+    color: var(--accent-color);
+    font-weight: 600;
+}
+.grammar-lesson-units,
+.pronunciation-lesson-units {
+    margin-left: 1rem;
+    padding-left: 0.5rem;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.unit-link {
+    padding-left: 2rem;
+    position: relative;
+    gap: 0.6rem;
+}
+.unit-bullet {
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent-color);
+    font-size: 1.2rem;
+}
+.unit-link .lesson-title {
+    font-size: 1.15rem;
+    font-family: var(--font-body);
+}
+.tree-empty {
+    padding-left: 1rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* ---------- Lesson page ---------- */
+.back-nav {
+    margin-top: 1.5rem;
+}
+.back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--accent-color);
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+.back-link:hover {
+    text-decoration: underline;
+}
+.lesson-header {
+    margin: 2rem 0 3rem;
+    border-bottom: 1px solid var(--line-color);
+    padding-bottom: 1.5rem;
+}
+.lesson-main-title {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent-color);
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+.lesson-author {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* B5 — "Đánh dấu đã học" toggle on lesson pages */
+.lesson-learned-btn {
+    margin-top: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    color: var(--text-secondary);
+    border-radius: 20px;
+    padding: 0.45rem 1.2rem;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.lesson-learned-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+.lesson-learned-btn.learned {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: #fff;
+}
+.lesson-learned-btn.learned:hover {
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+    color: #fff;
+}
+
+/* B5 — check mark next to learned lessons on the overview tree */
+.lp-done {
+    margin-left: 0.5rem;
+    color: var(--accent-color);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+.lesson-content {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    overflow-wrap: break-word;
+}
+
+/* Styles for rich text content from TinyMCE */
+.lesson-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+.lesson-content table, .lesson-content th, .lesson-content td {
+    border: 1px solid var(--line-color);
+}
+.lesson-content th, .lesson-content td {
+    padding: 0.8rem;
+    text-align: left;
+}
+.lesson-content th {
+    background-color: var(--nav-active-bg);
+    font-family: 'Playfair Display', serif;
+    color: var(--accent-color);
+}
+.lesson-content p {
+    margin-bottom: 1rem;
+}
+.lesson-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* =========================================
+   LESSON READING KIT
+   ========================================= */
+#reading-progress-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    z-index: 200;
+    background: transparent;
+    pointer-events: none;
+}
+#reading-progress-bar .rp-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-color), var(--accent-dark));
+}
+
+.lesson-content { position: relative; }
+.lesson-toc {
+    float: right;
+    width: 220px;
+    margin: 0 0 1rem 1.5rem;
+    padding: .9rem 1rem;
+    border: 1px solid var(--line-color);
+    border-radius: 12px;
+    background: var(--card-bg);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+.lesson-toc .toc-title {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-secondary);
+    margin-bottom: .4rem;
+}
+.lesson-toc a {
+    display: block;
+    padding: .22rem 0 .22rem .6rem;
+    font-size: .82rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-left: 2px solid var(--line-color);
+    transition: color .15s ease, border-color .15s ease;
+}
+.lesson-toc a.h3 { padding-left: 1.2rem; }
+.lesson-toc a:hover { color: var(--accent-color); }
+.lesson-toc a.active {
+    color: var(--accent-color);
+    border-left-color: var(--accent-color);
+    font-weight: 600;
+}
+@media (max-width: 900px) {
+    .lesson-toc {
+        float: none;
+        width: auto;
+        margin: 0 0 1.25rem;
+        position: static;
+        max-height: 200px;
+    }
+}
+
+#lesson-font-controls {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+#lesson-font-controls button {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: .78rem;
+    padding: .45rem .7rem;
+    cursor: pointer;
+}
+#lesson-font-controls button:hover { background: var(--nav-hover-bg); color: var(--accent-color); }
+>>>>>>> newFeature
