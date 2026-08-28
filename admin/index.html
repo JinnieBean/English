@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Thor's Notes</title>
+    <meta name="description" content="Administration panel for Thor's Notes — manage books, units, vocabulary, grammar and pronunciation content.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/png" href="../assets/images/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
@@ -14,10 +17,11 @@
     </script>
     <link rel="stylesheet" href="css/admin.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
-    <script type="module" src="js/admin.js" defer></script>
+    <script type="module" src="js/app.js" defer></script>
 </head>
 
 <body>
+    <noscript><p style="padding:1rem;text-align:center;">The admin panel requires JavaScript.</p></noscript>
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
@@ -71,17 +75,26 @@
                 <li class="nav-item" data-tab="tab-grammar" title="Grammar"><i class="fas fa-pen-nib"></i><span class="nav-text">Grammar</span></li>
                 <div class="sidebar-section-title">Pronunciation</div>
                 <li class="nav-item" data-tab="tab-pronunciation" title="Pronunciation"><i class="fas fa-volume-up"></i><span class="nav-text">Pronunciation</span></li>
+
+                <div class="sidebar-section-title">System</div>
+                <li class="nav-item" data-tab="tab-settings" title="Settings"><i class="fas fa-cog"></i><span class="nav-text">Settings</span></li>
             </ul>
             <div class="sidebar-footer">
-                  <button id="admin-dark-mode-btn" class="btn-secondary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                      <i class="fas fa-moon" id="admin-dm-icon"></i><span class="nav-text">Dark Mode</span>
-                  </button>
-                <button id="logout-btn" title="Logout" class="btn-secondary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;"><i class="fas fa-sign-out-alt"></i><span class="nav-text">Logout</span></button>
+                <div id="admin-user-email" class="admin-user-email nav-text" title="Signed in as"></div>
+                <button id="admin-dark-mode-btn" class="btn-secondary sidebar-footer-btn" title="Dark Mode">
+                    <i class="fas fa-moon" id="admin-dm-icon"></i><span class="nav-text">Dark Mode</span>
+                </button>
+                <button id="logout-btn" title="Logout" class="btn-secondary sidebar-footer-btn"><i class="fas fa-sign-out-alt"></i><span class="nav-text">Logout</span></button>
             </div>
         </aside>
 
         <!-- Main Content -->
         <main class="dashboard-content">
+
+        <!-- Bulk selection action bar -->
+        <div id="bulk-bar" class="bulk-bar" hidden>
+            <span class="bulk-count">0 selected</span>
+        </div>
 
             
             <!-- Dashboard Tab -->
@@ -89,23 +102,40 @@
                 <div class="dashboard-header">
                     <h2>Overview Dashboard</h2>
                 </div>
-                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
-                    <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem;">
-                        <div class="stat-icon" style="font-size: 2.5rem; color: #0d9caa;"><i class="fas fa-book"></i></div>
-                        <div><h3 style="font-size: 0.9rem; color: #666; margin: 0;">Total Books</h3><p id="stat-books" style="font-size: 1.8rem; font-weight: bold; margin: 0.2rem 0 0; color: #333;">...</p></div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-book"></i></div>
+                        <div><h3>Total Books</h3><p id="stat-books">...</p></div>
                     </div>
-                    <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem;">
-                        <div class="stat-icon" style="font-size: 2.5rem; color: #0d9caa;"><i class="fas fa-layer-group"></i></div>
-                        <div><h3 style="font-size: 0.9rem; color: #666; margin: 0;">Total Units</h3><p id="stat-units" style="font-size: 1.8rem; font-weight: bold; margin: 0.2rem 0 0; color: #333;">...</p></div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
+                        <div><h3>Total Units</h3><p id="stat-units">...</p></div>
                     </div>
-                    <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem;">
-                        <div class="stat-icon" style="font-size: 2.5rem; color: #0d9caa;"><i class="fas fa-font"></i></div>
-                        <div><h3 style="font-size: 0.9rem; color: #666; margin: 0;">Total Vocabulary</h3><p id="stat-vocab" style="font-size: 1.8rem; font-weight: bold; margin: 0.2rem 0 0; color: #333;">...</p></div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-font"></i></div>
+                        <div><h3>Total Vocabulary</h3><p id="stat-vocab">...</p></div>
                     </div>
-                    <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem;">
-                        <div class="stat-icon" style="font-size: 2.5rem; color: #0d9caa;"><i class="fas fa-pen-nib"></i></div>
-                        <div><h3 style="font-size: 0.9rem; color: #666; margin: 0;">Grammar Lessons</h3><p id="stat-grammar" style="font-size: 1.8rem; font-weight: bold; margin: 0.2rem 0 0; color: #333;">...</p></div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-comment-dots"></i></div>
+                        <div><h3>Phrasal Verbs</h3><p id="stat-phrasal">...</p></div>
                     </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-pen-nib"></i></div>
+                        <div><h3>Grammar Lessons</h3><p id="stat-grammar">...</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-volume-up"></i></div>
+                        <div><h3>Pronunciation Lessons</h3><p id="stat-pronunciation">...</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-pencil-alt"></i></div>
+                        <div><h3>Draft items</h3><p id="stat-drafts">...</p></div>
+                    </div>
+                </div>
+
+                <div class="quick-actions-panel" style="margin-top: 1.5rem;">
+                    <h3>Vocabulary per book</h3>
+                    <div id="words-per-book-panel"><p class="qa-hint">Loading&hellip;</p></div>
                 </div>
             </div>
 
@@ -122,7 +152,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Order</th>
+                                <th class="col-check"><input type="checkbox" id="check-all-books" title="Select all"></th>
+                                    <th>Order</th>
                                 <th>Cover</th>
                                 <th>Book Title</th>
                                 <th>Actions</th>
@@ -157,7 +188,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Order</th>
+                                <th class="col-check"><input type="checkbox" id="check-all-units" title="Select all"></th>
+                                    <th>Order</th>
                                 <th>Book</th>
                                 <th>Unit Title</th>
                                 <th>Actions</th>
@@ -192,7 +224,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Word</th>
+                                <th class="col-check"><input type="checkbox" id="check-all-vocab" title="Select all"></th>
+                                    <th>Word</th>
                                 <th>POS</th>
                                 <th>Pronunciation</th>
                                 <th>Unit</th>
@@ -228,7 +261,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Phrasal Verb</th>
+                                <th class="col-check"><input type="checkbox" id="check-all-phrasal" title="Select all"></th>
+                                    <th>Phrasal Verb</th>
                                 <th>Pronunciation</th>
                                 <th>Unit</th>
                                 <th>Actions</th>
@@ -263,8 +297,10 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Phrase</th>
+                                <th class="col-check"><input type="checkbox" id="check-all-prep" title="Select all"></th>
+                                    <th>Phrase</th>
                                 <th>Unit</th>
+                                <th>Definition</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -297,7 +333,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Root Word</th>
+                                <th class="col-check"><input type="checkbox" id="check-all-wordform" title="Select all"></th>
+                                    <th>Root Word</th>
                                 <th>Unit</th>
                                 <th>Actions</th>
                             </tr>
@@ -330,7 +367,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Pattern</th>
+                                <th class="col-check"><input type="checkbox" id="check-all-pattern" title="Select all"></th>
+                                    <th>Pattern</th>
                                 <th>Unit</th>
                                 <th>Actions</th>
                             </tr>
@@ -358,7 +396,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Unit</th>
+                                <th class="col-check"><input type="checkbox" id="check-all-lexical" title="Select all"></th>
+                                    <th>Unit</th>
                                 <th>Left Column Preview</th>
                                 <th>Actions</th>
                             </tr>
@@ -550,6 +589,81 @@
                     </table>
                 </div>
             </div>
+            <!-- Settings Tab -->
+            <div id="tab-settings" class="tab-pane" style="display: none;">
+                <div class="dashboard-header">
+                    <h2>Settings</h2>
+                </div>
+                <div class="settings-grid">
+                    <div class="quick-actions-panel">
+                        <h3><i class="fas fa-database"></i> Data Tools</h3>
+                        <p class="qa-hint">Back up or restore collection data as JSON. Import keeps existing document IDs when present and skips duplicates already loaded.</p>
+                        <div class="qa-row qa-col">
+                            <button id="export-all-btn" class="btn-secondary"><i class="fas fa-download"></i> Export all data (JSON)</button>
+                        </div>
+                        <div class="qa-row qa-col">
+                            <select id="import-collection" class="input-field qa-select">
+                                <option value="books">books</option>
+                                <option value="units">units</option>
+                                <option value="vocabularies">vocabularies</option>
+                                <option value="phrasal_verbs">phrasal_verbs</option>
+                                <option value="prep_phrases">prep_phrases</option>
+                                <option value="word_formations">word_formations</option>
+                                <option value="word_patterns">word_patterns</option>
+                                <option value="lexical_expansions">lexical_expansions</option>
+                                <option value="grammar_categories">grammar_categories</option>
+                                <option value="grammar_lessons">grammar_lessons</option>
+                                <option value="grammar_units">grammar_units</option>
+                                <option value="pronunciation_categories">pronunciation_categories</option>
+                                <option value="pronunciation_lessons">pronunciation_lessons</option>
+                                <option value="pronunciation_units">pronunciation_units</option>
+                            </select>
+                            <input type="file" id="import-file" accept=".json,application/json" class="input-field qa-file">
+                            <button id="import-btn" class="btn-primary"><i class="fas fa-upload"></i> Import JSON</button>
+                        </div>
+                    </div>
+
+                    <div class="quick-actions-panel">
+                        <h3><i class="fas fa-volume-up"></i> Audio URL maintenance</h3>
+                        <p class="qa-hint">
+                            Bulk find &amp; replace across every audio field (vocabulary audio, phrasal-verb audio,
+                            word-pattern audio, word-formation audios, lexical word audio). "Find" is a regular
+                            expression — e.g.
+                            <code>version=1\.2\.\d+</code> replaced with <code>version=1.2.91</code>.
+                        </p>
+                        <p class="qa-hint">
+                            Note: the study site already forces the latest Longman version automatically at playback —
+                            current constant <code>AUDIO_VERSION = <span id="audio-version-display">…</span></code>
+                            in <code>assets/js/utils.js</code> — so rewriting the database here is optional.
+                        </p>
+                        <div class="qa-row qa-col">
+                            <input type="text" id="audio-find" class="input-field" placeholder="Find (regex), e.g. version=1\.2\.\d+">
+                            <input type="text" id="audio-replace" class="input-field" placeholder="Replace with, e.g. version=1.2.91">
+                        </div>
+                        <div class="qa-row">
+                            <button id="audio-preview-btn" class="btn-secondary"><i class="fas fa-search"></i> Preview matches</button>
+                            <button id="audio-apply-btn" class="btn-primary"><i class="fas fa-magic"></i> Apply to database</button>
+                            <span id="audio-tool-status" class="qa-hint" style="margin:0;"></span>
+                        </div>
+                    </div>
+
+                    <div class="quick-actions-panel settings-wide">
+                        <h3><i class="fas fa-history"></i> Activity log</h3>
+                        <p class="qa-hint">Latest 50 changes made from this admin panel.</p>
+                        <div class="table-container">
+                            <table class="data-table audit-table">
+                                <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Collection</th><th>Details</th></tr></thead>
+                                <tbody id="audit-list">
+                                    <tr><td colspan="5" class="empty-row">No entries loaded yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="qa-row">
+                            <button id="audit-refresh-btn" class="btn-secondary"><i class="fas fa-sync"></i> Refresh</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
 
@@ -577,12 +691,20 @@
                     <textarea id="book-desc" rows="2"></textarea>
                 </div>
                 <div class="input-group">
-                    <label>Cover Image URL (e.g., assets/images/book_cover.png or https://...)</label>
-                    <input type="text" id="book-image" value="assets/images/book_cover.png">
+                    <label>Cover Image URL (e.g., assets/images/book_cover.webp or https://...)</label>
+                    <input type="text" id="book-image" value="assets/images/book_cover.webp">
+                    <img id="book-image-preview" class="book-image-preview" src="../assets/images/book_cover.webp" alt="Cover preview">
                 </div>
                 <div class="input-group">
                     <label>Order</label>
                     <input type="number" id="book-order" value="1" required min="1">
+                </div>
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="book-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn-primary">Save Book</button>
             </form>
@@ -621,6 +743,14 @@
                 </div>
 
                 <div class="input-group">
+                    <label>Audio URL (Link to .mp3)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="url" id="pattern-audio" placeholder="https://.../audio.mp3" style="flex:1;">
+                        <button type="button" id="pattern-audio-test" class="btn-secondary btn-small" title="Test play this audio">&#9654; Test</button>
+                    </div>
+                </div>
+
+                <div class="input-group">
                     <label>Definition</label>
                     <textarea id="pattern-def" rows="2" required></textarea>
                 </div>
@@ -629,6 +759,13 @@
                     <textarea id="pattern-example" rows="2" required></textarea>
                 </div>
 
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="pattern-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn-primary">Save Word Pattern</button>
             </form>
         </div>
@@ -666,6 +803,13 @@
                         <label><input type="checkbox" name="unit-section" value="lexical"> Lexical Expansion</label>
                     </div>
                 </div>
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="unit-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn-primary">Save Unit</button>
             </form>
         </div>
@@ -697,7 +841,10 @@
                     </div>
                     <div class="input-group flex-1">
                         <label>Audio URL (Link to .mp3)</label>
-                        <input type="url" id="vocab-audio" placeholder="https://.../audio.mp3">
+                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                            <input type="url" id="vocab-audio" placeholder="https://.../audio.mp3" style="flex:1;">
+                            <button type="button" id="vocab-audio-test" class="btn-secondary btn-small" title="Test play this audio">&#9654; Test</button>
+                        </div>
                     </div>
                 </div>
 
@@ -718,6 +865,13 @@
                     <textarea id="vocab-example" rows="2" placeholder="England needed to beat Germany..."></textarea>
                 </div>
 
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="vocab-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn-primary">Save Vocabulary</button>
             </form>
         </div>
@@ -743,6 +897,14 @@
                 </div>
 
                 <div class="input-group">
+                    <label>Audio URL (Link to .mp3)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="url" id="phrasal-audio" placeholder="https://.../audio.mp3" style="flex:1;">
+                        <button type="button" id="phrasal-audio-test" class="btn-secondary btn-small" title="Test play this audio">&#9654; Test</button>
+                    </div>
+                </div>
+
+                <div class="input-group">
                     <label>Belongs to Unit</label>
                     <select id="phrasal-unit-id" class="input-field" required>
                         <!-- Populated by JS -->
@@ -759,6 +921,13 @@
                     <textarea id="phrasal-example" rows="2" placeholder="The phone rang, but Mark..."></textarea>
                 </div>
 
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="phrasal-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn-primary">Save Phrasal Verb</button>
             </form>
         </div>
@@ -794,6 +963,13 @@
                     <textarea id="prep-example" rows="2" placeholder="I haven't seen George..."></textarea>
                 </div>
 
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="prep-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn-primary">Save Phrase</button>
             </form>
         </div>
@@ -838,6 +1014,13 @@
                         Form</button>
                 </div>
 
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="wordform-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn-primary" style="margin-top: 1rem;">Save Word Formation</button>
             </form>
         </div>
@@ -898,6 +1081,13 @@
                     <button type="button" id="add-lexical-word-btn" class="btn-secondary btn-small">+ Add Word</button>
                 </div>
 
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="lexical-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn-primary" style="margin-top: 1rem;">Save Lexical Expansion</button>
             </form>
         </div>
@@ -955,7 +1145,14 @@
                     <textarea id="grammar-lesson-content" class="input-field tinymce-editor"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button type="submit" class="btn-primary">Save Lesson</button>
+                    <div class="input-group">
+                    <label>Status</label>
+                    <select id="grammar-lesson-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Save Lesson</button>
                 </div>
             </form>
         </div>
@@ -997,7 +1194,14 @@
                     <textarea id="grammar-unit-content" class="input-field tinymce-editor"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button type="submit" class="btn-primary">Save Unit</button>
+                    <div class="input-group">
+                    <label>Status</label>
+                    <select id="grammar-unit-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Save Unit</button>
                 </div>
             </form>
         </div>
@@ -1053,7 +1257,14 @@
                     <textarea id="pronunciation-lesson-content" class="input-field tinymce-editor"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button type="submit" class="btn-primary">Save Lesson</button>
+                    <div class="input-group">
+                    <label>Status</label>
+                    <select id="pronunciation-lesson-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Save Lesson</button>
                 </div>
             </form>
         </div>
@@ -1094,7 +1305,14 @@
                     <textarea id="pronunciation-unit-content" class="input-field tinymce-editor"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button type="submit" class="btn-primary">Save Unit</button>
+                    <div class="input-group">
+                    <label>Status</label>
+                    <select id="pronunciation-unit-status" class="input-field">
+                        <option value="published" selected>Published (visible on site)</option>
+                        <option value="draft">Draft (hidden from site)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Save Unit</button>
                 </div>
             </form>
         </div>

@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Prepositional Phrases — Thor's Notes</title>
-    <meta name="description" content="Prepositional phrases for this unit with definitions and examples.">
-    <meta property="og:title" content="Prepositional Phrases — Thor's Notes">
-    <meta property="og:description" content="Prepositional phrases for this unit with definitions and examples.">
+    <title>Review Today — Thor's Notes</title>
+    <meta name="description" content="Spaced-repetition review: practise the vocabulary words that are due today across every unit you have studied.">
+    <meta property="og:title" content="Review Today — Thor's Notes">
+    <meta property="og:description" content="Spaced-repetition review: practise the vocabulary words that are due today across every unit you have studied.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/images/logo.png">
     <meta name="twitter:card" content="summary">
@@ -19,7 +19,6 @@
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/courses.css">
     <script>
         // Prevent sidebar flash: apply collapsed class immediately if stored
         (function() {
@@ -37,7 +36,6 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <noscript><p style="padding:1rem;text-align:center;">This site needs JavaScript enabled to load study content.</p></noscript>
     <div class="app-layout">
-        <!-- Sidebar -->
         <aside class="sidebar">
                         <div class="sidebar-header">
                 <a href="index.html" class="sidebar-brand-container">
@@ -67,7 +65,7 @@
                     <a href="english.html" class="nav-link" title="Home">
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span> <span class="nav-link-text">Home</span>
                     </a>
-                    <a href="book.html" class="nav-link active" title="Vocabulary">
+                    <a href="book.html" class="nav-link" title="Vocabulary">
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span> <span class="nav-link-text">Vocabulary</span>
                     </a>
                     <a href="grammar.html" class="nav-link" title="Grammar">
@@ -82,7 +80,7 @@
                         <a href="mylearning.html" class="nav-link nav-study" title="My Learning">
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span> <span class="nav-link-text">My Learning</span>
                         </a>
-                        <a href="review.html" class="nav-link nav-study" title="Review words due today">
+                        <a href="review.html" class="nav-link nav-study active" title="Review words due today">
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> <span class="nav-link-text">Review</span>
                         <span class="review-badge" id="review-count-badge" hidden>0</span>
                         </a>
@@ -107,43 +105,44 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <button id="mobile-menu-btn" class="mobile-menu-btn">☰</button>
+            <button id="mobile-menu-btn" class="mobile-menu-btn">&#9776;</button>
             <header class="main-header">
                 <div class="header-line"></div>
                 <div class="header-content">
-                    <a href="index.html">
-                        <h1>Thor's Notes</h1>
-                    </a>
+                    <a href="index.html"><h1>Thor's Notes</h1></a>
                     <p>A personal English study notebook</p>
                 </div>
                 <div class="header-line"></div>
             </header>
-    <div id="breadcrumb-container" class="breadcrumb-container" data-section="Prepositional Phrases"></div>
+            <div id="breadcrumb-container" class="breadcrumb-container" data-crumbs='[{"label":"Home","href":"index.html"},{"label":"Review"}]'></div>
 
             <main class="container" id="main-content">
-                <div class="units-container">
-                    <div class="unit-subnav" id="unit-subnav"></div>
-                    <div class="unit-detail-header" id="unit-detail-header-container">
-                        
-                        <h3 class="unit-detail-title" id="unit-detail-title">Loading...</h3>
-                        
-                    </div>
-                    <h3 class="vocab-section-title">Prepositional phrases</h3>
-                    <div class="phrasal-list" id="prep-list-container">
-                        <!-- Data will be loaded via JS -->
-                    </div>
-                </div>
+
+        <div class="units-container">
+            <h2 class="course-header">Review today</h2>
+            <p class="page-subtitle rv-sync-note" id="review-sync-note"></p>
+
+            <div class="ml-cards rv-cards">
+                <div class="stat-card"><div class="stat-icon">&#9200;</div><div><h3>Due today</h3><p id="rv-due">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon">&#8635;</div><div><h3>In rotation</h3><p id="rv-rotation">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon">&#10003;</div><div><h3>Known overall</h3><p id="rv-known">&ndash;</p></div></div>
+            </div>
+
+            <p class="page-subtitle" id="review-summary" style="margin-top:1.25rem;">Checking your schedule&hellip;</p>
+            <div id="review-actions" class="rv-actions"></div>
+            <div id="review-list-container"></div>
+        </div>
             </main>
-        
+
             <!-- Footer -->
             <footer class="site-footer">
-                <p>Made by Đậu nhỏ tung tăng</p>
+                <p>Made by &#272;&#7853;u nh&#7887; tung t&#259;ng</p>
             </footer>
-</div>
+        </div>
     </div>
 
     <script type="module" src="assets/js/ui.js"></script>
-    <script type="module" src="assets/js/main.js"></script>
+    <script type="module" src="assets/js/review.js"></script>
 </body>
 
 </html>

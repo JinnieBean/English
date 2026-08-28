@@ -1,0 +1,125 @@
+rules_version = '2';
+
+// Firestore security rules for Thor's Notes (english-study-68459)
+//
+// Deploy with:  firebase deploy --only firestore:rules
+// (requires firebase-tools login + a firebase.json referencing this file)
+//
+// IMPORTANT: replace the two placeholder emails below with the real
+// administrator accounts. Only these accounts may write any data.
+// Everyone else gets read-only access to the study content.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email in [
+          'dangkhoado16gmail.com',   // TODO: replace with the real admin email(s)
+          'thornote@gmail.com'   // TODO: replace / extend as needed
+        ]
+      );
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ---------- Study content: world-readable, admin-writable ----------
+    match /books/{bookId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /units/{unitId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /vocabularies/{vocabId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /phrasal_verbs/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /prep_phrases/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /word_formations/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /word_patterns/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /lexical_expansions/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /grammar_categories/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /grammar_lessons/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /grammar_units/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /grammar_intro/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /pronunciation_categories/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /pronunciation_lessons/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /pronunciation_units/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /pronunciation_intro/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------- Learner accounts: private per-user progress ----------
+    match /users/{uid}/data/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ---------- Audit trail (Settings tab) ----------
+    match /audit_logs/{logId} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ---------- Default deny ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found — Thor's Notes</title>
+    <meta name="description" content="The page you are looking for does not exist.">
+    <link rel="icon" type="image/png" href="assets/images/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script>
+        (function() {
+            if (localStorage.getItem('theme-dark') === 'true') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+</head>
+
+<body>
+    <main style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem;">
+        <h1 style="font-family: var(--font-heading); font-size: var(--text-6xl); color: var(--accent-color);">404</h1>
+        <p style="font-size: var(--text-lg); color: var(--text-secondary); margin-bottom: 2rem;">The page you are looking for doesn't exist or has been moved.</p>
+        <a href="index.html" class="btn-retry" style="text-decoration: none;">Back to home</a>
+    </main>
+</body>
+
+</html>
