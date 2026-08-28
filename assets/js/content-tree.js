@@ -109,7 +109,7 @@ export async function initContentTree(cfg) {
                 // B5 — put a check mark next to lessons already marked as learned
                 overviewContainer.querySelectorAll('[data-lp-key]').forEach(a => {
                     if (!lessonLearned(a.dataset.lpKey)) return;
-                    a.insertAdjacentHTML('beforeend', '<span class="lp-done" title="Đã học">&#10003;</span>');
+                    a.insertAdjacentHTML('beforeend', '<span class="lp-done" title="Learned">&#10003;</span>');
                 });
 
                 requestAnimationFrame(() => window.initRevealAnimations?.());
@@ -196,7 +196,7 @@ export async function initContentTree(cfg) {
                         ${authorHtml}
                         <button type="button" id="lesson-learned-btn" class="lesson-learned-btn${learned ? ' learned' : ''}"
                             aria-pressed="${learned}">
-                            ${learned ? '&#10003; Đã học' : '&#9711; Đánh dấu đã học'}
+                            ${learned ? '&#10003; Learned' : '&#9711; Mark as learned'}
                         </button>
                     </div>
                     <div class="lesson-content">
@@ -210,7 +210,7 @@ export async function initContentTree(cfg) {
                     if (nowLearned) recordActivity(1);
                     this.classList.toggle('learned', nowLearned);
                     this.setAttribute('aria-pressed', String(nowLearned));
-                    this.innerHTML = nowLearned ? '&#10003; Đã học' : '&#9711; Đánh dấu đã học';
+                    this.innerHTML = nowLearned ? '&#10003; Learned' : '&#9711; Mark as learned';
                 });
 
                 enhanceLessonPage();
