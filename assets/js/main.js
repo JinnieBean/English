@@ -88,7 +88,7 @@ function setupStudyTools(container, unitId, cards) {
             ${cards.length >= 4 ? '<button type="button" id="quiz-toggle-btn" class="flashcard-toggle-btn">&#10067; Quiz</button>' : ''}
         </div>
         <div class="vocab-tools-right">
-            <span id="progress-badge-${escapeHtml(unitId)}"></span>
+            <span class="progress-badge-slot" id="progress-badge-${escapeHtml(unitId)}"></span>
         </div>`;
     const titleEl = document.querySelector('.vocab-section-title');
     if (titleEl) {
@@ -140,7 +140,7 @@ function renderUnitSubnav(active) {
     if (!nav) return;
     const unitId = new URLSearchParams(window.location.search).get('id');
     const tabs = [
-        ['unit_detail.html', 'Vocabulary'],
+        ['unit_detail.html', 'Topic Vocabulary'],
         ['unit_phrasal.html', 'Phrasal Verbs'],
         ['unit_prep.html', 'Prepositional Phrases'],
         ['unit_wordform.html', 'Word Formation'],
@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const sectionMap = [
-                    { id: 'vocab', name: 'Vocabulary', url: 'unit_detail.html' },
+                    { id: 'vocab', name: 'Topic Vocabulary', url: 'unit_detail.html' },
                     { id: 'phrasal', name: 'Phrasal Verbs', url: 'unit_phrasal.html' },
                     { id: 'prep', name: 'Prepositional Phrases', url: 'unit_prep.html' },
                     { id: 'wordform', name: 'Word Formation', url: 'unit_wordform.html' },
@@ -425,7 +425,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             .map(sec => `<a href="${sec.url}?id=${encodeURIComponent(unit.id)}" class="unit-tab-btn">${sec.name}</a>`)
                             .join('');
                     } else {
-                        sectionsHtml = `<a href="unit_detail.html?id=${encodeURIComponent(unit.id)}" class="unit-tab-btn">Vocabulary</a>`;
+                        sectionsHtml = `<a href="unit_detail.html?id=${encodeURIComponent(unit.id)}" class="unit-tab-btn">Topic Vocabulary</a>`;
                     }
                     return `
                         <div class="unit-item reveal" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
@@ -484,7 +484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <label class="starred-filter"><input type="checkbox" id="starred-only-checkbox"> &#9733; Starred</label>
                         </div>
                         <div class="vocab-tools-right">
-                            <span id="progress-badge-${escapeHtml(unitId)}"></span>
+                            <span class="progress-badge-slot" id="progress-badge-${escapeHtml(unitId)}"></span>
                             <button type="button" id="export-csv-btn" class="csv-export-btn" title="Download this unit's words as CSV (Anki friendly)">Export CSV</button>
                         </div>`;
                     const titleEl = document.querySelector('.vocab-section-title');

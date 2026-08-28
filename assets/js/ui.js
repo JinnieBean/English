@@ -383,12 +383,14 @@ function renderProgressBadge(unitId, total) {
     if (!badge) return;
     const count = Math.min(getKnownSet(unitId).size, total);
     const pct = total > 0 ? (count / total) * 100 : 0;
+    const complete = total > 0 && count >= total;
     badge.innerHTML = `
-        <div class="unit-progress-badge" title="${count}/${total} words marked as known">
+        <div class="unit-progress-badge${complete ? ' unit-progress-complete' : ''}" title="${count}/${total} words marked as known">
+            <span class="unit-progress-icon" aria-hidden="true">&#10003;</span>
+            <span class="unit-progress-label"><strong>${count}/${total}</strong> known</span>
             <div class="unit-progress-bar-wrap">
                 <div class="unit-progress-bar-fill" style="width:${pct}%"></div>
             </div>
-            <span>${count}/${total}</span>
         </div>
     `;
 }

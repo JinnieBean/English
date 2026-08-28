@@ -828,11 +828,13 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     gap: 0.5rem;
     background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
     color: white;
-    border: none;
+    border: 1px solid transparent;
     border-radius: 20px;
-    padding: 0.45rem 1.2rem;
+    height: 2.25rem;
+    padding: 0 1.2rem;
     font-size: var(--text-sm);
     font-family: var(--font-body);
+    line-height: 1.2;
     cursor: pointer;
     transition: all 0.25s ease;
     box-shadow: 0 3px 10px rgba(13, 112, 120, 0.3);
@@ -1021,22 +1023,50 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
 /* =========================================
    PROGRESS INDICATOR (#11)
    ========================================= */
+.progress-badge-slot {
+    display: inline-flex;
+    align-items: center;
+}
+
 .unit-progress-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: var(--text-xs);
+    gap: 0.5rem;
+    height: 2.25rem;
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    line-height: 1.2;
     color: var(--text-secondary);
-    background: var(--nav-hover-bg);
+    background: var(--card-bg);
     border: 1px solid var(--line-color);
     border-radius: 20px;
-    padding: 0.2rem 0.7rem;
+    padding: 0 1.2rem;
+    white-space: nowrap;
     transition: all 0.2s ease;
 }
 
+.unit-progress-badge strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.unit-progress-icon {
+    color: var(--accent-color);
+    line-height: 1;
+}
+
+.unit-progress-badge.unit-progress-complete { border-color: #22c55e; }
+.unit-progress-complete .unit-progress-icon,
+.unit-progress-complete strong { color: #15803d; }
+[data-theme="dark"] .unit-progress-complete .unit-progress-icon,
+[data-theme="dark"] .unit-progress-complete strong { color: #4ade80; }
+.unit-progress-complete .unit-progress-bar-fill {
+    background: linear-gradient(90deg, #22c55e, #15803d);
+}
+
 .unit-progress-bar-wrap {
-    width: 48px;
-    height: 4px;
+    width: 56px;
+    height: 5px;
     background: var(--line-color);
     border-radius: 4px;
     overflow: hidden;
@@ -1482,6 +1512,7 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     gap: 0.8rem;
     margin-bottom: 1.25rem;
 }
+.vocab-section-title .vocab-toolbar { margin-bottom: 0; }
 .vocab-tools-left,
 .vocab-tools-right { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
 .csv-export-btn {
@@ -1489,9 +1520,11 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     border: 1px solid var(--line-color);
     color: var(--text-secondary);
     border-radius: 20px;
-    padding: 0.45rem 1rem;
+    height: 2.25rem;
+    padding: 0 1.2rem;
     font-family: var(--font-body);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
+    line-height: 1.2;
     cursor: pointer;
     transition: all 0.2s ease;
 }
