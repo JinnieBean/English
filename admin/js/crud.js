@@ -302,9 +302,6 @@ onSubmit(vocabForm, async () => {
     rememberUnitSelection('vocab', newVocab.unitId);
     if (!newVocab.word) { window.showToast('Word is required.', 'error'); return; }
     if (!newVocab.unitId) { window.showToast('Please select a unit.', 'error'); return; }
-    if (isDuplicate(vocabData, v => v.unitId === newVocab.unitId && (v.word || '').toLowerCase() === newVocab.word.toLowerCase(), id)) {
-        dupToast('vocabulary entry'); return;
-    }
 
     if (id) {
         await updateDoc(doc(db, "vocabularies", id), stampUpdate(newVocab));
@@ -319,13 +316,18 @@ onSubmit(vocabForm, async () => {
 
 // Audio test-play button (plays with the current Longman version applied,
 // exactly like the study site will)
-document.getElementById('vocab-audio-test')?.addEventListener('click', () => {
-    const raw = document.getElementById('vocab-audio').value.trim();
-    if (!raw) { window.showToast('Enter an audio URL first.', 'info'); return; }
-    const url = applyAudioVersion(raw);
-    const audio = new Audio(url);
-    audio.play().catch(() => window.showToast('Could not play this audio URL.', 'error'));
-});
+function wireAudioTest(btnId, inputId) {
+    document.getElementById(btnId)?.addEventListener('click', () => {
+        const raw = document.getElementById(inputId).value.trim();
+        if (!raw) { window.showToast('Enter an audio URL first.', 'info'); return; }
+        const url = applyAudioVersion(raw);
+        const audio = new Audio(url);
+        audio.play().catch(() => window.showToast('Could not play this audio URL.', 'error'));
+    });
+}
+wireAudioTest('vocab-audio-test', 'vocab-audio');
+wireAudioTest('phrasal-audio-test', 'phrasal-audio');
+wireAudioTest('pattern-audio-test', 'pattern-audio');
 
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
 document.getElementById('search-vocab').addEventListener('input', () => { resetPage('vocab'); renderVocab(); });
@@ -423,6 +425,7 @@ onSubmit(phrasalForm, async () => {
         unitId: document.getElementById('phrasal-unit-id').value,
         word: document.getElementById('phrasal-word').value.trim(),
         pron: document.getElementById('phrasal-pron').value.trim(),
+        audio: document.getElementById('phrasal-audio').value.trim(),
         def: document.getElementById('phrasal-def').value.trim(),
         example: document.getElementById('phrasal-example').value.trim(),
         status: document.getElementById('phrasal-status').value
@@ -495,6 +498,7 @@ window.editPhrasal = (id) => {
         document.getElementById('phrasal-unit-id').value = p.unitId || '';
         document.getElementById('phrasal-word').value = p.word || '';
         document.getElementById('phrasal-pron').value = p.pron || '';
+        document.getElementById('phrasal-audio').value = p.audio || '';
         document.getElementById('phrasal-def').value = p.def || '';
         document.getElementById('phrasal-example').value = p.example || '';
         document.getElementById('phrasal-status').value = p.status || 'published';
@@ -914,6 +918,7 @@ onSubmit(patternForm, async () => {
         word: document.getElementById('pattern-word').value.trim(),
         pos: document.getElementById('pattern-pos').value.trim(),
         pattern: document.getElementById('pattern-pattern').value.trim(),
+        audio: document.getElementById('pattern-audio').value.trim(),
         def: document.getElementById('pattern-def').value.trim(),
         example: document.getElementById('pattern-example').value.trim(),
         status: document.getElementById('pattern-status').value
@@ -985,6 +990,7 @@ window.editPattern = (id) => {
         document.getElementById('pattern-word').value = p.word || '';
         document.getElementById('pattern-pos').value = p.pos || '';
         document.getElementById('pattern-pattern').value = p.pattern || '';
+        document.getElementById('pattern-audio').value = p.audio || '';
         document.getElementById('pattern-def').value = p.def || '';
         document.getElementById('pattern-example').value = p.example || '';
         document.getElementById('pattern-status').value = p.status || 'published';

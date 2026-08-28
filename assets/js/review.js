@@ -6,7 +6,7 @@
  *              ("Practice early" lets learners rehearse before due date)
  */
 import {
-    initStore, srsDueList, srsCounts, totalKnown, todayKey,
+    initStore, srsDueList, totalKnown, todayKey,
     onStoreAuthChanged, getUser, isAuthResolved
 } from './progress-store.js';
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -148,17 +148,22 @@ function render() {
     }
 
     const todayIso = todayKey();
-    const dueEntries = srsDueList(todayIso).filter(e => e.next !== '9999-12-31');
-    const counts = srsCounts();
-    const upcomingCount = Math.max(0, counts.learning - dueEntries.length);
+    // Cards tagged with src come from phrasal/prep/wordform/pattern/lexical
+    // flashcards and have no document in `vocabularies` — they cannot be
+    // loaded for a review session, so they are kept out of the schedule.
+    const loadable = (e) => e.next !== '9999-12-31' && !e.src;
+    const dueEntries = srsDueList(todayIso).filter(loadable);
+    const scheduled = srsDueList('9999-12-30').filter(loadable);
+    const upcomingEntries = scheduled.filter(e => (e.next || '') > todayIso);
+    const upcomingCount = upcomingEntries.length;
 
     setStat('rv-due', dueEntries.length);
-    setStat('rv-rotation', counts.learning);
+    setStat('rv-rotation', scheduled.length);
     setStat('rv-known', totalKnown());
     renderSyncNote();
 
     // Nothing studied at all yet
-    if (totalKnown() === 0 && counts.learning === 0) {
+    if (totalKnown() === 0 && scheduled.length === 0) {
         renderEmptySchedule();
         _dueWords = []; _upcomingWords = [];
         return;
@@ -185,9 +190,6 @@ function render() {
             if (b) b.onclick = () => startSession(_dueWords);
         }
         if (upcomingCount > 0) {
-            // Far-future "today" returns every scheduled word; exclude graduated
-            const allScheduled = srsDueList('9999-12-30').filter(e => e.next !== '9999-12-31');
-            const upcomingEntries = allScheduled.filter(e => !dueEntries.some(d => d.id === e.id));
             _upcomingWords = await loadWordsFor(upcomingEntries);
             const b2 = document.getElementById('practice-upcoming-btn');
             if (b2) b2.onclick = () => startSession(_upcomingWords);

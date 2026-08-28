@@ -57,6 +57,56 @@ function registerLexicon(items) {
     });
 }
 
+/** Flashcard overlay markup (identical to unit_detail / review pages). */
+function ensureFlashcardOverlay() {
+    if (document.getElementById('flashcard-overlay')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+        <div class="flashcard-overlay" id="flashcard-overlay" aria-hidden="true">
+            <div class="flashcard-modal" role="dialog" aria-modal="true" aria-label="Flashcard practice">
+                <button class="flashcard-close" id="flashcard-close" data-fc-action="close" aria-label="Close">&times;</button>
+                <div class="flashcard-counter" id="fc-counter" aria-live="polite">1 / 1</div>
+                <div class="flashcard-progress-bar">
+                    <div class="flashcard-progress-fill" id="fc-progress-fill" style="width:0%"></div>
+                </div>
+                <div class="flashcard-card" id="flashcard-card-area"></div>
+                <div class="flashcard-actions"></div>
+            </div>
+        </div>
+    `);
+}
+
+/** Flashcards + Quiz toolbar for the five sibling unit pages.
+ *  Cards must be shaped {id, word, def, example, pron, audio, unitId, src}. */
+function setupStudyTools(container, unitId, cards) {
+    if (!cards || !cards.length || document.getElementById('flashcard-toggle-btn')) return;
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'vocab-toolbar reveal visible';
+    toolbar.innerHTML = `
+        <div class="vocab-tools-left">
+            <button type="button" id="flashcard-toggle-btn" class="flashcard-toggle-btn">&#127924; Flashcards</button>
+            ${cards.length >= 4 ? '<button type="button" id="quiz-toggle-btn" class="flashcard-toggle-btn">&#10067; Quiz</button>' : ''}
+        </div>
+        <div class="vocab-tools-right">
+            <span id="progress-badge-${escapeHtml(unitId)}"></span>
+        </div>`;
+    const titleEl = document.querySelector('.vocab-section-title');
+    if (titleEl) {
+        titleEl.style.display = 'flex';
+        titleEl.style.alignItems = 'center';
+        titleEl.style.justifyContent = 'space-between';
+        titleEl.style.gap = '1rem';
+        titleEl.appendChild(toolbar);
+    } else {
+        container.parentNode.insertBefore(toolbar, container);
+    }
+
+    ensureFlashcardOverlay();
+    if (window.initFlashcard) window.initFlashcard(cards, unitId);
+    if (window.initQuiz) window.initQuiz(cards);
+    window.renderProgressBadge?.(unitId, cards.length);
+}
+
 /** Prev/Next unit footer for the six unit_* pages. */
 async function buildUnitPager(cur) {
     try {
@@ -620,17 +670,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         placeholder: 'Search phrasal verbs…',
         emptyMsg: 'This unit has no phrasal verbs yet.',
         sortKey: 'word',
-        renderItem: p => `
+        toCard: (p, unitId) => ({
+            id: p.id, word: p.word, def: p.def, example: p.example,
+            pron: p.pron || '', audio: p.audio || '', unitId, src: 'phrasal'
+        }),
+        renderItem: p => {
+            const audioHtml = window.buildCustomAudioPlayer
+                ? `<div class="vocab-audio-group">${window.buildCustomAudioPlayer(p.audio, p.word)}</div>`
+                : '';
+            return `
             <div class="phrasal-item reveal">
                 <div class="phrasal-left">
                     <div class="phrasal-word">${escapeHtml(p.word || '')}</div>
                     <div class="phrasal-pron">${escapeHtml(p.pron || '')}</div>
+                    ${audioHtml}
                 </div>
                 <div class="phrasal-right">
                     <p class="phrasal-def">${escapeHtml(p.def || '')}</p>
                     <p class="phrasal-example">${escapeHtml(p.example || '')}</p>
                 </div>
-            </div>`
+            </div>`;
+        }
     });
 
     setupSimpleList({
@@ -640,6 +700,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         placeholder: 'Search prepositional phrases…',
         emptyMsg: 'This unit has no prepositional phrases yet.',
         sortKey: 'word',
+        toCard: (p, unitId) => ({
+            id: p.id, word: p.word, def: p.def, example: p.example,
+            pron: '', audio: '', unitId, src: 'prep'
+        }),
         renderItem: p => `
             <div class="phrasal-item reveal">
                 <div class="phrasal-left">
@@ -703,6 +767,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         item => [item.def, item.example]
                     ]));
 
+                if (cfg.toCard) {
+                    const cards = items.map(it => cfg.toCard(it, unitId)).filter(c => c.word && c.def);
+                    setupStudyTools(container, unitId, cards);
+                }
+
             } catch (e) {
                 console.error(e);
                 showError(container, 'Could not load data. Please check your connection.', load);
@@ -726,6 +795,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const snap = await getDocs(query(collection(db, "word_formations"), where("unitId", "==", unitId)));
                 const wordforms = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
                 wordforms.sort((a, b) => (a.rootWord || '').localeCompare(b.rootWord || ''));
+
+                // Expose every derived form to the dictionary popup (B7).
+                // Strip bare POS suffixes ("action n" -> "action") so
+                // double-click lookups on the base word match.
+                registerLexicon(wordforms.flatMap(w =>
+                    (w.forms || []).map(f => ({
+                        word: String(f.title || '').replace(/\s+\b(v|n|adj|adv|prep|conj|pron|det)\b\.?\s*$/i, '').trim(),
+                        def: f.definitions
+                    }))));
 
                 const searchInput = injectSearchBar(container, 'wf-search-input', 'Search root words…');
                 applyUrlSearchParam(searchInput);
@@ -817,6 +895,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                         w => (w.forms || []).flatMap(f => [f.definitions, f.examples])
                     ]));
 
+                // Flashcards/quiz over every derived form (flattened sub-rows).
+                // Form titles are stored as "action n" — normalise to the
+                // site-wide "action (n)" convention so stripPos() works.
+                const cards = [];
+                wordforms.forEach(w => {
+                    (w.forms || []).forEach((f, i) => {
+                        if (!f.title || !f.definitions) return;
+                        const a0 = (f.audios || [])[0] || {};
+                        cards.push({
+                            id: `${w.id}#${i}`,
+                            word: String(f.title).replace(/\s+\b(v|n|adj|adv|prep|conj|pron|det)\b\.?\s*$/i, ' ($1)'),
+                            def: f.definitions,
+                            example: (f.examples || '').split('\n')[0] || '',
+                            pron: a0.pron || '',
+                            audio: a0.url || '',
+                            unitId,
+                            src: 'wordform'
+                        });
+                    });
+                });
+                setupStudyTools(container, unitId, cards);
+
             } catch (e) {
                 console.error(e);
                 showError(container, 'Could not load data. Please check your connection.', load);
@@ -841,6 +941,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const patterns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
                 patterns.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
 
+                registerLexicon(patterns);
+
                 const searchInput = injectSearchBar(container, 'pattern-search-input', 'Search word patterns…');
                 applyUrlSearchParam(searchInput);
 
@@ -853,7 +955,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         container.innerHTML = '<p class="empty-state">No results match your search.</p>';
                         return;
                     }
-                    container.innerHTML = list.map(p => `
+                    container.innerHTML = list.map(p => {
+                        const audioHtml = window.buildCustomAudioPlayer
+                            ? `<div class="vocab-audio-group">${window.buildCustomAudioPlayer(p.audio, p.word)}</div>`
+                            : '';
+                        return `
                         <div class="phrasal-item reveal">
                             <div class="phrasal-left pattern-left" style="flex-direction: column; align-items: flex-start;">
                                 <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: nowrap; white-space: nowrap;">
@@ -861,12 +967,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <span class="vocab-pos">${window.formatStandalonePos(p.pos)}</span>
                                 </div>
                                 <div style="font-size: 1.3rem; color: var(--text-primary); font-weight: normal; font-style: italic;">${escapeHtml(p.pattern || '').replace(/\n/g, '<br>')}</div>
+                                ${audioHtml}
                             </div>
                             <div class="phrasal-right">
                                 <p class="phrasal-def">${escapeHtml(p.def || '')}</p>
                                 <p class="phrasal-example">${escapeHtml(p.example || '')}</p>
                             </div>
-                        </div>`).join('');
+                        </div>`;
+                    }).join('');
                     requestAnimationFrame(() => {
                         window.initRevealAnimations
                             ? window.initRevealAnimations()
@@ -879,6 +987,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                         p => [p.word, p.pattern],
                         p => [p.def, p.example]
                     ]));
+
+                const cards = patterns.map(p => ({
+                    id: p.id,
+                    word: p.word,
+                    def: p.pattern ? `${p.pattern} — ${p.def || ''}` : (p.def || ''),
+                    example: p.example || '',
+                    pron: '',
+                    audio: p.audio || '',
+                    unitId,
+                    src: 'pattern'
+                })).filter(c => c.word && c.def);
+                setupStudyTools(container, unitId, cards);
 
             } catch (e) {
                 console.error(e);
@@ -902,6 +1022,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const snap = await getDocs(query(collection(db, "lexical_expansions"), where("unitId", "==", unitId)));
                 const lexicals = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+
+                // Expose every expansion word to the dictionary popup (B7)
+                registerLexicon(lexicals.flatMap(l => l.words || []));
 
                 const searchInput = injectSearchBar(container, 'lexical-search-input', 'Search lexical expansions…');
                 applyUrlSearchParam(searchInput);
@@ -1009,6 +1132,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Always render once on load (honours any ?q= URL parameter)
                     runSearch();
                 }
+
+                // Flashcards/quiz over every expansion word (flattened sub-rows)
+                const cards = [];
+                lexicals.forEach(lex => {
+                    (lex.words || []).forEach((w, i) => {
+                        if (!w.word || !w.def) return;
+                        cards.push({
+                            id: `${lex.id}#${i}`,
+                            word: w.word,
+                            def: w.def,
+                            example: w.example || '',
+                            pron: w.pron || '',
+                            audio: w.audio || '',
+                            unitId,
+                            src: 'lexical'
+                        });
+                    });
+                });
+                setupStudyTools(container, unitId, cards);
             } catch (e) {
                 console.error(e);
                 showError(container, 'Could not load data. Please check your connection.', load);

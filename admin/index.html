@@ -626,8 +626,9 @@
                     <div class="quick-actions-panel">
                         <h3><i class="fas fa-volume-up"></i> Audio URL maintenance</h3>
                         <p class="qa-hint">
-                            Bulk find &amp; replace across every audio field (vocabulary audio, word-formation audios,
-                            lexical word audio). "Find" is a regular expression — e.g.
+                            Bulk find &amp; replace across every audio field (vocabulary audio, phrasal-verb audio,
+                            word-pattern audio, word-formation audios, lexical word audio). "Find" is a regular
+                            expression — e.g.
                             <code>version=1\.2\.\d+</code> replaced with <code>version=1.2.91</code>.
                         </p>
                         <p class="qa-hint">
@@ -738,6 +739,14 @@
                     <div class="input-group flex-1">
                         <label>Pattern (e.g., be bored with + Noun/V_ing)</label>
                         <textarea id="pattern-pattern" rows="3" class="input-field" required></textarea>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Audio URL (Link to .mp3)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="url" id="pattern-audio" placeholder="https://.../audio.mp3" style="flex:1;">
+                        <button type="button" id="pattern-audio-test" class="btn-secondary btn-small" title="Test play this audio">&#9654; Test</button>
                     </div>
                 </div>
 
@@ -884,6 +893,14 @@
                     <div class="input-group flex-1">
                         <label>Pronunciation</label>
                         <input type="text" id="phrasal-pron" required placeholder="e.g. /ˌkæri ˈɑːn/">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Audio URL (Link to .mp3)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="url" id="phrasal-audio" placeholder="https://.../audio.mp3" style="flex:1;">
+                        <button type="button" id="phrasal-audio-test" class="btn-secondary btn-small" title="Test play this audio">&#9654; Test</button>
                     </div>
                 </div>
 

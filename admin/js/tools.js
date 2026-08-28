@@ -2,7 +2,7 @@ import { collection, getDocs, doc, writeBatch, serverTimestamp } from "https://w
 import { adminDb as db } from './admin-firebase.js';
 import { friendlyError, AUDIO_VERSION } from '../../assets/js/utils.js';
 import { hooks, confirmDialog, logAudit } from './common.js';
-import { vocabData, wordformData, lexicalData, fetchAll } from './data.js';
+import { vocabData, phrasalData, patternData, wordformData, lexicalData, fetchAll } from './data.js';
 
 /* =========================================================
    DATA TOOLS — Export / Import JSON
@@ -98,16 +98,19 @@ document.getElementById('import-btn')?.addEventListener('click', async () => {
 /* =========================================================
    AUDIO URL MAINTENANCE — bulk regex find & replace
    Scans every audio-bearing field:
-     vocabularies.audio · word_formations.forms[].audios[].url
+     vocabularies.audio · phrasal_verbs.audio · word_patterns.audio
+     word_formations.forms[].audios[].url
      lexical_expansions.words[].audio
    ========================================================= */
-const AUDIO_COLLECTIONS = ['vocabularies', 'word_formations', 'lexical_expansions'];
+const AUDIO_COLLECTIONS = ['vocabularies', 'phrasal_verbs', 'word_patterns', 'word_formations', 'lexical_expansions'];
 
 // Show the currently forced Longman audio version in the Settings panel
 document.getElementById('audio-version-display')?.replaceChildren(document.createTextNode(AUDIO_VERSION));
 
 const AUDIO_DATA_BY_COLL = () => ({
     vocabularies: vocabData,
+    phrasal_verbs: phrasalData,
+    word_patterns: patternData,
     word_formations: wordformData,
     lexical_expansions: lexicalData
 });
@@ -117,7 +120,7 @@ const AUDIO_DATA_BY_COLL = () => ({
 function mapAudioUrls(collName, data, replacer) {
     let urlsChanged = 0;
     let out;
-    if (collName === 'vocabularies' && data.audio) {
+    if ((collName === 'vocabularies' || collName === 'phrasal_verbs' || collName === 'word_patterns') && data.audio) {
         const nv = replacer(data.audio);
         if (nv !== data.audio) { out = { ...data, audio: nv }; urlsChanged++; }
     } else if (collName === 'word_formations' && Array.isArray(data.forms)) {
@@ -212,8 +215,8 @@ document.getElementById('audio-apply-btn')?.addEventListener('click', async () =
             const { out, urlsChanged } = mapAudioUrls(coll, d, replacer);
             if (!out) return;
             totalDocs++; totalUrls += urlsChanged;
-            const field = coll === 'vocabularies' ? 'audio' : coll === 'word_formations' ? 'forms' : 'words';
-            pending.push({ coll, id: d.id, field, value: out[field], label: coll === 'vocabularies' ? out.audio : `${out[field]?.length ?? 0} item(s)` });
+            const field = coll === 'word_formations' ? 'forms' : coll === 'lexical_expansions' ? 'words' : 'audio';
+            pending.push({ coll, id: d.id, field, value: out[field], label: field === 'audio' ? out.audio : `${out[field]?.length ?? 0} item(s)` });
         });
     });
 

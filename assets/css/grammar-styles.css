@@ -149,6 +149,42 @@
     color: var(--text-secondary);
     font-style: italic;
 }
+
+/* B5 — "Đánh dấu đã học" toggle on lesson pages */
+.lesson-learned-btn {
+    margin-top: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    color: var(--text-secondary);
+    border-radius: 20px;
+    padding: 0.45rem 1.2rem;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.lesson-learned-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+.lesson-learned-btn.learned {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: #fff;
+}
+.lesson-learned-btn.learned:hover {
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+    color: #fff;
+}
+
+/* B5 — check mark next to learned lessons on the overview tree */
+.lp-done {
+    margin-left: 0.5rem;
+    color: var(--accent-color);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
 .lesson-content {
     font-size: 1.05rem;
     line-height: 1.7;

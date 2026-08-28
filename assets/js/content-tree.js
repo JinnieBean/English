@@ -14,6 +14,9 @@
 import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
 import { escapeHtml } from './utils.js';
+import {
+    lessonLearned, setLessonLearned, recordActivity
+} from './progress-store.js';
 
 const SKELETON = `
     <div class="grammar-category" style="margin-bottom: 3rem;">
@@ -49,11 +52,12 @@ export async function initContentTree(cfg) {
         const load = async () => {
             overviewContainer.innerHTML = Array(3).fill(SKELETON).join('');
             try {
-                // Fetch the three levels in parallel instead of a waterfall
-                const [categories, lessons, units] = await Promise.all([
+                // Fetch the three levels (+ intro doc) in parallel instead of a waterfall
+                const [categories, lessons, units, introSnap] = await Promise.all([
                     fetchAll(cfg.categories),
                     fetchAll(cfg.lessons),
-                    fetchAll(cfg.units)
+                    fetchAll(cfg.units),
+                    getDoc(doc(db, cfg.intro, 'main')).catch(() => null)
                 ]);
 
                 if (!categories.length) {
@@ -61,21 +65,31 @@ export async function initContentTree(cfg) {
                     return;
                 }
 
-                overviewContainer.innerHTML = categories.map(cat => {
+                // B6 — "Introduction" entry pointing at ?id=intro (lesson page
+                // already knows how to render the intro doc)
+                const introHtml = (introSnap && introSnap.exists()) ? `
+                    <div class="${cfg.cssPrefix}-intro reveal">
+                        <h2 class="${cfg.cssPrefix}-intro-title">${escapeHtml(introSnap.data().title || 'Introduction')}</h2>
+                        <a href="${cfg.lessonPage}?id=intro" class="${cfg.cssPrefix}-read-more">Read the introduction &rarr;</a>
+                    </div>` : '';
+
+                overviewContainer.innerHTML = introHtml + categories.map(cat => {
                     const catLessons = lessons.filter(l => l.categoryId === cat.id);
 
                     let lesHtml;
                     if (catLessons.length > 0) {
                         lesHtml = catLessons.map(l => {
                             const uniHtml = units.filter(u => u.lessonId === l.id).map(unit => `
-                                <a href="${cfg.lessonPage}?id=${encodeURIComponent(unit.id)}&type=unit" class="${cfg.cssPrefix}-lesson-link unit-link">
+                                <a href="${cfg.lessonPage}?id=${encodeURIComponent(unit.id)}&type=unit" class="${cfg.cssPrefix}-lesson-link unit-link"
+                                    data-lp-key="${cfg.cssPrefix}:unit:${unit.id}">
                                     <span class="unit-bullet" aria-hidden="true">&bull;</span>
                                     <span class="lesson-title">${escapeHtml(unit.title)}</span>
                                 </a>`).join('');
 
                             return `
                             <div class="${cfg.cssPrefix}-lesson-group">
-                                <a href="${cfg.lessonPage}?id=${encodeURIComponent(l.id)}&type=lesson" class="${cfg.cssPrefix}-lesson-link lesson-heading">
+                                <a href="${cfg.lessonPage}?id=${encodeURIComponent(l.id)}&type=lesson" class="${cfg.cssPrefix}-lesson-link lesson-heading"
+                                    data-lp-key="${cfg.cssPrefix}:lesson:${l.id}">
                                     <span class="lesson-title">${escapeHtml(l.title)}</span>
                                 </a>
                                 <div class="${cfg.cssPrefix}-lesson-units">${uniHtml}</div>
@@ -91,6 +105,12 @@ export async function initContentTree(cfg) {
                             <div class="${cfg.cssPrefix}-category-lessons">${lesHtml}</div>
                         </div>`;
                 }).join('');
+
+                // B5 — put a check mark next to lessons already marked as learned
+                overviewContainer.querySelectorAll('[data-lp-key]').forEach(a => {
+                    if (!lessonLearned(a.dataset.lpKey)) return;
+                    a.insertAdjacentHTML('beforeend', '<span class="lp-done" title="Đã học">&#10003;</span>');
+                });
 
                 requestAnimationFrame(() => window.initRevealAnimations?.());
             } catch (e) {
@@ -160,6 +180,13 @@ export async function initContentTree(cfg) {
                     { label: cfg.label, href: cfg.overviewHref },
                     { label: title }
                 ]);
+
+                // B5 — stable progress key: prefix:type:id
+                const lpType = lessonId === 'intro' ? 'intro'
+                    : (urlParams.get('type') === 'unit' ? 'unit' : 'lesson');
+                const lpKey = `${cfg.cssPrefix}:${lpType}:${lessonId}`;
+                const learned = lessonLearned(lpKey);
+
                 lessonContainer.innerHTML = `
                     <nav class="back-nav">
                         <a href="${cfg.overviewHref}" class="back-link">&larr; Back to ${escapeHtml(cfg.label)}</a>
@@ -167,11 +194,25 @@ export async function initContentTree(cfg) {
                     <div class="lesson-header">
                         <h1 class="lesson-main-title">${escapeHtml(title)}</h1>
                         ${authorHtml}
+                        <button type="button" id="lesson-learned-btn" class="lesson-learned-btn${learned ? ' learned' : ''}"
+                            aria-pressed="${learned}">
+                            ${learned ? '&#10003; Đã học' : '&#9711; Đánh dấu đã học'}
+                        </button>
                     </div>
                     <div class="lesson-content">
                         ${content}
                     </div>
                 `;
+
+                document.getElementById('lesson-learned-btn')?.addEventListener('click', function () {
+                    const nowLearned = !lessonLearned(lpKey);
+                    setLessonLearned(lpKey, nowLearned);
+                    if (nowLearned) recordActivity(1);
+                    this.classList.toggle('learned', nowLearned);
+                    this.setAttribute('aria-pressed', String(nowLearned));
+                    this.innerHTML = nowLearned ? '&#10003; Đã học' : '&#9711; Đánh dấu đã học';
+                });
+
                 enhanceLessonPage();
             } catch (e) {
                 console.error(e);

@@ -5,7 +5,8 @@
  * {
  *   progress: { [unitId]: { known: [wordId...] } },
  *   bookmarks:{ [wordDocId]: {word,def,example,pron,unitId} },
- *   srs:      { [wordDocId]: { box, next:'YYYY-MM-DD', unitId } },
+ *   srs:      { [wordDocId]: { box, next:'YYYY-MM-DD', unitId, src? } },
+ *   lessonProgress: { ['grammar|pronunciation:lesson|unit|intro:id']: timestamp },
  *   activity: { 'YYYY-MM-DD': count }
  * }
  *
@@ -26,7 +27,7 @@ const LS_OWNER = 'tn-store-v1-owner'; // uid the local copy belongs to (null = a
 export const SRS_INTERVALS = [1, 3, 7, 14]; // days per box
 
 function blankState() {
-    return { progress: {}, bookmarks: {}, srs: {}, activity: {} };
+    return { progress: {}, bookmarks: {}, srs: {}, lessonProgress: {}, activity: {} };
 }
 
 let state = null;
@@ -131,6 +132,11 @@ async function pullAndMerge(uid) {
         merged.bookmarks = { ...(remote.bookmarks || {}) };
         Object.entries(state.bookmarks || {}).forEach(([id, v]) => { merged.bookmarks[id] = v; });
 
+        merged.lessonProgress = { ...(remote.lessonProgress || {}) };
+        Object.entries(state.lessonProgress || {}).forEach(([k, v]) => {
+            if (!merged.lessonProgress[k] || v > merged.lessonProgress[k]) merged.lessonProgress[k] = v;
+        });
+
         merged.activity = { ...(state.activity || {}) };
         Object.entries(remote.activity || {}).forEach(([d, c]) => {
             merged.activity[d] = Math.max(merged.activity[d] || 0, c || 0);
@@ -177,6 +183,18 @@ export function setBookmark(wordId, data) {
     scheduleSync();
 }
 
+/* ================= lesson progress (Grammar / Pronunciation) ================= */
+
+export function lessonProgressMap() { return state?.lessonProgress || {}; }
+export function lessonLearned(key) { return !!key && !!(state?.lessonProgress || {})[key]; }
+export function lessonLearnedCount() { return Object.keys(state?.lessonProgress || {}).length; }
+export function setLessonLearned(key, learned) {
+    if (!key || !state) return;
+    if (learned) state.lessonProgress[key] = Date.now();
+    else delete state.lessonProgress[key];
+    scheduleSync();
+}
+
 /* ================= activity & streak ================= */
 
 export function todayKey(d = new Date()) { return d.toISOString().slice(0, 10); }
@@ -220,8 +238,10 @@ export function srsCounts() {
     return { learning, due };
 }
 
-/** Grade a word after a flashcard/quiz answer and advance its SRS box. */
-export function srsGrade(wordId, unitId, wasKnown) {
+/** Grade a word after a flashcard/quiz answer and advance its SRS box.
+ *  `src` tags cards that do NOT come from the vocabularies collection
+ *  (phrasal/prep/wordform/pattern/lexical) so review forecasts can skip them. */
+export function srsGrade(wordId, unitId, wasKnown, src) {
     const e = state.srs[wordId] || { box: 0, next: '', unitId: unitId || null };
     const d = new Date();
     if (wasKnown) {
@@ -236,6 +256,7 @@ export function srsGrade(wordId, unitId, wasKnown) {
         e.next = d.toISOString().slice(0, 10);
     }
     e.unitId = unitId || e.unitId || null;
+    if (src) e.src = src;
     state.srs[wordId] = e;
     recordActivity(1);
     scheduleSync();

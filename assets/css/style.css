@@ -2103,6 +2103,57 @@ button.wf-toggle {
     .ml-unit-track { display: none; }
 }
 
+/* B8 — review forecast & weekly chart (wider bars + value labels) */
+.ml-day-wide { flex: 1 1 0; min-width: 44px; }
+.ml-day-count {
+    font-size: .68rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+/* B3 — Bookmarks page */
+.bm-group { margin-bottom: 2.5rem; }
+.bm-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line-color);
+    padding-bottom: .5rem;
+    margin-bottom: 1.25rem;
+}
+.bm-unit-title {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    color: var(--accent-color);
+    margin: 0;
+}
+.bm-count {
+    display: inline-block;
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--nav-hover-bg);
+    border-radius: 10px;
+    padding: .1rem .55rem;
+    vertical-align: middle;
+}
+.bm-unit-link {
+    font-size: .85rem;
+    color: var(--accent-color);
+    text-decoration: none;
+}
+.bm-unit-link:hover { text-decoration: underline; }
+.bm-item {
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: 12px;
+    padding: 1.1rem 3rem 1.1rem 1.4rem;
+    margin-bottom: .8rem;
+}
+
 /* =========================================
    SIDEBAR AUTH BOX — collapsed & mobile adaptation
    ========================================= */

@@ -530,7 +530,7 @@ case 'known': {
             _fcKnown.add(v.id);
             // Persist to progress-store (tn-store-v1 + cloud when signed in)
             if (cardUnit) markKnown(cardUnit, v.id, true);
-            srsGrade(v.id, cardUnit, true);
+            srsGrade(v.id, cardUnit, true, v.src);
             advanceOrFinish();
             break;
         }
@@ -541,7 +541,7 @@ case 'known': {
             pauseAllAudio();
             _fcKnown.delete(v2.id);
             if (cardUnit2) markKnown(cardUnit2, v2.id, false);
-            srsGrade(v2.id, cardUnit2, false);
+            srsGrade(v2.id, cardUnit2, false, v2.src);
             advanceOrFinish();
             break;
         }
@@ -668,12 +668,18 @@ let _quizAnswered = false;
 let _quizMode = 'choice';
 let _quizAudio = null;
 let _quizSourcePool = [];
+let _quizMenuPool = [];
 
 function initQuiz(vocabs) {
     if (!vocabs || vocabs.length < 4) return;
     const btn = document.getElementById('quiz-toggle-btn');
     if (!btn) return;
-    btn.addEventListener('click', () => openQuizMenu(vocabs));
+    _quizMenuPool = vocabs;
+    // Guard against double-binding when the section is reloaded via Retry
+    if (btn.dataset.qzBound !== '1') {
+        btn.dataset.qzBound = '1';
+        btn.addEventListener('click', () => openQuizMenu(_quizMenuPool));
+    }
 }
 
 function ensureQuizOverlay() {
@@ -924,7 +930,7 @@ function renderListeningQuestion(q, area) {
         </div>
         <div class="quiz-options">
             ${q.options.map((opt, i) => `
-                <button type="button" class="quiz-option" data-correct="${opt === stripPos(q.word) ? '1' : '0'}" data-index="${i}">
+                <button type="button" class="quiz-option" data-correct="${stripPos(opt) === stripPos(q.word) ? '1' : '0'}" data-index="${i}">
                     <span class="quiz-option-key">${i + 1}</span>
                     <span class="quiz-option-word">${escapeHtml(stripPos(opt))}</span>
                 </button>`).join('')}
@@ -998,7 +1004,7 @@ function updateIndexStats(vocabCount, unitCount, grammarCount) {
    GLOBAL SEARCH (site-wide instant search)
    ============================================== */
 let _gsPromise = null;
-const GS_CACHE_KEY = 'tn-search-cache-v1';
+const GS_CACHE_KEY = 'tn-search-cache-v2';
 const GS_TTL = 30 * 60 * 1000;
 
 function ensureSearchIndex() {
@@ -1022,12 +1028,13 @@ async function buildSearchIndex() {
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(x => x.status !== 'draft');
 
-            const [vocabs, phrasals, preps, patterns, gLessons, gUnits, pLessons, pUnits, units] =
+            const [vocabs, phrasals, preps, patterns, wordforms, lexicals, gLessons, gUnits, pLessons, pUnits, units, books] =
                 await Promise.all([
                     grab('vocabularies'), grab('phrasal_verbs'), grab('prep_phrases'),
-                    grab('word_patterns'), grab('grammar_lessons'), grab('grammar_units'),
+                    grab('word_patterns'), grab('word_formations'), grab('lexical_expansions'),
+                    grab('grammar_lessons'), grab('grammar_units'),
                     grab('pronunciation_lessons'), grab('pronunciation_units'),
-                    grab('units')
+                    grab('units'), grab('books')
                 ]);
             const unitTitle = {};
             units.forEach(u => { unitTitle[u.id] = u.title; });
@@ -1039,6 +1046,9 @@ async function buildSearchIndex() {
             phrasals.forEach(v => v.word && items.push({ t: 'Phrasal Verbs', label: v.word, sub: inUnit(v.unitId), url: `unit_phrasal.html?id=${v.unitId}` }));
             preps.forEach(v => v.word && items.push({ t: 'Prepositional Phrases', label: v.word, sub: inUnit(v.unitId), url: `unit_prep.html?id=${v.unitId}` }));
             patterns.forEach(v => v.word && items.push({ t: 'Word Patterns', label: v.word, sub: inUnit(v.unitId), url: `unit_pattern.html?id=${v.unitId}` }));
+            wordforms.forEach(w => w.rootWord && items.push({ t: 'Word Formation', label: w.rootWord, sub: inUnit(w.unitId), url: `unit_wordform.html?id=${w.unitId}` }));
+            lexicals.forEach(l => (l.words || []).forEach(w => w.word && items.push({ t: 'Lexical Expansion', label: w.word, sub: inUnit(l.unitId), url: `unit_lexical.html?id=${l.unitId}` })));
+            books.forEach(b => b.title && items.push({ t: 'Books', label: b.title, sub: b.subtitle || 'Book', url: `units.html?bookId=${b.id}` }));
             gLessons.forEach(l => l.title && items.push({ t: 'Grammar', label: l.title, sub: 'Lesson', url: `grammar_lesson.html?id=${l.id}&type=lesson` }));
             gUnits.forEach(u => u.title && items.push({ t: 'Grammar', label: u.title, sub: 'Unit', url: `grammar_lesson.html?id=${u.id}&type=unit` }));
             pLessons.forEach(l => l.title && items.push({ t: 'Pronunciation', label: l.title, sub: 'Lesson', url: `pronunciation_lesson.html?id=${l.id}&type=lesson` }));
@@ -1162,6 +1172,11 @@ function initDictPopup() {
     let pop = null;
     const dismiss = () => { pop?.remove(); pop = null; };
 
+    // Esc closes the popup from anywhere on the page
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && pop) dismiss();
+    });
+
     const baseForms = (w) => {
         const out = new Set([w]);
         if (w.endsWith('ies')) out.add(w.slice(0, -3) + 'y');
@@ -1227,7 +1242,8 @@ function initDictPopup() {
             };
             document.addEventListener('click', off, true);
         }, 10);
-        window.addEventListener('scroll', dismiss, { once: true, passive: true });
+        // NOTE: the popup is positioned in page coordinates, so it stays
+        // anchored to the selected word while scrolling (no dismiss on scroll).
     }
 }
 

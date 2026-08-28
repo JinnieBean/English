@@ -84,6 +84,9 @@
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> <span class="nav-link-text">Review</span>
                         <span class="review-badge" id="review-count-badge" hidden>0</span>
                         </a>
+                        <a href="bookmarks.html" class="nav-link nav-study" title="Bookmarked words">
+                        <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg></span> <span class="nav-link-text">Bookmarks</span>
+                        </a>
 
                 </div>
             </nav>
@@ -124,11 +127,22 @@
                 <div class="stat-card"><div class="stat-icon">&#8635;</div><div><h3>In SRS rotation</h3><p id="ml-learning">&ndash;</p></div></div>
                 <div class="stat-card"><div class="stat-icon">&#128293;</div><div><h3>Day streak</h3><p id="ml-streak">&ndash;</p></div></div>
                 <div class="stat-card"><div class="stat-icon">&#128218;</div><div><h3>Units studied</h3><p id="ml-units">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon">&#128214;</div><div><h3>Lessons learned</h3><p id="ml-lessons">&ndash;</p></div></div>
             </div>
+
+            <section style="margin-top:2rem;">
+                <h3 style="margin-bottom:.75rem;">Review forecast &mdash; next 7 days</h3>
+                <div id="ml-forecast" class="ml-activity"></div>
+            </section>
 
             <section style="margin-top:2rem;">
                 <h3 style="margin-bottom:.75rem;">Last 14 days activity</h3>
                 <div id="ml-activity" class="ml-activity"></div>
+            </section>
+
+            <section style="margin-top:2rem;">
+                <h3 style="margin-bottom:.75rem;">Reviews per week &mdash; last 8 weeks</h3>
+                <div id="ml-weekly" class="ml-activity"></div>
             </section>
 
             <section style="margin-top:2rem;">

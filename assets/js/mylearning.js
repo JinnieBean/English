@@ -4,7 +4,8 @@
  */
 import {
     initStore, onStoreAuthChanged, getUser, totalKnown, srsCounts, getStreak,
-    allProgress, getActivityMap, todayKey, isAuthResolved
+    allProgress, getActivityMap, todayKey, isAuthResolved,
+    lessonLearnedCount, srsDueList
 } from './progress-store.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
@@ -19,6 +20,8 @@ function renderStats() {
     $('ml-learning').textContent = String(c.learning);
     $('ml-streak').textContent = String(getStreak());
     $('ml-units').textContent = String(Object.keys(allProgress()).length);
+    const mlLessons = $('ml-lessons');
+    if (mlLessons) mlLessons.textContent = String(lessonLearnedCount());
 }
 
 function renderSyncStatus() {
@@ -53,6 +56,68 @@ function renderActivity() {
         <div class="ml-day" title="${d.label}: ${d.n} review${d.n === 1 ? '' : 's'}">
             <div class="ml-bar" style="height:${Math.round((d.n / max) * 100)}%"></div>
             <span>${d.label.split(' ')[1] || d.label}</span>
+        </div>`).join('');
+}
+
+/** B8 — how many words come due on each of the next 7 days (srs.next).
+ *  Cards tagged with src (phrasal/pattern/…) are excluded: they have no
+ *  document in `vocabularies` and therefore never appear in Review. */
+function renderForecast() {
+    const wrap = $('ml-forecast');
+    if (!wrap) return;
+    const entries = srsDueList('9999-12-30').filter(e => e.next !== '9999-12-31' && !e.src);
+    const today = todayKey();
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        days.push({
+            k: todayKey(d),
+            n: 0,
+            label: i === 0 ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' })
+        });
+    }
+    entries.forEach(e => {
+        // overdue words fold into today's bucket
+        const k = (e.next || '') <= today ? today : e.next;
+        const day = days.find(d => d.k === k);
+        if (day) day.n++;
+    });
+    const max = Math.max(1, ...days.map(d => d.n));
+    wrap.innerHTML = days.map(d => `
+        <div class="ml-day ml-day-wide" title="${d.k}: ${d.n} word${d.n === 1 ? '' : 's'} due">
+            <div class="ml-bar" style="height:${Math.round((d.n / max) * 100)}%"></div>
+            <span>${d.label}</span>
+            <strong class="ml-day-count">${d.n}</strong>
+        </div>`).join('');
+}
+
+/** B8 — reviews per week, aggregated from the activity map (last 8 weeks). */
+function renderWeekly() {
+    const wrap = $('ml-weekly');
+    if (!wrap) return;
+    const map = getActivityMap();
+    const weeks = [];
+    for (let w = 7; w >= 0; w--) {
+        let sum = 0;
+        for (let i = 0; i < 7; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() - w * 7 - i);
+            sum += map[todayKey(d)] || 0;
+        }
+        const start = new Date();
+        start.setDate(start.getDate() - w * 7 - 6);
+        weeks.push({
+            n: sum,
+            label: start.toLocaleDateString(undefined, { day: 'numeric', month: 'numeric' })
+        });
+    }
+    const max = Math.max(1, ...weeks.map(x => x.n));
+    wrap.innerHTML = weeks.map(x => `
+        <div class="ml-day ml-day-wide" title="Week of ${x.label}: ${x.n} review${x.n === 1 ? '' : 's'}">
+            <div class="ml-bar" style="height:${Math.round((x.n / max) * 100)}%"></div>
+            <span>${x.label}</span>
+            <strong class="ml-day-count">${x.n}</strong>
         </div>`).join('');
 }
 
@@ -92,10 +157,11 @@ async function renderUnitBars() {
 document.addEventListener('DOMContentLoaded', () => {
     initStore();
     renderStats(); renderActivity(); renderSyncStatus();
-    renderUnitBars();
+    renderUnitBars(); renderForecast(); renderWeekly();
 
     // refresh once auth merge settles
     onStoreAuthChanged(() => {
         renderStats(); renderSyncStatus(); renderUnitBars();
+        renderForecast(); renderWeekly();
     });
 });
