@@ -235,6 +235,7 @@ async function loadData() {
     renderPattern();
     renderLexical();
     updateDashboardStats();
+    renderWordsPerBook();
 }
 
 /** Reload only what a given collection affects. */
@@ -375,6 +376,14 @@ hooks.updateStats = updateDashboardStats;
    ========================================================= */
 const dmBtn = document.getElementById('admin-dark-mode-btn');
 if (dmBtn) {
+    const dmIcon = document.getElementById('admin-dm-icon');
+    const dmLabel = dmBtn.querySelector('.nav-text');
+    const applyDarkIcon = (dark) => {
+        if (dmIcon) dmIcon.className = dark ? 'fas fa-sun' : 'fas fa-moon';
+        if (dmLabel) dmLabel.textContent = dark ? 'Light Mode' : 'Dark Mode';
+        dmBtn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+    };
+    applyDarkIcon(document.documentElement.getAttribute('data-theme') === 'dark');
     dmBtn.addEventListener('click', () => {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         if (isDark) {
@@ -384,5 +393,6 @@ if (dmBtn) {
             document.documentElement.setAttribute('data-theme', 'dark');
             localStorage.setItem('admin-theme-dark', 'true');
         }
+        applyDarkIcon(!isDark);
     });
 }

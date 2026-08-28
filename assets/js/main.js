@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 booksListContainer.innerHTML = books.map((book, i) => `
                     <div class="book-container reveal">
                         <div class="book-cover img-loading">
-                            <img src="${escapeHtml(book.image || 'assets/images/book_cover.png')}"
+                            <img src="${escapeHtml(book.image || 'assets/images/book_cover.webp')}"
                                 alt="Cover of ${escapeHtml(book.title)}"
                                 ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'}
                                 decoding="async">
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         img.addEventListener('error', () => {
                             if (!img.dataset.fallback) {
                                 img.dataset.fallback = '1';
-                                img.src = 'assets/images/book_cover.png';
+                                img.src = 'assets/images/book_cover.webp';
                             } else {
                                 reveal();
                             }
@@ -891,22 +891,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         let wordsHtml = '';
                         if (lex.words && lex.words.length > 0) {
-                            wordsHtml = lex.words.map(w => `
+                            wordsHtml = lex.words.map(w => {
+                                const audioHtml = window.buildCustomAudioPlayer
+                                    ? window.buildCustomAudioPlayer(w.audio, w.word)
+                                    : (w.audio
+                                        ? `<audio controls preload="none" class="vocab-audio-player"><source src="${escapeHtml(w.audio)}" type="audio/mpeg"></audio>`
+                                        : '');
+                                return `
                                 <div class="vocab-item reveal">
                                     <div class="vocab-left">
                                         <div class="vocab-word-group">
                                             <span class="vocab-word">${window.formatWordWithPos(escapeHtml(w.word))}</span>
                                             <span class="vocab-pos">${window.formatStandalonePos(w.pos)}</span>
                                         </div>
-                                        <div style="margin-top: 0.5rem;">
+                                        <div class="vocab-audio-group" style="margin-top: 0.5rem;">
                                             <span class="vocab-pronunciation" style="white-space: pre-wrap; line-height: 1.6; font-style: italic; font-weight: normal;">${escapeHtml(w.pron || '')}</span>
+                                            ${audioHtml}
                                         </div>
                                     </div>
                                     <div class="vocab-right">
                                         <p class="vocab-def">${escapeHtml(w.def || '')}</p>
                                         <p class="vocab-example">${escapeHtml(w.example || '')}</p>
                                     </div>
-                                </div>`).join('');
+                                </div>`;
+                            }).join('');
                         }
 
                         return `

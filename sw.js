@@ -7,7 +7,7 @@
  *  - Other static assets (images/fonts/CDN): stale-while-revalidate
  *  - Never intercept /admin/** (keep the CMS always fresh) or non-GET
  */
-const CACHE = 'tn-cache-v6';
+const CACHE = 'tn-cache-v7';
 const OFFLINE_URL = 'offline.html';
 
 const PRECACHE = [
@@ -41,6 +41,8 @@ const PRECACHE = [
     'assets/js/firebase-config.js',
     'assets/js/progress-store.js',
     'assets/js/content-tree.js',
+    'assets/js/grammar.js',
+    'assets/js/pronunciation.js',
     'assets/js/review.js',
     'assets/js/mylearning.js',
     'assets/images/logo.png'

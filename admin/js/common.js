@@ -237,7 +237,7 @@ export async function performDelete(collName, id, label, extraWarning = '') {
 /** Resolve a site-root-relative asset path for use inside /admin/.
  *  Remote URLs and data/blob URIs pass through untouched. */
 export function assetUrl(path) {
-    const p = path || 'assets/images/book_cover.png';
+    const p = path || 'assets/images/book_cover.webp';
     if (/^(https?:|data:|blob:)/i.test(p)) return p;
     return '../' + String(p).replace(/^\//, '');
 }
@@ -263,7 +263,7 @@ export function publicUrlFor(coll, item) {
     const id = encodeURIComponent(item.id || '');
     switch (coll) {
         case 'books': return 'book.html';
-        case 'units': return `units.html?bookId=${id}`;
+        case 'units': return item.bookId ? `units.html?bookId=${encodeURIComponent(item.bookId)}` : null;
         case 'vocabularies': return u && `unit_detail.html?id=${u}`;
         case 'phrasal_verbs': return u && `unit_phrasal.html?id=${u}`;
         case 'prep_phrases': return u && `unit_prep.html?id=${u}`;

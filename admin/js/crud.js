@@ -95,7 +95,7 @@ window.editBook = (id) => {
         document.getElementById('book-title').value = b.title || '';
         document.getElementById('book-subtitle').value = b.subtitle || '';
         document.getElementById('book-desc').value = b.desc || '';
-        document.getElementById('book-image').value = b.image || 'assets/images/book_cover.png';
+        document.getElementById('book-image').value = b.image || 'assets/images/book_cover.webp';
         document.getElementById('book-order').value = b.order || 1;
         document.getElementById('book-status').value = b.status || 'published';
         updateBookPreview();
@@ -1021,7 +1021,6 @@ window.addLexicalWordRow = function (word = '', pos = '', pron = '', audio = '',
     div.dataset.rowId = rowId;
     div.innerHTML = `
         <button type="button" class="btn-secondary btn-danger btn-small lx-remove-btn" onclick="this.parentElement.remove()">Remove</button>
-        <input type="hidden" class="lx-audio" value="${escapeHtml(audio)}">
         <div class="form-row" style="margin-bottom: 0.5rem; padding-right: 4rem;">
             <div class="input-group flex-1">
                 <label>Word</label>
@@ -1035,6 +1034,10 @@ window.addLexicalWordRow = function (word = '', pos = '', pron = '', audio = '',
         <div class="input-group" style="margin-bottom: 0.5rem;">
             <label>Pronunciation / Notes</label>
             <textarea class="lx-pron" rows="2" placeholder="Pronunciation / Notes">${escapeHtml(pron)}</textarea>
+        </div>
+        <div class="input-group" style="margin-bottom: 0.5rem;">
+            <label>Audio URL (Link to .mp3)</label>
+            <input type="url" class="input-field lx-audio" placeholder="https://.../audio.mp3" value="${escapeHtml(audio)}">
         </div>
         <div class="input-group" style="margin-bottom: 0.5rem;">
             <label>Definition</label>
