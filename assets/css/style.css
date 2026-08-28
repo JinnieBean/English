@@ -412,6 +412,7 @@ body {
     padding: 0 0.5rem 2rem;
     overflow: hidden;
     min-height: 48px;
+    position: relative;
 }
 
 .sidebar-brand-container {
@@ -427,19 +428,15 @@ body {
 
 .sidebar-brand-icon {
     font-size: 1.8rem;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 }
 
-.sidebar.collapsed .sidebar-brand-icon {
-    display: flex;
-}
-
 .sidebar-brand-logo {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     object-fit: contain;
     border-radius: 6px;
 }
@@ -447,11 +444,12 @@ body {
 /* FIX #4: Sidebar brand text color — use teal instead of blue */
 .sidebar-brand-text {
     font-family: var(--font-body);
-    font-size: 1.4rem;
+    font-size: 1.15rem;
     color: var(--text-primary);
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
     transition: opacity 0.25s ease, max-width 0.3s ease;
     max-width: 200px;
     opacity: 1;
@@ -470,6 +468,7 @@ body {
     color: var(--text-secondary);
     background-color: var(--nav-hover-bg);
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .sidebar-toggle:hover {
@@ -487,16 +486,18 @@ html.sidebar-will-collapse .sidebar .sidebar-brand-text {
     opacity: 0;
     pointer-events: none;
 }
-html.sidebar-will-collapse .sidebar .sidebar-brand-icon {
-    display: flex;
+html.sidebar-will-collapse .sidebar .nav-link-text {
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
 }
-html.sidebar-will-collapse .sidebar .nav-link-text,
 html.sidebar-will-collapse .sidebar .nav-section-title {
-    display: none;
-}
-html.sidebar-will-collapse .sidebar .nav-link {
-    justify-content: center;
-    padding: 0.75rem;
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+    overflow: hidden;
 }
 html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     display: none;
@@ -506,12 +507,7 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     width: 80px;
     flex: 0 0 80px;
 }
-.sidebar.collapsed .sidebar-header {
-    flex-direction: row;
-    justify-content: center;
-    gap: 0;
-    padding: 0 0 2rem;
-}
+/* Icons stay pinned in place; only the labels collapse next to them */
 .sidebar.collapsed .sidebar-brand-text {
     max-width: 0;
     opacity: 0;
@@ -520,24 +516,53 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
 .sidebar.collapsed .sidebar-toggle {
     display: none;
 }
-.sidebar.collapsed .sidebar-brand-container {
-    flex: none;
-    width: 100%;
+/* Collapsed rail: logo and expand icon are stacked in the same spot,
+   hovering the logo cross-fades to the expand icon in place (no position shift) */
+.logo-wrapper {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+.logo-wrapper .sidebar-brand-icon,
+.logo-wrapper .sidebar-expand-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
     justify-content: center;
-    gap: 0;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.logo-wrapper .sidebar-expand-icon {
+    opacity: 0;
+    visibility: hidden;
+    color: var(--text-secondary);
+}
+.sidebar.collapsed .sidebar-brand-container:hover .sidebar-brand-icon {
+    opacity: 0;
+}
+.sidebar.collapsed .sidebar-brand-container:hover .sidebar-expand-icon {
+    opacity: 1;
+    visibility: visible;
+}
+/* Fade the collapse button in when the rail expands (it comes back from display:none) */
+@starting-style {
+    .sidebar:not(.collapsed) .sidebar-toggle {
+        opacity: 0;
+    }
 }
 .sidebar.collapsed .nav-section-title {
-    display: none;
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+    overflow: hidden;
 }
 .sidebar.collapsed .nav-link-text {
-    display: none;
-}
-.sidebar.collapsed .nav-link {
-    justify-content: center;
-    padding: 0.75rem;
-}
-.sidebar.collapsed .nav-link .icon {
-    margin: 0;
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* Dark Mode Toggle Button (#7) */
@@ -566,16 +591,26 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     color: var(--text-primary);
 }
 
+.dm-label {
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 120px;
+    opacity: 1;
+    transition: opacity 0.2s ease, max-width 0.2s ease;
+}
+
 .sidebar.collapsed .dark-mode-toggle {
     padding: 0.5rem;
     border-radius: 50%;
     width: 36px;
     height: 36px;
     justify-content: center;
+    gap: 0;
 }
 
 .sidebar.collapsed .dark-mode-toggle .dm-label {
-    display: none;
+    max-width: 0;
+    opacity: 0;
 }
 
 /* Focus states (#21) */
@@ -605,21 +640,23 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     text-transform: uppercase;
     font-weight: 700;
     letter-spacing: 1px;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
     margin-bottom: 0.5rem;
+    max-height: 3rem;
+    overflow: hidden;
+    transition: opacity 0.25s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease;
 }
 
 .nav-link {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem;
     text-decoration: none;
     color: var(--nav-text);
     font-size: var(--text-sm);
     border-radius: 6px;
     transition: all 0.2s ease;
-    border-left: 3px solid transparent;
 }
 
 .nav-link:hover {
@@ -632,7 +669,7 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     background-color: var(--nav-active-bg);
     color: var(--nav-active-color);
     font-weight: 600;
-    border-left-color: var(--nav-active-border);
+    box-shadow: inset 3px 0 0 0 var(--nav-active-border);
 }
 
 .nav-link .icon {
@@ -643,6 +680,14 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+}
+
+.nav-link-text {
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 200px;
+    opacity: 1;
+    transition: opacity 0.25s ease, max-width 0.3s ease;
 }
 
 /* =========================================
@@ -1075,6 +1120,7 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
         border-radius: 0;
         background-color: transparent;
         transform: none;
+        box-shadow: none;
     }
     .nav-link .icon { width: 22px; height: 22px; }
     .nav-link .icon svg { width: 22px; height: 22px; }
@@ -1087,6 +1133,7 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
         width: auto;
         max-width: none;
         white-space: nowrap;
+        pointer-events: auto;
     }
     .dm-label,
     .sidebar.collapsed .dm-label,
@@ -1095,6 +1142,7 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
         display: block;
         opacity: 1;
         width: auto;
+        max-width: none;
         margin-top: 0.2rem;
     }
     .dark-mode-toggle,
@@ -1767,8 +1815,18 @@ button.wf-toggle {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 180px;
+    opacity: 1;
+    transition: opacity .2s ease, max-width .25s ease;
 }
 .tn-auth-name.tn-muted { font-style: italic; }
+.tn-full-label {
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 140px;
+    opacity: 1;
+    transition: opacity .2s ease, max-width .25s ease;
+}
 .tn-auth-actions .btn-retry { width: 100%; font-size: .75rem; padding: .4rem .8rem; }
 
 .nav-link.nav-study { position: relative; }
@@ -2046,20 +2104,23 @@ button.wf-toggle {
 }
 .tn-auth-box .tn-busy { opacity: .55; pointer-events: none; }
 
-/* Collapsed rail (56px) */
+/* Collapsed rail (80px) — avatar stays put, labels fade away */
 .sidebar.collapsed .tn-auth-box {
     padding: .55rem .25rem;
     gap: .5rem;
-    align-items: center;
 }
-.sidebar.collapsed .tn-auth-status { justify-content: center; }
 .sidebar.collapsed .tn-auth-name,
-.sidebar.collapsed .tn-full-label,
+.sidebar.collapsed .tn-full-label {
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
+}
 .sidebar.collapsed .review-badge { display: none; }
 .sidebar.collapsed .tn-auth-actions .btn-retry {
     width: auto;
     padding: .42rem .55rem;
     font-size: .78rem;
+    gap: 0;
 }
 
 /* Mobile bottom-bar mode */
