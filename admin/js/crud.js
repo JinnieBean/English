@@ -327,7 +327,6 @@ function wireAudioTest(btnId, inputId) {
 }
 wireAudioTest('vocab-audio-test', 'vocab-audio');
 wireAudioTest('phrasal-audio-test', 'phrasal-audio');
-wireAudioTest('pattern-audio-test', 'pattern-audio');
 
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
 document.getElementById('search-vocab').addEventListener('input', () => { resetPage('vocab'); renderVocab(); });
@@ -918,7 +917,6 @@ onSubmit(patternForm, async () => {
         word: document.getElementById('pattern-word').value.trim(),
         pos: document.getElementById('pattern-pos').value.trim(),
         pattern: document.getElementById('pattern-pattern').value.trim(),
-        audio: document.getElementById('pattern-audio').value.trim(),
         def: document.getElementById('pattern-def').value.trim(),
         example: document.getElementById('pattern-example').value.trim(),
         status: document.getElementById('pattern-status').value
@@ -990,7 +988,6 @@ window.editPattern = (id) => {
         document.getElementById('pattern-word').value = p.word || '';
         document.getElementById('pattern-pos').value = p.pos || '';
         document.getElementById('pattern-pattern').value = p.pattern || '';
-        document.getElementById('pattern-audio').value = p.audio || '';
         document.getElementById('pattern-def').value = p.def || '';
         document.getElementById('pattern-example').value = p.example || '';
         document.getElementById('pattern-status').value = p.status || 'published';

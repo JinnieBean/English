@@ -956,9 +956,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return;
                     }
                     container.innerHTML = list.map(p => {
-                        const audioHtml = window.buildCustomAudioPlayer
-                            ? `<div class="vocab-audio-group">${window.buildCustomAudioPlayer(p.audio, p.word)}</div>`
-                            : '';
+
                         return `
                         <div class="phrasal-item reveal">
                             <div class="phrasal-left pattern-left" style="flex-direction: column; align-items: flex-start;">
@@ -967,7 +965,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <span class="vocab-pos">${window.formatStandalonePos(p.pos)}</span>
                                 </div>
                                 <div style="font-size: 1.3rem; color: var(--text-primary); font-weight: normal; font-style: italic;">${escapeHtml(p.pattern || '').replace(/\n/g, '<br>')}</div>
-                                ${audioHtml}
                             </div>
                             <div class="phrasal-right">
                                 <p class="phrasal-def">${escapeHtml(p.def || '')}</p>
@@ -994,7 +991,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     def: p.pattern ? `${p.pattern} — ${p.def || ''}` : (p.def || ''),
                     example: p.example || '',
                     pron: '',
-                    audio: p.audio || '',
+                    audio: '',
                     unitId,
                     src: 'pattern'
                 })).filter(c => c.word && c.def);
