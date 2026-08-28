@@ -430,7 +430,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return `
                         <div class="unit-item reveal" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
                             <span class="unit-name">${escapeHtml(unit.title)}</span>
-                            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                            <div class="unit-sections">
                                 ${sectionsHtml}
                             </div>
                         </div>`;
