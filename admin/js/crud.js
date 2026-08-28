@@ -1,10 +1,10 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
+import { collection, addDoc, updateDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { adminDb as db } from './admin-firebase.js';
 import { escapeHtml, friendlyError, applyAudioVersion } from '../../assets/js/utils.js';
 import { hooks, openModal, onSubmit, stampCreate, stampUpdate, isDuplicate, dupToast, performDelete, assetUrl, publicUrlFor, enableDragReorder, confirmDialog, logAudit } from './common.js';
 import {
     booksData, unitsData, vocabData, phrasalData, prepData, wordformData, patternData, lexicalData,
-    applyPagination, resetPage, populateUnitSelects,
+    applyPagination, resetPage,
     rememberUnitSelection, applySavedUnitSelect, sessionState
 } from './data.js';
 

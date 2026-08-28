@@ -6,7 +6,7 @@
  */
 import { escapeHtml, formatTime, applyAudioVersion } from './utils.js';
 import {
-    initStore, getKnownSet, markKnown, allBookmarks, getBookmark, setBookmark,
+    initStore, getKnownSet, markKnown,
     srsGrade, srsDueList, getUser, signInWithGoogle, signOutUser,
     onStoreAuthChanged, onAuthError, recordActivity, isAuthResolved
 } from './progress-store.js';

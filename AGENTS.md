@@ -18,7 +18,7 @@ Static multi-page English study site (vanilla HTML/CSS/ES modules) backed by Fir
 
 ## Gotchas
 
-- The six `unit_*.html` pages (detail, phrasal, prep, wordform, pattern, lexical) are near-identical copies that only differ in title/meta/breadcrumb `data-section`/active subnav link. Edit all six when changing shared markup.
+- The six `unit_*.html` pages (detail, phrasal, prep, wordform, pattern, lexical) are near-identical copies that only differ in title/meta/breadcrumb `data-section`. The subnav tab bar is rendered by `renderUnitSubnav()` in main.js into `<div id="unit-subnav">` (styles: `.unit-subnav`/`.subnav-link` in courses.css); wf/lexical expanders use a delegated `[data-wf-toggle]` click listener (no inline onclick). Edit all six when changing shared markup.
 - Sidebar/theme state is persisted in `localStorage` (`sidebar-collapsed`, `theme-dark`, `admin-sidebar-collapsed`, `admin-theme-dark`); pages apply an inline `<script>` in `<head>` to avoid flash-of-uncollapsed-sidebar — preserve it when editing page heads.
 - All dynamic data rendered into `innerHTML` must go through `escapeHtml()` (exception: TinyMCE lesson HTML, which passes through `sanitizeRichText()` on save in admin).
 - Unit-scoped public queries use `where('unitId','==',id)` (single-field equality needs no composite index); sort client-side afterwards. Index-page counters use `getCountFromServer`.

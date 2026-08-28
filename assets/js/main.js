@@ -1,7 +1,7 @@
 import { collection, getDocs, getDoc, doc, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
 import { escapeHtml, normalizeSearch } from './utils.js';
-import { allBookmarks, getBookmark, setBookmark, initStore } from './progress-store.js';
+import { allBookmarks, getBookmark, setBookmark } from './progress-store.js';
 
 /* ---------- Shared page helpers ---------- */
 
@@ -84,6 +84,38 @@ async function buildUnitPager(cur) {
     }
 }
 
+/** Tab bar shared by the six unit_* pages; `active` is the current page file. */
+function renderUnitSubnav(active) {
+    const nav = document.getElementById('unit-subnav');
+    if (!nav) return;
+    const unitId = new URLSearchParams(window.location.search).get('id');
+    const tabs = [
+        ['unit_detail.html', 'Vocabulary'],
+        ['unit_phrasal.html', 'Phrasal Verbs'],
+        ['unit_prep.html', 'Prepositional Phrases'],
+        ['unit_wordform.html', 'Word Formation'],
+        ['unit_pattern.html', 'Word Patterns'],
+        ['unit_lexical.html', 'Lexical Expansion']
+    ];
+    nav.innerHTML = tabs.map(([target, label]) => {
+        const href = unitId ? `${target}?id=${encodeURIComponent(unitId)}` : target;
+        const isActive = target === active;
+        return `<a href="${href}" class="subnav-link${isActive ? ' active' : ''}"${isActive ? ' aria-current="page"' : ''}>${label}</a>`;
+    }).join('');
+}
+
+/* Accessible expander for word-formation/lexical blocks. Delegated so
+   re-renders (search, pagination…) never need re-binding. */
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-wf-toggle]');
+    if (!btn) return;
+    const forms = btn.nextElementSibling;
+    if (!forms) return;
+    const collapsed = forms.classList.toggle('collapsed');
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    btn.innerHTML = collapsed ? '&#9654;' : '&#9660;';
+});
+
 let _urlSearchTimer;
 function syncUrlSearchParam(value) {
     clearTimeout(_urlSearchTimer);
@@ -164,11 +196,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         quoteContainer.innerHTML = `"${escapeHtml(randomSlogan.text)}"\n                          <cite>— ${escapeHtml(randomSlogan.author)}</cite>`;
     }
 
+    /* Shared tab bar on the six unit_* pages (rendered from JS) */
+    renderUnitSubnav(location.pathname.split('/').pop() || 'unit_detail.html');
+
     /* Render dynamic Unit Detail Header */
     const headerContainer = document.getElementById('unit-detail-header-container');
     if (headerContainer) {
         const unitId = new URLSearchParams(window.location.search).get('id');
         const titleEl = document.getElementById('unit-detail-title');
+        if (!unitId && titleEl) {
+            titleEl.innerText = 'Unit not found';
+        }
         if (unitId && titleEl) {
             try {
                 const unitDoc = await getDoc(doc(db, "units", unitId));
@@ -757,8 +795,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <div class="wf-root">${escapeHtml(w.rootWord || '')}</div>
                                     <div class="wf-overview-list">${overviewsHtml}</div>
                                 </div>
-                                <button type="button" class="wf-toggle" aria-expanded="false"
-                                    aria-label="Toggle word formation details" onclick="window.toggleWf(this)">&#9654;</button>
+                                <button type="button" class="wf-toggle" data-wf-toggle aria-expanded="false"
+                                    aria-label="Toggle word formation details">&#9654;</button>
                                 <div class="wf-forms collapsed">${formsHtml}</div>
                             </div>`;
                     }).join('');
@@ -920,8 +958,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return `
                             <div class="wf-item reveal" style="margin-bottom: 3rem; width: 100%;">
                                 ${topSectionHtml}
-                                <button type="button" class="wf-toggle" aria-expanded="false"
-                                    aria-label="Toggle lexical expansion details" onclick="window.toggleWf(this)">&#9654;</button>
+                                <button type="button" class="wf-toggle" data-wf-toggle aria-expanded="false"
+                                    aria-label="Toggle lexical expansion details">&#9654;</button>
                                 <div class="wf-forms collapsed">
                                     <div style="display: flex; flex-direction: column; gap: 3rem; width: 100%;">
                                         ${wordsHtml}
@@ -979,12 +1017,3 @@ document.addEventListener('DOMContentLoaded', async () => {
         load();
     }
 });
-
-/* Accessible word-formation expander: pass the button itself. */
-window.toggleWf = function (btn) {
-    const forms = btn.nextElementSibling;
-    if (!forms) return;
-    const collapsed = forms.classList.toggle('collapsed');
-    btn.setAttribute('aria-expanded', String(!collapsed));
-    btn.innerHTML = collapsed ? '&#9654;' : '&#9660;';
-};

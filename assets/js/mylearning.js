@@ -16,10 +16,7 @@ function renderStats() {
     $('ml-known').textContent = String(totalKnown());
     const c = srsCounts();
     // "In SRS rotation" = words still being scheduled (not graduated)
-    let inRotation = 0;
-    Object.values(allProgress()).forEach(() => {});
-    inRotation = c.learning;
-    $('ml-learning').textContent = String(inRotation);
+    $('ml-learning').textContent = String(c.learning);
     $('ml-streak').textContent = String(getStreak());
     $('ml-units').textContent = String(Object.keys(allProgress()).length);
 }

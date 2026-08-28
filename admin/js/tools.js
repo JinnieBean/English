@@ -1,6 +1,6 @@
 import { collection, getDocs, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
-import { friendlyError, applyAudioVersion, AUDIO_VERSION } from '../../assets/js/utils.js';
+import { adminDb as db } from './admin-firebase.js';
+import { friendlyError, AUDIO_VERSION } from '../../assets/js/utils.js';
 import { hooks, confirmDialog, logAudit } from './common.js';
 import { vocabData, wordformData, lexicalData, fetchAll } from './data.js';
 

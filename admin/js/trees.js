@@ -1,5 +1,5 @@
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
+import { collection, doc, addDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { adminDb as db } from './admin-firebase.js';
 import { escapeHtml, sanitizeRichText, friendlyError } from '../../assets/js/utils.js';
 import { logAudit as logAuditBase } from './common.js';
 const logAuditSafe = (...a) => logAuditBase(...a).catch?.() ?? logAuditBase;
@@ -37,6 +37,11 @@ function makeTreeManager(cfg) {
             hooks.updateStats?.();
         } catch (e) {
             console.error(`Error loading ${cfg.label} data:`, e);
+            [catList, lessonList, unitList].forEach(tb => {
+                if (tb && !tb.rows.length) {
+                    tb.innerHTML = '<tr><td colspan="4" class="empty-row">Could not load data — check your connection and reload.</td></tr>';
+                }
+            });
             window.showToast(`Could not load ${cfg.label} data: ${friendlyError(e)}`, 'error');
         }
     }

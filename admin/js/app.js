@@ -34,7 +34,7 @@ import { hooks, confirmDialog } from './common.js';
 import {
     booksData, unitsData, vocabData, phrasalData, prepData,
     wordformData, patternData, lexicalData,
-    fetchAll, assignData, paginationState, addPaginationControls,
+    fetchAll, assignData, addPaginationControls,
     populateBookSelects, populateUnitSelects
 } from './data.js';
 import {
@@ -323,6 +323,7 @@ async function renderWordsPerBook() {
             </div>`).join('');
     } catch (e) {
         console.warn('[stats] words-per-book failed:', e);
+        panel.innerHTML = '<p class="qa-hint">Could not load words-per-book stats.</p>';
     }
 }
 window.renderWordsPerBook = renderWordsPerBook;

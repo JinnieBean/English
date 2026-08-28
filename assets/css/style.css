@@ -90,6 +90,25 @@ body {
     transition: background-color 0.35s ease, color 0.35s ease;
 }
 
+/* Keyboard-only skip link (visible on :focus) */
+.skip-link {
+    position: absolute;
+    top: -100%;
+    left: 1rem;
+    z-index: 2000;
+    padding: 0.75rem 1.25rem;
+    background: var(--accent-color);
+    color: #fff;
+    border-radius: 0 0 8px 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
 /* =========================================
    FADE-IN ANIMATION (#9)
    ========================================= */

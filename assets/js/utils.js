@@ -16,12 +16,6 @@ export function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-/**
- * Escape a string for safe interpolation into an HTML attribute that is
- * quoted with double quotes (same as escapeHtml but kept for readability).
- */
-export const escapeAttr = escapeHtml;
-
 /** Debounce: delay fn execution until `ms` of silence. */
 export function debounce(fn, ms = 250) {
     let t;
@@ -104,20 +98,6 @@ export function applyAudioVersion(url) {
         if (!AUDIO_VERSIONED_HOST.test(u.hostname)) return url;
         u.searchParams.delete('version');
         u.searchParams.set('version', AUDIO_VERSION);
-        return u.toString();
-    } catch {
-        return url;
-    }
-}
-
-/** Remove the version query entirely (used by the admin bulk-rewrite tool
- *  as a suggested "normalise" operation). */
-export function stripAudioVersion(url) {
-    if (!url || typeof url !== 'string') return url;
-    try {
-        const u = new URL(url);
-        if (!AUDIO_VERSIONED_HOST.test(u.hostname)) return url;
-        u.searchParams.delete('version');
         return u.toString();
     } catch {
         return url;
