@@ -6,7 +6,7 @@
  * Config shape:
  * {
  *   overviewContainerId, lessonContainerId,      // container ids on each page type
- *   categories, lessons, units, intro,           // Firestore collection names
+ *   categories, lessons, units, intro,           // Firestore collection names (intro optional)
  *   lessonPage,                                  // e.g. 'grammar_lesson.html'
  *   cssPrefix,                                   // 'grammar' | 'pronunciation'
  * }
@@ -52,12 +52,12 @@ export async function initContentTree(cfg) {
         const load = async () => {
             overviewContainer.innerHTML = Array(3).fill(SKELETON).join('');
             try {
-                // Fetch the three levels (+ intro doc) in parallel instead of a waterfall
+                // Fetch the three levels (+ intro doc, when configured) in parallel instead of a waterfall
                 const [categories, lessons, units, introSnap] = await Promise.all([
                     fetchAll(cfg.categories),
                     fetchAll(cfg.lessons),
                     fetchAll(cfg.units),
-                    getDoc(doc(db, cfg.intro, 'main')).catch(() => null)
+                    cfg.intro ? getDoc(doc(db, cfg.intro, 'main')).catch(() => null) : Promise.resolve(null)
                 ]);
 
                 if (!categories.length) {
@@ -140,7 +140,7 @@ export async function initContentTree(cfg) {
                 let authorHtml = '';
                 let content = '';
 
-                if (lessonId === 'intro') {
+                if (lessonId === 'intro' && cfg.intro) {
                     const snap = await getDoc(doc(db, cfg.intro, 'main'));
                     if (snap.exists()) {
                         const data = snap.data();
