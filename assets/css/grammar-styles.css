@@ -120,19 +120,6 @@
 }
 
 /* ---------- Lesson page ---------- */
-.back-nav {
-    margin-top: 1.5rem;
-}
-.back-link {
-    display: inline-block;
-    margin-bottom: 1rem;
-    color: var(--accent-color);
-    text-decoration: none;
-    font-size: 0.95rem;
-}
-.back-link:hover {
-    text-decoration: underline;
-}
 .lesson-header {
     margin: 2rem 0 3rem;
     border-bottom: 1px solid var(--line-color);

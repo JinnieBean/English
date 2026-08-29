@@ -188,9 +188,6 @@ export async function initContentTree(cfg) {
                 const learned = lessonLearned(lpKey);
 
                 lessonContainer.innerHTML = `
-                    <nav class="back-nav">
-                        <a href="${cfg.overviewHref}" class="back-link">&larr; Back to ${escapeHtml(cfg.label)}</a>
-                    </nav>
                     <div class="lesson-header">
                         <h1 class="lesson-main-title">${escapeHtml(title)}</h1>
                         ${authorHtml}
