@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Prepositional Phrases — Thor's Notes</title>
-    <meta name="description" content="Prepositional phrases for this unit with definitions and examples.">
-    <meta property="og:title" content="Prepositional Phrases — Thor's Notes">
-    <meta property="og:description" content="Prepositional phrases for this unit with definitions and examples.">
+    <title>Basics — Thor's Notes</title>
+    <meta name="description" content="Language basics: alphabet, IPA, question words, introductions and numbers — interactive tables with audio.">
+    <meta property="og:title" content="Basics — Thor's Notes">
+    <meta property="og:description" content="Language basics: alphabet, IPA, question words, introductions and numbers — interactive tables with audio.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/images/logo.png">
     <meta name="twitter:card" content="summary">
@@ -19,7 +19,7 @@
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/courses.css">
+    <link rel="stylesheet" href="assets/css/basics.css">
     <script>
         // Prevent sidebar flash: apply collapsed class immediately if stored
         (function() {
@@ -67,7 +67,7 @@
                     <a href="english.html" class="nav-link" title="Home">
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span> <span class="nav-link-text">Home</span>
                     </a>
-                    <a href="book.html" class="nav-link active" title="Vocabulary">
+                    <a href="book.html" class="nav-link" title="Vocabulary">
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span> <span class="nav-link-text">Vocabulary</span>
                     </a>
                     <a href="grammar.html" class="nav-link" title="Grammar">
@@ -76,7 +76,7 @@
                     <a href="pronunciation.html" class="nav-link" title="Pronunciation">
                     <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span> <span class="nav-link-text">Pronunciation</span>
                     </a>
-                    <a href="basics.html" class="nav-link" title="Basics">
+                    <a href="basics.html" class="nav-link active" title="Basics">
                     <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg></span> <span class="nav-link-text">Basics</span>
                     </a>
                     </div>
@@ -95,6 +95,8 @@
 
                 </div>
             </nav>
+        
+
                 <div class="sidebar-bottom">
             <!-- Dark Mode Toggle (#7) -->
 <button class="dark-mode-toggle" id="dark-mode-toggle" title="Toggle dark mode">
@@ -121,32 +123,23 @@
                 </div>
                 <div class="header-line"></div>
             </header>
-    <div id="breadcrumb-container" class="breadcrumb-container" data-section="Prepositional Phrases"></div>
+    <div id="breadcrumb-container" class="breadcrumb-container" data-crumbs='[{"label":"Home","href":"index.html"},{"label":"Basics"}]'></div>
 
             <main class="container" id="main-content">
-                <div class="units-container">
-                    <div class="unit-subnav" id="unit-subnav"></div>
-                    <div class="unit-detail-header" id="unit-detail-header-container">
-                        
-                        <h3 class="unit-detail-title" id="unit-detail-title">Loading...</h3>
-                        
-                    </div>
-                    <h3 class="vocab-section-title">Prepositional phrases</h3>
-                    <div class="phrasal-list" id="prep-list-container">
-                        <!-- Data will be loaded via JS -->
-                    </div>
+                <div id="basics-overview-container">
+                    <p style="padding: 1rem 0;">Loading data...</p>
                 </div>
             </main>
-        
+            
             <!-- Footer -->
             <footer class="site-footer">
                 <p>Made by Đậu nhỏ tung tăng</p>
             </footer>
-</div>
+        </div>
     </div>
 
+    <script type="module" src="assets/js/basics.js"></script>
     <script type="module" src="assets/js/ui.js"></script>
-    <script type="module" src="assets/js/main.js"></script>
 </body>
 
 </html>

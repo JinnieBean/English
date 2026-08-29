@@ -52,6 +52,31 @@
     object-fit: cover;
 }
 
+/* Basics portal card — spans the grid, text tile instead of a photo */
+.topic-card-basics {
+    grid-column: 1 / -1;
+    justify-self: center;
+}
+.topic-image-text {
+    flex-direction: column;
+    background: linear-gradient(135deg, var(--accent-color, #0d7078), var(--accent-dark, #074d53));
+    color: #fff;
+}
+.topic-image-text .abc {
+    font-family: var(--font-heading, 'Playfair Display', serif);
+    font-size: 3.4rem;
+    letter-spacing: 0.08em;
+    line-height: 1.1;
+}
+.topic-image-text .num {
+    font-family: var(--font-display, 'Urbanist', sans-serif);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.4em;
+    opacity: 0.85;
+    margin-right: -0.4em; /* balance trailing letter-spacing */
+}
+
 .source-text {
     font-size: 0.9rem;
     color: var(--text-secondary, #4a7578);

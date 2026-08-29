@@ -7,6 +7,7 @@
  *   bookmarks:{ [wordDocId]: {word,def,example,pron,unitId} },
  *   srs:      { [wordDocId]: { box, next:'YYYY-MM-DD', unitId, src? } },
  *   lessonProgress: { ['grammar|pronunciation:lesson|unit|intro:id']: timestamp },
+ *   basics:     { ['topic:<id>']: timestamp, ['items:<id>']: [label...] },
  *   activity: { 'YYYY-MM-DD': count }
  * }
  *
@@ -27,7 +28,7 @@ const LS_OWNER = 'tn-store-v1-owner'; // uid the local copy belongs to (null = a
 export const SRS_INTERVALS = [1, 3, 7, 14]; // days per box
 
 function blankState() {
-    return { progress: {}, bookmarks: {}, srs: {}, lessonProgress: {}, activity: {} };
+    return { progress: {}, bookmarks: {}, srs: {}, lessonProgress: {}, basics: {}, activity: {} };
 }
 
 let state = null;
@@ -142,6 +143,16 @@ async function pullAndMerge(uid) {
             merged.activity[d] = Math.max(merged.activity[d] || 0, c || 0);
         });
 
+        merged.basics = { ...(remote.basics || {}) };
+        Object.entries(state.basics || {}).forEach(([k, v]) => {
+            const r = merged.basics[k];
+            if (Array.isArray(v) || Array.isArray(r)) {
+                merged.basics[k] = [...new Set([...(Array.isArray(r) ? r : []), ...(Array.isArray(v) ? v : [])])];
+            } else if (!r || (v || 0) > (r || 0)) {
+                merged.basics[k] = v;
+            }
+        });
+
         state = merged;
         persistNow();
         await pushToCloud();
@@ -192,6 +203,35 @@ export function setLessonLearned(key, learned) {
     if (!key || !state) return;
     if (learned) state.lessonProgress[key] = Date.now();
     else delete state.lessonProgress[key];
+    scheduleSync();
+}
+
+/* ================= Basics (static pages) ================= */
+
+export function basicsTopicLearned(topicId) {
+    return !!(topicId && state?.basics?.[`topic:${topicId}`]);
+}
+export function setBasicsTopicLearned(topicId, learned) {
+    if (!topicId || !state) return;
+    if (!state.basics) state.basics = {};
+    const key = `topic:${topicId}`;
+    if (learned) state.basics[key] = Date.now();
+    else delete state.basics[key];
+    scheduleSync();
+}
+export function basicsLearnedCount() {
+    return Object.keys(state?.basics || {}).filter(k => k.startsWith('topic:')).length;
+}
+export function basicsItemSet(topicId) {
+    return new Set(state?.basics?.[`items:${topicId}`] || []);
+}
+export function toggleBasicsItem(topicId, label, on) {
+    if (!topicId || !state) return;
+    if (!state.basics) state.basics = {};
+    const key = `items:${topicId}`;
+    const set = new Set(state.basics[key] || []);
+    if (on) set.add(label); else set.delete(label);
+    state.basics[key] = [...set];
     scheduleSync();
 }
 
