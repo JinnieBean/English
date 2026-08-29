@@ -23,8 +23,6 @@ function initDarkMode() {
 
     const applyTheme = (dark) => {
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-        if (icon) icon.textContent = dark ? '\u2600\uFE0F' : '\uD83C\uDF19';
-        if (label) label.textContent = dark ? 'Light Mode' : 'Dark Mode';
         toggle.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
     };
 
@@ -1276,10 +1274,11 @@ function buildAuthBox() {
     function render(user) {
         // Session not resolved yet — avoid flashing the signed-out state
         if (!isAuthResolved()) {
-            statusEl.innerHTML = '<span class="tn-auth-name tn-muted">Loading&hellip;</span>';
-            actionsEl.innerHTML = '';
             return;
         }
+        
+        box.classList.add('loaded'); // fade in auth box smoothly
+        
         if (user) {
             const name = user.displayName || user.email || 'Learner';
             statusEl.innerHTML = `

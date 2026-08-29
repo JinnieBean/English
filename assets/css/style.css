@@ -564,12 +564,6 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     opacity: 1;
     visibility: visible;
 }
-/* Fade the collapse button in when the rail expands (it comes back from display:none) */
-@starting-style {
-    .sidebar:not(.collapsed) .sidebar-toggle {
-        opacity: 0;
-    }
-}
 .sidebar.collapsed .nav-section-title {
     max-height: 0;
     opacity: 0;
@@ -631,6 +625,14 @@ html.sidebar-will-collapse .sidebar #sidebar-toggle-expanded {
     max-width: 0;
     opacity: 0;
 }
+
+/* Fix dark mode button flash by using CSS for text content */
+.dm-icon { font-size: 0; }
+.dm-icon::before { content: "🌙"; font-size: 1rem; }
+html[data-theme="dark"] .dm-icon::before { content: "☀️"; }
+.dm-label { font-size: 0; }
+.dm-label::before { content: "Dark Mode"; font-size: .8rem; }
+html[data-theme="dark"] .dm-label::before { content: "Light Mode"; }
 
 /* Focus states (#21) */
 :focus-visible {
@@ -1847,6 +1849,11 @@ button.wf-toggle {
     display: flex;
     flex-direction: column;
     gap: .5rem;
+    opacity: 0;
+    transition: opacity 0.3s ease, padding 0.2s ease;
+}
+.tn-auth-box.loaded {
+    opacity: 1;
 }
 .tn-auth-status { display: flex; align-items: center; gap: .5rem; }
 .tn-avatar {
