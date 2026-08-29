@@ -4,7 +4,8 @@
  *          Vocab Highlight (#14), Flashcard Mode (#10),
  *          Progress Indicator (#11), Breadcrumb (#5), Stats (#8)
  */
-import { escapeHtml, formatTime, applyAudioVersion } from './utils.js';
+import { escapeHtml, formatTime, applyAudioVersion, recordLastStudied, getLastStudied } from './utils.js';
+import { ensureSearchIndex, searchItems } from './search-index.js';
 import {
     initStore, getKnownSet, markKnown,
     srsGrade, srsDueList, getUser, signInWithGoogle, signOutUser,
@@ -779,14 +780,17 @@ function openQuizMenu(vocabs) {
     });
 }
 
-function startQuiz(vocabs, mode) {
+function startQuiz(vocabs, mode, forced) {
     _quizMode = mode;
-    _quizSourcePool = vocabs;
+    if (!forced) _quizSourcePool = vocabs;
     let pool = vocabs.filter(v => v.word && v.def);
     if (mode === 'listening') pool = vocabs.filter(v => v.word && v.audio);
-    if (pool.length < 4) { renderQuizSummary(); return; }
+    if (!forced && pool.length < 4) { renderQuizSummary(); return; }
 
-    _quizData = shuffle(pool).slice(0, Math.min(10, pool.length)).map(v => ({
+    const questions = forced
+        ? shuffle(forced).slice(0, 10)
+        : shuffle(pool).slice(0, Math.min(10, pool.length));
+    _quizData = questions.map(v => ({
         ...v,
         answered: false,
         correct: false,
@@ -801,6 +805,15 @@ function startQuiz(vocabs, mode) {
     _quizIndex = 0;
     _quizScore = 0;
     renderQuizQuestion();
+}
+
+/** Feed quiz answers into the Leitner SRS: a correct answer advances the
+ *  box, a wrong one resets it and schedules tomorrow — same rules as the
+ *  flashcards, so both tools share one review schedule. */
+function quizGrade(q, correct) {
+    if (!q || !q.id) return;
+    srsGrade(q.id, q.unitId || null, correct, q.src);
+    updateReviewBadge();
 }
 
 function buildOptions(current, pool) {
@@ -953,6 +966,7 @@ function settleChoice(area, correct, chosenBtn, q) {
     if (!correct) chosenBtn.classList.add('wrong');
     const fb = document.getElementById('quiz-feedback');
     if (fb) fb.textContent = correct ? 'Correct!' : `Answer: ${stripPos(q.word)}`;
+    quizGrade(q, correct);
     updateQuizNextBtn();
 }
 
@@ -994,6 +1008,7 @@ function gradeTyping(area, q, exact, near, answer) {
         area.querySelector('.quiz-typing-def')?.classList.add('wrong');
     }
     document.getElementById('typing-input')?.setAttribute('readonly', 'true');
+    quizGrade(q, exact || near);
     updateQuizNextBtn();
 }
 
@@ -1043,17 +1058,20 @@ function renderQuizSummary() {
     if (fill) fill.style.width = '100%';
     if (!area) return;
     const pct = _quizData.length ? Math.round((_quizScore / _quizData.length) * 100) : 0;
+    const wrong = _quizData.filter(q => !q.correct);
     const titles = { choice: 'Multiple choice', typing: 'Typing test', listening: 'Listening quiz' };
     area.innerHTML = `
         <div class="flashcard-summary">
             <div class="fc-summary-title">${pct >= 80 ? 'Excellent!' : pct >= 50 ? 'Good job!' : 'Keep practising!'}</div>
             <p class="fc-summary-text">${titles[_quizMode] || 'Quiz'} — you scored ${_quizScore} / ${_quizData.length} (${pct}%).</p>
             <div class="fc-summary-actions">
+                ${wrong.length ? `<button class="fc-btn fc-btn-unknown" type="button" id="quiz-retry-wrong">Retry wrong (${wrong.length})</button>` : ''}
                 <button class="fc-btn" type="button" id="quiz-restart">Play again</button>
                 <button class="fc-btn fc-btn-secondary" type="button" id="quiz-menu-btn">Other modes</button>
                 <button class="fc-btn fc-btn-secondary" type="button" id="quiz-close-2">Close</button>
             </div>
         </div>`;
+    document.getElementById('quiz-retry-wrong')?.addEventListener('click', () => startQuiz(_quizSourcePool, _quizMode, wrong));
     document.getElementById('quiz-restart')?.addEventListener('click', () => startQuiz(_quizSourcePool, _quizMode));
     document.getElementById('quiz-menu-btn')?.addEventListener('click', () => openQuizMenu(_quizSourcePool));
     document.getElementById('quiz-close-2')?.addEventListener('click', closeQuiz);
@@ -1082,66 +1100,6 @@ function updateIndexStats(vocabCount, unitCount, grammarCount) {
 /* ==============================================
    GLOBAL SEARCH (site-wide instant search)
    ============================================== */
-let _gsPromise = null;
-const GS_CACHE_KEY = 'tn-search-cache-v2';
-const GS_TTL = 30 * 60 * 1000;
-
-function ensureSearchIndex() {
-    // Share a single in-flight build across concurrent callers
-    if (!_gsPromise) {
-        _gsPromise = buildSearchIndex();
-    }
-    return _gsPromise;
-}
-
-async function buildSearchIndex() {
-    let items = null;
-    try {
-        const cached = JSON.parse(sessionStorage.getItem(GS_CACHE_KEY) || 'null');
-        if (cached && Date.now() - cached.t < GS_TTL && Array.isArray(cached.items)) {
-            items = cached.items;
-        } else {
-            const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-            const { db } = await import('./firebase-config.js');
-            const grab = async (n) => (await getDocs(collection(db, n))).docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(x => x.status !== 'draft');
-
-            const [vocabs, phrasals, preps, patterns, wordforms, lexicals, gLessons, gUnits, pLessons, pUnits, units, books] =
-                await Promise.all([
-                    grab('vocabularies'), grab('phrasal_verbs'), grab('prep_phrases'),
-                    grab('word_patterns'), grab('word_formations'), grab('lexical_expansions'),
-                    grab('grammar_lessons'), grab('grammar_units'),
-                    grab('pronunciation_lessons'), grab('pronunciation_units'),
-                    grab('units'), grab('books')
-                ]);
-            const unitTitle = {};
-            units.forEach(u => { unitTitle[u.id] = u.title; });
-            const inUnit = (id) => unitTitle[id] || '';
-
-            // NOTE: assigns the OUTER `items` (no shadowing!)
-            items = [];
-            vocabs.forEach(v => v.word && items.push({ t: 'Vocabulary', label: v.word, sub: inUnit(v.unitId), url: `unit_detail.html?id=${v.unitId}` }));
-            phrasals.forEach(v => v.word && items.push({ t: 'Phrasal Verbs', label: v.word, sub: inUnit(v.unitId), url: `unit_phrasal.html?id=${v.unitId}` }));
-            preps.forEach(v => v.word && items.push({ t: 'Prepositional Phrases', label: v.word, sub: inUnit(v.unitId), url: `unit_prep.html?id=${v.unitId}` }));
-            patterns.forEach(v => v.word && items.push({ t: 'Word Patterns', label: v.word, sub: inUnit(v.unitId), url: `unit_pattern.html?id=${v.unitId}` }));
-            wordforms.forEach(w => w.rootWord && items.push({ t: 'Word Formation', label: w.rootWord, sub: inUnit(w.unitId), url: `unit_wordform.html?id=${w.unitId}` }));
-            lexicals.forEach(l => (l.words || []).forEach(w => w.word && items.push({ t: 'Lexical Expansion', label: w.word, sub: inUnit(l.unitId), url: `unit_lexical.html?id=${l.unitId}` })));
-            books.forEach(b => b.title && items.push({ t: 'Books', label: b.title, sub: b.subtitle || 'Book', url: `units.html?bookId=${b.id}` }));
-            gLessons.forEach(l => l.title && items.push({ t: 'Grammar', label: l.title, sub: 'Lesson', url: `grammar_lesson.html?id=${l.id}&type=lesson` }));
-            gUnits.forEach(u => u.title && items.push({ t: 'Grammar', label: u.title, sub: 'Unit', url: `grammar_lesson.html?id=${u.id}&type=unit` }));
-            pLessons.forEach(l => l.title && items.push({ t: 'Pronunciation', label: l.title, sub: 'Lesson', url: `pronunciation_lesson.html?id=${l.id}&type=lesson` }));
-            pUnits.forEach(u => u.title && items.push({ t: 'Pronunciation', label: u.title, sub: 'Unit', url: `pronunciation_lesson.html?id=${u.id}&type=unit` }));
-
-            try { sessionStorage.setItem(GS_CACHE_KEY, JSON.stringify({ t: Date.now(), items })); } catch {}
-        }
-    } catch (e) {
-        console.warn('[search] index failed:', e);
-        _gsPromise = null; // allow retry on next keystroke
-        return null;
-    }
-    return items;
-}
 
 function initGlobalSearch() {
     const headerContent = document.querySelector('.main-header .header-content');
@@ -1151,7 +1109,7 @@ function initGlobalSearch() {
     wrap.className = 'global-search';
     wrap.innerHTML = `
         <svg class="gs-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-        <input type="search" class="gs-input" placeholder="Search words, grammar…" aria-label="Search the whole site">
+        <input type="search" class="gs-input" placeholder="Search words, meanings, grammar… ( / )" aria-label="Search the whole site">
         <div class="gs-results" hidden></div>`;
     headerContent.appendChild(wrap);
 
@@ -1162,22 +1120,13 @@ function initGlobalSearch() {
     let debounceT;
 
     const close = () => { box.hidden = true; activeIdx = -1; };
+    const allUrl = () => `search.html?q=${encodeURIComponent(input.value.trim())}`;
 
     const renderResults = () => {
         const term = input.value.toLowerCase().trim();
-        if (!term || !currentResults.length) { close(); return; }
-        const scored = [];
-        for (const it of currentResults) {
-            const lbl = (it.label || '').toLowerCase();
-            let score = 0;
-            if (lbl === term) score = 100;
-            else if (lbl.startsWith(term)) score = 80;
-            else if (lbl.includes(term)) score = 60;
-            else if ((it.sub || '').toLowerCase().includes(term)) score = 30;
-            if (score) scored.push({ score, it });
-        }
-        scored.sort((a, b) => b.score - a.score);
-        const top = scored.slice(0, 12).map(x => x.it);
+        if (!term) { close(); return; }
+        const ranked = searchItems(currentResults, term);
+        const top = ranked.slice(0, 12);
 
         if (!top.length) {
             box.innerHTML = '<div class="gs-empty">No matches found.</div>';
@@ -1198,28 +1147,42 @@ function initGlobalSearch() {
         box.innerHTML = top.map((it, i) => {
             const header = it.t !== lastType ? `<div class="gs-group">${escapeHtml(it.t)}</div>` : '';
             lastType = it.t;
+            // Show the meaning snippet when the hit came from the definition
+            // (or alongside it) so def-search results make sense at a glance.
+            const defHit = it.d && it.d.toLowerCase().includes(term)
+                && !(it.label || '').toLowerCase().includes(term);
             return `${header}
                 <a class="gs-item ${i === activeIdx ? 'active' : ''}" href="${escapeHtml(it.url)}">
                     <span class="gs-label">${hl(it.label)}</span>
                     ${it.sub ? `<span class="gs-sub">${escapeHtml(it.sub)}</span>` : ''}
+                    ${defHit ? `<span class="gs-def">${hl(it.d)}</span>` : ''}
                 </a>`;
-        }).join('');
+        }).join('') + `
+            <a class="gs-all" href="${escapeHtml(allUrl())}">See all ${ranked.length} result${ranked.length === 1 ? '' : 's'} &rarr;</a>`;
         box.hidden = false;
     };
 
+    // The Firestore index is only fetched on the first actual keystroke
+    // (never on focus) and cached in sessionStorage afterwards.
     input.addEventListener('input', () => {
         clearTimeout(debounceT);
+        if (!input.value.trim()) { close(); return; }
+        if (!currentResults.length) {
+            box.innerHTML = '<div class="gs-empty">Searching&hellip;</div>';
+            box.hidden = false;
+        }
         debounceT = setTimeout(async () => {
             currentResults = (await ensureSearchIndex()) || [];
             renderResults();
         }, 180);
     });
 
-    input.addEventListener('focus', async () => {
-        currentResults = (await ensureSearchIndex()) || [];
-    });
-
     input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { close(); input.blur(); return; }
+        if (e.key === 'Enter' && box.hidden) {
+            if (input.value.trim()) window.location.href = allUrl();
+            return;
+        }
         if (box.hidden) return;
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             e.preventDefault();
@@ -1233,9 +1196,19 @@ function initGlobalSearch() {
         } else if (e.key === 'Enter') {
             const target = box.querySelectorAll('.gs-item')[Math.max(activeIdx, 0)];
             if (target) window.location.href = target.getAttribute('href');
-        } else if (e.key === 'Escape') {
-            close(); input.blur();
+            else if (input.value.trim()) window.location.href = allUrl();
         }
+    });
+
+    // "/" focuses the search box from anywhere (unless already typing).
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+        const t = e.target;
+        if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement
+            || t instanceof HTMLSelectElement || t.isContentEditable) return;
+        e.preventDefault();
+        input.focus();
+        input.select();
     });
 
     document.addEventListener('click', (e) => {
@@ -1420,14 +1393,65 @@ function buildAuthBox() {
 function updateReviewBadge() {
     const el = document.getElementById('review-count-badge');
     if (!el) return;
+    // Matches review.js exactly: graduated words are excluded; every other
+    // card (including src-tagged ones) is loadable via card-loader.js.
     const due = srsDueList().filter(en => en.next !== '9999-12-31').length;
     el.textContent = due > 99 ? '99+' : String(due);
     el.hidden = due === 0;
 }
 
 /* ==============================================
-   PWA — service worker registration
-   ============================================== */
+    RESUME — "Continue studying" shortcut
+    ============================================== */
+const UNIT_PAGES = ['unit_detail.html', 'unit_phrasal.html', 'unit_prep.html',
+    'unit_wordform.html', 'unit_pattern.html', 'unit_lexical.html'];
+
+function trackLastStudied() {
+    const page = location.pathname.split('/').pop();
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+    if (!id) return;
+    if (UNIT_PAGES.includes(page)) {
+        recordLastStudied({ page, id, kind: 'unit', ts: Date.now() });
+    } else if (page === 'grammar_lesson.html' || page === 'pronunciation_lesson.html') {
+        if (id === 'intro') return;
+        recordLastStudied({ page, id, kind: 'lesson', type: params.get('type') || 'lesson', ts: Date.now() });
+    }
+}
+
+async function initResumeSlot() {
+    const slots = document.querySelectorAll('[data-resume-slot]');
+    if (!slots.length) return;
+    const last = getLastStudied();
+    if (!last) return;
+
+    let title = '';
+    try {
+        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const { db } = await import('./firebase-config.js');
+        const coll = last.kind === 'unit' ? 'units'
+            : `${last.page.startsWith('grammar') ? 'grammar' : 'pronunciation'}_${last.type === 'unit' ? 'units' : 'lessons'}`;
+        const snap = await getDoc(doc(db, coll, last.id));
+        if (snap.exists() && snap.data().status !== 'draft') title = snap.data().title || '';
+    } catch { /* offline or deleted — keep the slot hidden */ }
+    if (!title) return;
+
+    const href = `${last.page}?id=${encodeURIComponent(last.id)}${last.kind === 'lesson' ? `&type=${last.type}` : ''}`;
+    const html = `
+        <a class="resume-link" href="${escapeHtml(href)}">
+            <span class="resume-icon" aria-hidden="true">&#9654;</span>
+            <span class="resume-text">
+                <strong>Continue where you left off</strong>
+                <small>${escapeHtml(title)}</small>
+            </span>
+            <span class="resume-cta">Resume &rarr;</span>
+        </a>`;
+    slots.forEach(el => { el.innerHTML = html; el.hidden = false; });
+}
+
+/* ==============================================
+    PWA — service worker registration
+    ============================================== */
 function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol === 'file:') return;
@@ -1502,6 +1526,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initGlobalSearch();
     initDictPopup();
     registerServiceWorker();
+    trackLastStudied();
+    initResumeSlot();
     setTimeout(updateReviewBadge, 800);
     // Refresh the due-today badge once the account's cloud data is merged in
     onStoreAuthChanged(() => updateReviewBadge());

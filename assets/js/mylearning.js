@@ -60,12 +60,11 @@ function renderActivity() {
 }
 
 /** B8 — how many words come due on each of the next 7 days (srs.next).
- *  Cards tagged with src (phrasal/pattern/…) are excluded: they have no
- *  document in `vocabularies` and therefore never appear in Review. */
+ *  src-tagged cards are included: card-loader.js rebuilds them in Review. */
 function renderForecast() {
     const wrap = $('ml-forecast');
     if (!wrap) return;
-    const entries = srsDueList('9999-12-30').filter(e => e.next !== '9999-12-31' && !e.src);
+    const entries = srsDueList('9999-12-30').filter(e => e.next !== '9999-12-31');
     const today = todayKey();
     const days = [];
     for (let i = 0; i < 7; i++) {

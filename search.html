@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>My Learning — Thor's Notes</title>
-    <meta name="description" content="Your personal learning dashboard: known words, streaks and progress across every unit.">
-    <meta property="og:title" content="My Learning — Thor's Notes">
-    <meta property="og:description" content="Your personal learning dashboard: known words, streaks and progress across every unit.">
+    <title>Search — Thor's Notes</title>
+    <meta name="description" content="Search every word, meaning, unit and lesson across Thor's Notes.">
+    <meta property="og:title" content="Search — Thor's Notes">
+    <meta property="og:description" content="Search every word, meaning, unit and lesson across Thor's Notes.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/images/logo.png">
     <meta name="twitter:card" content="summary">
@@ -19,6 +19,7 @@
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/courses.css">
     <script>
         // Prevent sidebar flash: apply collapsed class immediately if stored
         (function() {
@@ -80,7 +81,7 @@
                     </div>
                     <div class="nav-section">
                         <h3 class="nav-section-title">MY LEARNING</h3>
-                        <a href="mylearning.html" class="nav-link nav-study active" title="My Learning">
+                        <a href="mylearning.html" class="nav-link nav-study" title="My Learning">
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span> <span class="nav-link-text">My Learning</span>
                         </a>
                         <a href="review.html" class="nav-link nav-study" title="Review words due today">
@@ -117,43 +118,16 @@
                 </div>
                 <div class="header-line"></div>
             </header>
-            <div id="breadcrumb-container" class="breadcrumb-container" data-crumbs='[{"label":"Home","href":"index.html"},{"label":"My Learning"}]'></div>
+            <div id="breadcrumb-container" class="breadcrumb-container" data-crumbs='[{"label":"Home","href":"index.html"},{"label":"Search"}]'></div>
 
             <main class="container" id="main-content">
 
         <div class="units-container">
-            <h2 class="course-header">My Learning</h2>
-            <p class="page-subtitle" id="ml-sync-status">Loading&hellip;</p>
-
-            <div class="ml-cards">
-                <div class="stat-card"><div class="stat-icon">&#10003;</div><div><h3>Words known</h3><p id="ml-known">&ndash;</p></div></div>
-                <div class="stat-card"><div class="stat-icon">&#8635;</div><div><h3>In SRS rotation</h3><p id="ml-learning">&ndash;</p></div></div>
-                <div class="stat-card"><div class="stat-icon">&#128293;</div><div><h3>Day streak</h3><p id="ml-streak">&ndash;</p></div></div>
-                <div class="stat-card"><div class="stat-icon">&#128218;</div><div><h3>Units studied</h3><p id="ml-units">&ndash;</p></div></div>
-                <div class="stat-card"><div class="stat-icon">&#128214;</div><div><h3>Lessons learned</h3><p id="ml-lessons">&ndash;</p></div></div>
-            </div>
-
-            <div class="resume-card" data-resume-slot hidden style="margin-top:1.5rem;"></div>
-
-            <section style="margin-top:2rem;">
-                <h3 style="margin-bottom:.75rem;">Review forecast &mdash; next 7 days</h3>
-                <div id="ml-forecast" class="ml-activity"></div>
-            </section>
-
-            <section style="margin-top:2rem;">
-                <h3 style="margin-bottom:.75rem;">Last 14 days activity</h3>
-                <div id="ml-activity" class="ml-activity"></div>
-            </section>
-
-            <section style="margin-top:2rem;">
-                <h3 style="margin-bottom:.75rem;">Reviews per week &mdash; last 8 weeks</h3>
-                <div id="ml-weekly" class="ml-activity"></div>
-            </section>
-
-            <section style="margin-top:2rem;">
-                <h3 style="margin-bottom:.75rem;">Progress by unit</h3>
-                <div id="ml-unit-bars"></div>
-            </section>
+            <h2 class="course-header">Search</h2>
+            <input type="search" id="sr-input" class="sr-input" placeholder="Search words, meanings, grammar…"
+                aria-label="Search the whole site" autocomplete="off">
+            <p class="page-subtitle" id="sr-head"></p>
+            <div id="sr-results"><p class="empty-state">Type something to search.</p></div>
         </div>
             </main>
 
@@ -165,7 +139,7 @@
     </div>
 
     <script type="module" src="assets/js/ui.js"></script>
-    <script type="module" src="assets/js/mylearning.js"></script>
+    <script type="module" src="assets/js/search.js"></script>
 </body>
 
 </html>

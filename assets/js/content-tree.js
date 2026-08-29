@@ -17,6 +17,7 @@ import { escapeHtml } from './utils.js';
 import {
     lessonLearned, setLessonLearned, recordActivity
 } from './progress-store.js';
+import { lessonCards } from './card-loader.js';
 
 const SKELETON = `
     <div class="grammar-category" style="margin-bottom: 3rem;">
@@ -210,6 +211,15 @@ export async function initContentTree(cfg) {
                     this.innerHTML = nowLearned ? '&#10003; Learned' : '&#9711; Mark as learned';
                 });
 
+                // B-flashcards — derive Q/A cards from the lesson headings and
+                // offer a flashcard/quiz session (SRS-graded, reviewable).
+                if (lpType !== 'intro') {
+                    setupLessonStudyTools(
+                        lessonContainer.querySelector('.lesson-header'),
+                        lessonCards(content, lessonId, `${cfg.cssPrefix}_${lpType}`)
+                    );
+                }
+
                 enhanceLessonPage();
             } catch (e) {
                 console.error(e);
@@ -217,6 +227,65 @@ export async function initContentTree(cfg) {
             }
         };
         loadLesson();
+    }
+}
+
+/* ---------- Lesson flashcards / quiz (shared overlay from ui.js) ---------- */
+function ensureFlashcardOverlay() {
+    if (document.getElementById('flashcard-overlay')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+        <div class="flashcard-overlay" id="flashcard-overlay" aria-hidden="true">
+            <div class="flashcard-modal" role="dialog" aria-modal="true" aria-label="Lesson flashcards">
+                <button class="flashcard-close" id="flashcard-close" data-fc-action="close" aria-label="Close">&times;</button>
+                <div class="flashcard-counter" id="fc-counter" aria-live="polite">1 / 1</div>
+                <div class="flashcard-progress-bar">
+                    <div class="flashcard-progress-fill" id="fc-progress-fill" style="width:0%"></div>
+                </div>
+                <div class="flashcard-card" id="flashcard-card-area"></div>
+                <div class="flashcard-actions"></div>
+            </div>
+        </div>`);
+}
+
+function hiddenToolBtn(id, cls) {
+    let btn = document.getElementById(id);
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = id;
+        btn.className = cls;
+        btn.style.display = 'none';
+        document.body.appendChild(btn);
+    }
+    return btn;
+}
+
+function setupLessonStudyTools(headerEl, cards) {
+    if (!headerEl || cards.length < 2 || !window.initFlashcard) return;
+
+    const fcBtn = document.createElement('button');
+    fcBtn.type = 'button';
+    fcBtn.className = 'lesson-learned-btn lesson-fc-btn';
+    fcBtn.innerHTML = `&#127924; Flashcards (${cards.length})`;
+    headerEl.appendChild(fcBtn);
+    fcBtn.addEventListener('click', () => {
+        ensureFlashcardOverlay();
+        const toggle = hiddenToolBtn('flashcard-toggle-btn', 'flashcard-toggle-btn');
+        window.initFlashcard(cards, null); // null → per-card SRS grading, no unit badge
+        toggle.click();
+    });
+
+    if (cards.length >= 4 && window.initQuiz) {
+        const qzBtn = document.createElement('button');
+        qzBtn.type = 'button';
+        qzBtn.className = 'lesson-learned-btn lesson-fc-btn';
+        qzBtn.innerHTML = '&#10067; Quiz';
+        headerEl.appendChild(qzBtn);
+        qzBtn.addEventListener('click', () => {
+            const toggle = hiddenToolBtn('quiz-toggle-btn', 'flashcard-toggle-btn');
+            window.initQuiz(cards);
+            toggle.click();
+        });
     }
 }
 

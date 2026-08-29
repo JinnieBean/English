@@ -103,3 +103,22 @@ export function applyAudioVersion(url) {
         return url;
     }
 }
+
+/* =========================================================
+   RESUME — remembers the last studied unit/lesson per device
+   (localStorage only; it's a convenience shortcut, not data)
+   ========================================================= */
+const LAST_STUDIED_KEY = 'tn-last-studied';
+
+export function recordLastStudied(entry) {
+    try { localStorage.setItem(LAST_STUDIED_KEY, JSON.stringify(entry)); } catch { /* ignore */ }
+}
+
+export function getLastStudied(maxAgeDays = 30) {
+    try {
+        const e = JSON.parse(localStorage.getItem(LAST_STUDIED_KEY) || 'null');
+        if (!e || !e.page || !e.id) return null;
+        if (Date.now() - (e.ts || 0) > maxAgeDays * 864e5) return null;
+        return e;
+    } catch { return null; }
+}

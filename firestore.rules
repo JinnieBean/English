@@ -15,7 +15,7 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null && (
         request.auth.token.email in [
-          'dangkhoado16gmail.com',   // TODO: replace with the real admin email(s)
+          'dangkhoado16@gmail.com',   // TODO: replace with the real admin email(s)
           'thornote@gmail.com'   // TODO: replace / extend as needed
         ]
       );

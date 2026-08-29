@@ -11,6 +11,7 @@ import {
  * immediately signed out of THIS panel.
  */
 const ADMIN_EMAILS = [
+    'dangkhoado16@gmail.com',
     'thornote@gmail.com' // TODO: replace with your real admin email
 ];
 

@@ -280,7 +280,8 @@ export function srsCounts() {
 
 /** Grade a word after a flashcard/quiz answer and advance its SRS box.
  *  `src` tags cards that do NOT come from the vocabularies collection
- *  (phrasal/prep/wordform/pattern/lexical) so review forecasts can skip them. */
+ *  (phrasal/prep/wordform/pattern/lexical or generated lesson cards) so
+ *  review.js knows which loader (card-loader.js) rebuilds them. */
 export function srsGrade(wordId, unitId, wasKnown, src) {
     const e = state.srs[wordId] || { box: 0, next: '', unitId: unitId || null };
     const d = new Date();

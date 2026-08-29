@@ -57,6 +57,48 @@ function registerLexicon(items) {
     });
 }
 
+/* ---------- Bookmarks for the five sibling unit pages ----------
+   Bookmark keys are namespaced (`src:sid`) so they never collide with
+   vocabulary doc ids. `sid` mirrors the SRS/flashcard id used on the unit
+   pages (docId, or `docId#index` for flattened wordform/lexical rows), so
+   starring and reviewing share one identity per card. */
+function bmStarHtml(item, src, sid) {
+    const id = `${src}:${sid}`;
+    const payload = {
+        word: item.word || '', def: item.def || '', example: item.example || '',
+        pron: item.pron || '', unitId: item.unitId || null, src, sid
+    };
+    const starred = !!getBookmark(id);
+    return `<button type="button" class="bookmark-btn bm-star ${starred ? 'active' : ''}"
+        data-bm="${escapeHtml(id)}" data-bm-data="${escapeHtml(JSON.stringify(payload))}"
+        title="${starred ? 'Remove bookmark' : 'Bookmark this'}" aria-label="Bookmark"
+        aria-pressed="${starred}">${starred ? '&#9733;' : '&#9734;'}</button>`;
+}
+
+/** Delegated star wiring — survives list re-renders (bind once per container). */
+function wireBmStars(container) {
+    container.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-bm]');
+        if (!b) return;
+        const id = b.dataset.bm;
+        if (getBookmark(id)) {
+            setBookmark(id, null);
+            b.classList.remove('active');
+            b.innerHTML = '&#9734;';
+            b.setAttribute('aria-pressed', 'false');
+            b.title = 'Bookmark this';
+        } else {
+            let data = {};
+            try { data = JSON.parse(b.dataset.bmData || '{}'); } catch { /* noop */ }
+            setBookmark(id, data);
+            b.classList.add('active');
+            b.innerHTML = '&#9733;';
+            b.setAttribute('aria-pressed', 'true');
+            b.title = 'Remove bookmark';
+        }
+    });
+}
+
 /** Flashcard overlay markup (identical to unit_detail / review pages). */
 function ensureFlashcardOverlay() {
     if (document.getElementById('flashcard-overlay')) return;
@@ -627,6 +669,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : '';
             return `
             <div class="phrasal-item reveal">
+                ${bmStarHtml(p, 'phrasal', p.id)}
                 <div class="phrasal-left">
                     <div class="phrasal-word">${escapeHtml(p.word || '')}</div>
                     <div class="phrasal-pron">${escapeHtml(p.pron || '')}</div>
@@ -653,6 +696,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }),
         renderItem: p => `
             <div class="phrasal-item reveal">
+                ${bmStarHtml(p, 'prep', p.id)}
                 <div class="phrasal-left">
                     <div class="phrasal-word">${escapeHtml(p.word || '')}</div>
                 </div>
@@ -674,6 +718,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setupSimpleList(cfg) {
         const container = document.getElementById(cfg.containerId);
         if (!container) return;
+        wireBmStars(container);
         const unitId = new URLSearchParams(window.location.search).get('id');
         if (!unitId) {
             showError(container, 'Unit ID missing from the URL.');
@@ -730,6 +775,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setupWfList() {
         const container = document.getElementById('wordform-list-container');
         if (!container) return;
+        wireBmStars(container);
         const unitId = new URLSearchParams(window.location.search).get('id');
         if (!unitId) {
             showError(container, 'Unit ID missing from the URL.');
@@ -782,7 +828,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         let formsHtml = '';
                         if (w.forms && w.forms.length > 0) {
-                            formsHtml = w.forms.map(f => {
+                            formsHtml = w.forms.map((f, i) => {
                                 let audiosHtml = '';
                                 if (f.audios && f.audios.length > 0) {
                                     audiosHtml = f.audios.map(a => {
@@ -803,7 +849,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 return `
                                     <div class="wf-form-block">
                                         <div class="wf-form-left">
-                                            <h4 class="wf-form-title">${formatPos(escapeHtml(f.title))}</h4>
+                                            <div class="wf-form-title-row">
+                                                <h4 class="wf-form-title">${formatPos(escapeHtml(f.title))}</h4>
+                                                ${bmStarHtml({
+                                                    word: String(f.title || '').replace(/\s+\b(v|n|adj|adv|prep|conj|pron|det)\b\.?\s*$/i, ' ($1)'),
+                                                    def: f.definitions || '',
+                                                    example: (f.examples || '').split('\n')[0] || '',
+                                                    pron: (f.audios || [])[0]?.pron || '',
+                                                    unitId: w.unitId || unitId
+                                                }, 'wordform', `${w.id}#${i}`)}
+                                            </div>
                                             ${audiosHtml}
                                         </div>
                                         <div class="wf-form-right">
@@ -875,6 +930,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setupPatternList() {
         const container = document.getElementById('pattern-list-container');
         if (!container) return;
+        wireBmStars(container);
         const unitId = new URLSearchParams(window.location.search).get('id');
         if (!unitId) {
             showError(container, 'Unit ID missing from the URL.');
@@ -906,6 +962,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         return `
                         <div class="phrasal-item reveal">
+                            ${bmStarHtml({ ...p, unitId: p.unitId || unitId }, 'pattern', p.id)}
                             <div class="phrasal-left pattern-left" style="flex-direction: column; align-items: flex-start;">
                                 <div class="vocab-word-group" style="margin-bottom: 1rem; align-items: baseline; flex-wrap: nowrap; white-space: nowrap;">
                                     <span class="phrasal-word">${window.formatWordWithPos(escapeHtml(p.word))}</span>
@@ -955,6 +1012,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setupLexicalList() {
         const container = document.getElementById('lexical-list-container');
         if (!container) return;
+        wireBmStars(container);
         const unitId = new URLSearchParams(window.location.search).get('id');
         if (!unitId) {
             showError(container, 'Unit ID missing from the URL.');
@@ -996,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         let wordsHtml = '';
                         if (lex.words && lex.words.length > 0) {
-                            wordsHtml = lex.words.map(w => {
+                            wordsHtml = lex.words.map((w, i) => {
                                 const audioHtml = window.buildCustomAudioPlayer
                                     ? window.buildCustomAudioPlayer(w.audio, w.word)
                                     : (w.audio
@@ -1004,6 +1062,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         : '');
                                 return `
                                 <div class="vocab-item reveal">
+                                    ${bmStarHtml({ ...w, unitId: lex.unitId || unitId }, 'lexical', `${lex.id}#${i}`)}
                                     <div class="vocab-left">
                                         <div class="vocab-word-group">
                                             <span class="vocab-word">${window.formatWordWithPos(escapeHtml(w.word))}</span>

@@ -1329,7 +1329,8 @@ const TREE_COLL = {
 document.addEventListener('dblclick', async (e) => {
     const td = e.target.closest('td[data-inline="1"]');
     if (!td || td.querySelector('input')) return;
-    const { tab, id, field } = td.dataset;
+    const { tab, id } = td.dataset;
+    let field = td.dataset.field;
     let coll;
     if (td.dataset.treeTab) {
         const map = TREE_COLL[td.dataset.treeTab];

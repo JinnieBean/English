@@ -12,6 +12,7 @@ import {
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
 import { escapeHtml } from './utils.js';
+import { isLoadable, loadSrcCards } from './card-loader.js';
 
 const summaryEl = document.getElementById('review-summary');
 const actionsEl = document.getElementById('review-actions');
@@ -37,14 +38,17 @@ function ensureFlashcardOverlay() {
 }
 
 async function loadWordsFor(entries) {
+    const vocabEntries = entries.filter(e => !e.src);
+    const srcEntries = entries.filter(e => e.src);
+
     const byUnit = new Map();
-    entries.forEach(e => {
+    vocabEntries.forEach(e => {
         if (!e.unitId) return;
         if (!byUnit.has(e.unitId)) byUnit.set(e.unitId, new Set());
         byUnit.get(e.unitId).add(e.id);
     });
 
-    const wanted = new Set(entries.map(e => e.id));
+    const wanted = new Set(vocabEntries.map(e => e.id));
     const words = [];
 
     await Promise.all([...byUnit.keys()].map(async unitId => {
@@ -60,6 +64,14 @@ async function loadWordsFor(entries) {
             console.warn('[review] failed to load unit', unitId, e);
         }
     }));
+
+    // src-tagged cards (phrasal/prep/pattern/wordform/lexical + lesson cards)
+    // are rebuilt by the shared card-loader.
+    try {
+        words.push(...await loadSrcCards(srcEntries));
+    } catch (e) {
+        console.warn('[review] failed to load src cards', e);
+    }
 
     words.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
     return words;
@@ -79,6 +91,7 @@ function renderPreview(words) {
                     <div class="rv-word-main">
                         <span class="rv-word">${escapeHtml(v.word || '')}</span>
                         <span class="rv-pron">${escapeHtml(v.pron || '')}</span>
+                        ${v.src ? `<span class="rv-src">${escapeHtml(v.src.replace(/_/g, ' '))}</span>` : ''}
                     </div>
                     <p class="rv-def">${escapeHtml(v.def || '')}</p>
                 </div>`).join('')}
@@ -148,10 +161,9 @@ function render() {
     }
 
     const todayIso = todayKey();
-    // Cards tagged with src come from phrasal/prep/wordform/pattern/lexical
-    // flashcards and have no document in `vocabularies` — they cannot be
-    // loaded for a review session, so they are kept out of the schedule.
-    const loadable = (e) => e.next !== '9999-12-31' && !e.src;
+    // Graduated words are out; every other card is loadable — vocabularies
+    // directly, src-tagged ones rebuilt through card-loader.js.
+    const loadable = isLoadable;
     const dueEntries = srsDueList(todayIso).filter(loadable);
     const scheduled = srsDueList('9999-12-30').filter(loadable);
     const upcomingEntries = scheduled.filter(e => (e.next || '') > todayIso);
