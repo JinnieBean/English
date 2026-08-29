@@ -7,7 +7,7 @@
  *  - Other static assets (images/fonts/CDN): stale-while-revalidate
  *  - Never intercept /admin/** (keep the CMS always fresh) or non-GET
  */
-const CACHE = 'tn-cache-v11';
+const CACHE = 'tn-cache-v12';
 const OFFLINE_URL = 'offline.html';
 
 const PRECACHE = [
@@ -54,6 +54,7 @@ const PRECACHE = [
     'assets/js/mylearning.js',
     'assets/js/bookmarks.js',
     'assets/js/card-loader.js',
+    'assets/js/idb-cache.js',
     'assets/js/search-index.js',
     'assets/js/search.js',
     'assets/images/logo.png'

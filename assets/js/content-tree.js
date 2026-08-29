@@ -18,6 +18,7 @@ import {
     lessonLearned, setLessonLearned, recordActivity
 } from './progress-store.js';
 import { lessonCards } from './card-loader.js';
+import { cachedLoad } from './idb-cache.js';
 
 const SKELETON = `
     <div class="grammar-category" style="margin-bottom: 3rem;">
@@ -40,8 +41,10 @@ function showError(container, message, retryFn) {
 const isDraft = (d) => d.status === 'draft';
 
 async function fetchAll(name) {
-    const snap = await getDocs(collection(db, name));
-    const items = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+    const { data: items } = await cachedLoad(`tree:${name}`, async () => {
+        const snap = await getDocs(collection(db, name));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+    });
     items.sort((a, b) => (a.order || 0) - (b.order || 0));
     return items;
 }
@@ -136,30 +139,35 @@ export async function initContentTree(cfg) {
 
             lessonContainer.innerHTML = '<div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div>';
 
+            const loadDoc = async (coll, id) => {
+                const { data } = await cachedLoad(`doc:${coll}:${id}`, async () => {
+                    const s = await getDoc(doc(db, coll, id));
+                    return s.exists() ? s.data() : null;
+                });
+                return data;
+            };
+
             try {
                 let title = '';
                 let authorHtml = '';
                 let content = '';
 
                 if (lessonId === 'intro' && cfg.intro) {
-                    const snap = await getDoc(doc(db, cfg.intro, 'main'));
-                    if (snap.exists()) {
-                        const data = snap.data();
+                    const data = await loadDoc(cfg.intro, 'main');
+                    if (data) {
                         title = data.title || `${cfg.label} Overview`;
                         content = data.content || '';
                     }
                 } else if (urlParams.get('type') === 'unit') {
-                    const snap = await getDoc(doc(db, cfg.units, lessonId));
-                    if (snap.exists()) {
-                        const data = snap.data();
+                    const data = await loadDoc(cfg.units, lessonId);
+                    if (data) {
                         title = data.title;
                         authorHtml = data.author ? `<p class="lesson-author">Written By ${escapeHtml(data.author)}</p>` : '';
                         content = data.content || '';
                     }
                 } else {
-                    const snap = await getDoc(doc(db, cfg.lessons, lessonId));
-                    if (snap.exists()) {
-                        const data = snap.data();
+                    const data = await loadDoc(cfg.lessons, lessonId);
+                    if (data) {
                         title = data.title;
                         authorHtml = data.author ? `<p class="lesson-author">Written By ${escapeHtml(data.author)}</p>` : '';
                         content = data.content || '';

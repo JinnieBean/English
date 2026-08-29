@@ -4,7 +4,7 @@
  *          Vocab Highlight (#14), Flashcard Mode (#10),
  *          Progress Indicator (#11), Breadcrumb (#5), Stats (#8)
  */
-import { escapeHtml, formatTime, applyAudioVersion, recordLastStudied, getLastStudied } from './utils.js';
+import { escapeHtml, formatTime, applyAudioVersion, recordLastStudied, getLastStudied, debounce } from './utils.js';
 import { ensureSearchIndex, searchItems } from './search-index.js';
 import {
     initStore, getKnownSet, markKnown,
@@ -391,6 +391,25 @@ function highlightWordInExample(exampleEl, word) {
     }
 }
 
+/* ---------- Screen-reader announcements (#14) ----------
+   One shared polite live region; every transient status (session results,
+   bookmark changes, offline state…) is mirrored here for AT users. */
+let _liveEl = null;
+function announce(msg) {
+    if (!msg) return;
+    if (!_liveEl) {
+        _liveEl = document.createElement('div');
+        _liveEl.id = 'tn-live';
+        _liveEl.className = 'sr-only';
+        _liveEl.setAttribute('aria-live', 'polite');
+        _liveEl.setAttribute('role', 'status');
+        document.body.appendChild(_liveEl);
+    }
+    _liveEl.textContent = '';
+    setTimeout(() => { _liveEl.textContent = msg; }, 60);
+}
+window.announce = announce;
+
 /* ==============================================
    #11 — PROGRESS INDICATOR (driven by flashcard/SRS results)
    Backed by progress-store.js (local-first, cloud-synced when signed in)
@@ -429,6 +448,27 @@ let _lastFocused = null;
 
 function fcOpen() {
     return document.getElementById('flashcard-overlay')?.classList.contains('active');
+}
+
+/* ---------- Overlay focus trap (#11) ----------
+   Keeps Tab/Shift+Tab inside the open modal so keyboard users never fall
+   through to the page behind the overlay. */
+const FOCUSABLE_SEL = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function trapTab(e, overlay) {
+    if (e.key !== 'Tab') return;
+    const nodes = [...overlay.querySelectorAll(FOCUSABLE_SEL)]
+        .filter(el => el.offsetWidth || el.offsetHeight || el === document.activeElement);
+    if (!nodes.length) { e.preventDefault(); return; }
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (!overlay.contains(document.activeElement)) {
+        e.preventDefault(); first.focus();
+    } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+    }
 }
 
 function initFlashcard(vocabs, unitId) {
@@ -473,6 +513,7 @@ function bindFlashcardEvents(btn, overlay) {
 
     document.addEventListener('keydown', (e) => {
         if (!fcOpen()) return;
+        trapTab(e, overlay);
         switch (e.key) {
             case ' ': case 'Enter': case 'f': case 'F':
                 e.preventDefault(); _flashcardRevealed = !_flashcardRevealed; renderFlashcard(); break;
@@ -594,6 +635,7 @@ function finishSession() {
     if (fill) fill.style.width = '100%';
     const knownCount = _fcKnown.size;
     const total = _flashcardData.length;
+    announce(`Flashcard session complete: ${knownCount} of ${total} words marked as known.`);
     if (cardArea) {
         cardArea.innerHTML = `
             <div class="flashcard-summary">
@@ -688,6 +730,7 @@ let _quizMode = 'choice';
 let _quizAudio = null;
 let _quizSourcePool = [];
 let _quizMenuPool = [];
+let _quizLastFocused = null;
 
 function initQuiz(vocabs) {
     if (!vocabs || vocabs.length < 4) return;
@@ -721,6 +764,7 @@ function ensureQuizOverlay() {
     document.addEventListener('keydown', (e) => {
         const openNow = overlay.classList.contains('active');
         if (!openNow) return;
+        trapTab(e, overlay);
         if (e.key === 'Escape') closeQuiz();
         if (_quizMode === 'choice' && /^[1-4]$/.test(e.key)) {
             document.querySelector(`.quiz-option[data-index="${+e.key - 1}"]`)?.click();
@@ -749,6 +793,9 @@ function openQuizMenu(vocabs) {
     const overlay = document.getElementById('quiz-overlay');
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
+    _quizLastFocused = document.activeElement;
+    document.body.style.overflow = 'hidden';
+    overlay.querySelector('.quiz-modal')?.setAttribute('role', 'dialog');
     const counter = document.getElementById('quiz-counter');
     const fill = document.getElementById('quiz-progress-fill');
     if (counter) counter.textContent = 'Choose a mode';
@@ -778,6 +825,7 @@ function openQuizMenu(vocabs) {
             startQuiz(vocabs, btn.dataset.quizMode);
         });
     });
+    area.querySelector('[data-quiz-mode]:not(.disabled)')?.focus();
 }
 
 function startQuiz(vocabs, mode, forced) {
@@ -830,6 +878,8 @@ function closeQuiz() {
     const overlay = document.getElementById('quiz-overlay');
     overlay?.classList.remove('active');
     overlay?.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    if (_quizLastFocused instanceof HTMLElement) _quizLastFocused.focus();
 }
 
 function stopQuizAudio() {
@@ -1067,14 +1117,52 @@ function renderQuizSummary() {
             <div class="fc-summary-actions">
                 ${wrong.length ? `<button class="fc-btn fc-btn-unknown" type="button" id="quiz-retry-wrong">Retry wrong (${wrong.length})</button>` : ''}
                 <button class="fc-btn" type="button" id="quiz-restart">Play again</button>
+                <button class="fc-btn fc-btn-secondary" type="button" id="quiz-review-btn" aria-expanded="false" aria-controls="quiz-review-list">Review answers</button>
                 <button class="fc-btn fc-btn-secondary" type="button" id="quiz-menu-btn">Other modes</button>
                 <button class="fc-btn fc-btn-secondary" type="button" id="quiz-close-2">Close</button>
             </div>
+            <div class="quiz-review" id="quiz-review-list" hidden></div>
         </div>`;
     document.getElementById('quiz-retry-wrong')?.addEventListener('click', () => startQuiz(_quizSourcePool, _quizMode, wrong));
     document.getElementById('quiz-restart')?.addEventListener('click', () => startQuiz(_quizSourcePool, _quizMode));
     document.getElementById('quiz-menu-btn')?.addEventListener('click', () => openQuizMenu(_quizSourcePool));
     document.getElementById('quiz-close-2')?.addEventListener('click', closeQuiz);
+
+    // #15 — per-question review: my answer vs the correct one
+    const reviewBtn = document.getElementById('quiz-review-btn');
+    const reviewList = document.getElementById('quiz-review-list');
+    reviewBtn?.addEventListener('click', () => {
+        const open = !reviewList.hidden;
+        reviewList.hidden = open;
+        reviewBtn.setAttribute('aria-expanded', String(!open));
+        reviewBtn.textContent = open ? 'Review answers' : 'Hide answers';
+        if (open || reviewList.dataset.built) return;
+        reviewList.dataset.built = '1';
+        reviewList.innerHTML = _quizData.map((q, i) => {
+            let prompt, mine, right;
+            if (_quizMode === 'typing') {
+                prompt = q.def; mine = q.typed || '—'; right = stripPos(q.word);
+            } else if (_quizMode === 'listening') {
+                prompt = `&#9835; ${stripPos(q.word)}`;
+                mine = q.chosen != null ? stripPos(q.options[q.chosen]) : '—';
+                right = stripPos(q.word);
+            } else {
+                prompt = stripPos(q.word);
+                mine = q.chosen != null ? q.options[q.chosen] : '—';
+                right = q.def;
+            }
+            return `
+                <div class="qr-row ${q.correct ? 'qr-ok' : 'qr-bad'}">
+                    <span class="qr-num">${i + 1}</span>
+                    <div class="qr-body">
+                        <div class="qr-prompt">${_quizMode === 'choice' ? escapeHtml(prompt) : prompt}</div>
+                        <div class="qr-mine">${q.correct ? '&#10003;' : '&#10007;'} Your answer: ${escapeHtml(mine)}</div>
+                        ${q.correct ? '' : `<div class="qr-right">Correct: ${escapeHtml(right)}</div>`}
+                    </div>
+                </div>`;
+        }).join('');
+    });
+    announce(`${titles[_quizMode] || 'Quiz'} finished: ${_quizScore} of ${_quizData.length} correct.`);
 }
 
 /* ==============================================
@@ -1222,11 +1310,13 @@ function initGlobalSearch() {
    ============================================== */
 function initDictPopup() {
     let pop = null;
+    let lookupBtn = null;
     const dismiss = () => { pop?.remove(); pop = null; };
+    const removeLookup = () => { lookupBtn?.remove(); lookupBtn = null; };
 
     // Esc closes the popup from anywhere on the page
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && pop) dismiss();
+        if (e.key === 'Escape') { dismiss(); removeLookup(); }
     });
 
     const baseForms = (w) => {
@@ -1239,23 +1329,62 @@ function initDictPopup() {
         return out;
     };
 
+    const findLexeme = (wordRaw) => {
+        const lexicon = window.__unitLexicon || {};
+        for (const cand of baseForms(wordRaw.toLowerCase())) {
+            if (lexicon[cand]) return lexicon[cand];
+        }
+        return null;
+    };
+
+    const ZONE_SEL = '.vocab-example, .phrasal-example, .wf-example-line, .vocab-def, .phrasal-def';
+    const cleanWord = (t) => String(t || '').trim().replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, '');
+
     document.addEventListener('dblclick', (e) => {
         const zone = e.target.closest('.vocab-example, .phrasal-example, .wf-example-line');
         if (!zone) return;
         const sel = window.getSelection();
-        const wordRaw = String(sel || '').trim().replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, '');
+        const wordRaw = cleanWord(String(sel || ''));
         if (!wordRaw || wordRaw.split(/\s+/).length > 3) return;
-
-        const lexicon = window.__unitLexicon || {};
-        const lower = wordRaw.toLowerCase();
-        let hit = null;
-        for (const cand of baseForms(lower)) {
-            if (lexicon[cand]) { hit = lexicon[cand]; break; }
-        }
-        showDictPop(e, sel, wordRaw, hit);
+        removeLookup();
+        const rect = sel?.rangeCount ? sel.getRangeAt(0).getBoundingClientRect()
+            : { left: e.clientX, top: e.clientY, width: 0, bottom: e.clientY };
+        showDictPop(rect, wordRaw, findLexeme(wordRaw));
     });
 
-    function showDictPop(e, sel, wordRaw, hit) {
+    /* #12 — touch-friendly alternative to double-click: selecting a word in
+       an example/definition floats a "Look up" button above the selection. */
+    const onSelection = debounce(() => {
+        removeLookup();
+        const sel = window.getSelection();
+        const text = String(sel || '');
+        if (!text || text.split(/\s+/).length > 3 || !sel.rangeCount) return;
+        const range = sel.getRangeAt(0);
+        const anchor = range.commonAncestorContainer.parentElement;
+        if (!anchor || !anchor.closest(ZONE_SEL)) return;
+        const wordRaw = cleanWord(text);
+        if (!wordRaw) return;
+        const rect = range.getBoundingClientRect();
+        if (!rect.width && !rect.height) return;
+        dismiss();
+        lookupBtn = document.createElement('button');
+        lookupBtn.type = 'button';
+        lookupBtn.className = 'dict-lookup-btn';
+        lookupBtn.innerHTML = '&#128214; Look up';
+        lookupBtn.style.left = Math.max(8, rect.left + rect.width / 2 - 48) + 'px';
+        lookupBtn.style.top = Math.max(8, rect.top - 42) + 'px';
+        lookupBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            showDictPop(rect, wordRaw, findLexeme(wordRaw));
+            removeLookup();
+        });
+        document.body.appendChild(lookupBtn);
+    }, 300);
+    document.addEventListener('selectionchange', onSelection);
+    // The button is viewport-fixed, so it must not drift on scroll
+    window.addEventListener('scroll', removeLookup, { passive: true });
+
+    function showDictPop(rect, wordRaw, hit) {
         dismiss();
         pop = document.createElement('div');
         pop.className = 'dict-pop';
@@ -1275,10 +1404,9 @@ function initDictPopup() {
 
         document.body.appendChild(pop);
         const pw = pop.offsetWidth, ph = pop.offsetHeight;
-        const rect = sel?.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : { left: e.clientX, top: e.clientY, width: 0, bottom: e.clientY };
         let left = rect.left + window.scrollX + rect.width / 2 - pw / 2;
         let top = rect.top + window.scrollY - ph - 8;
-        if (top < window.scrollY + 8) top = (rect.bottom || e.clientY) + window.scrollY + 8;
+        if (top < window.scrollY + 8) top = (rect.bottom || rect.top) + window.scrollY + 8;
         const vw = document.documentElement.clientWidth;
         if (vw < 480) left = Math.max(8, (vw - pw) / 2); else left = Math.max(window.scrollX + 8, left);
         pop.style.left = left + 'px';
@@ -1450,6 +1578,27 @@ async function initResumeSlot() {
 }
 
 /* ==============================================
+    OFFLINE BANNER (#13) — network state strip
+    ============================================== */
+const OFFLINE_MSG = 'You\u2019re offline \u2014 showing the last cached content.';
+function initOfflineBanner() {
+    let banner = null;
+    const set = (show) => {
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'tn-offline-banner';
+            banner.setAttribute('role', 'status');
+            banner.textContent = OFFLINE_MSG;
+            document.body.appendChild(banner);
+        }
+        banner.classList.toggle('show', show);
+    };
+    window.addEventListener('offline', () => { set(true); announce('You are offline.'); });
+    window.addEventListener('online', () => { set(false); announce('Back online.'); });
+    if (!navigator.onLine) set(true);
+}
+
+/* ==============================================
     PWA — service worker registration
     ============================================== */
 function registerServiceWorker() {
@@ -1498,15 +1647,26 @@ function initSidebar() {
 
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     if (mobileMenuBtn && sidebar) {
+        const setMobileOpen = (on) => {
+            sidebar.classList.toggle('mobile-open', on);
+            document.body.classList.toggle('sidebar-lock', on);
+        };
         mobileMenuBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('mobile-open');
+            setMobileOpen(!sidebar.classList.contains('mobile-open'));
+        });
+        // Esc closes the mobile drawer (and restores scrolling)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && sidebar.classList.contains('mobile-open')) {
+                setMobileOpen(false);
+                mobileMenuBtn.focus();
+            }
         });
 
         // Close sidebar when clicking outside on mobile
         document.addEventListener('click', (e) => {
             if (window.innerWidth <= 768 && sidebar.classList.contains('mobile-open')) {
                 if (!sidebar.contains(e.target) && e.target !== mobileMenuBtn) {
-                    sidebar.classList.remove('mobile-open');
+                    setMobileOpen(false);
                 }
             }
         });
@@ -1526,6 +1686,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initGlobalSearch();
     initDictPopup();
     registerServiceWorker();
+    initOfflineBanner();
     trackLastStudied();
     initResumeSlot();
     setTimeout(updateReviewBadge, 800);

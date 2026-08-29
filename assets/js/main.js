@@ -2,6 +2,7 @@ import { collection, getDocs, getDoc, doc, query, where, getCountFromServer } fr
 import { db } from './firebase-config.js';
 import { escapeHtml, normalizeSearch } from './utils.js';
 import { allBookmarks, getBookmark, setBookmark } from './progress-store.js';
+import { cachedLoad } from './idb-cache.js';
 
 /* ---------- Shared page helpers ---------- */
 
@@ -87,6 +88,7 @@ function wireBmStars(container) {
             b.innerHTML = '&#9734;';
             b.setAttribute('aria-pressed', 'false');
             b.title = 'Bookmark this';
+            window.announce?.('Bookmark removed');
         } else {
             let data = {};
             try { data = JSON.parse(b.dataset.bmData || '{}'); } catch { /* noop */ }
@@ -95,6 +97,7 @@ function wireBmStars(container) {
             b.innerHTML = '&#9733;';
             b.setAttribute('aria-pressed', 'true');
             b.title = 'Remove bookmark';
+            window.announce?.(`Bookmarked ${data.word || ''}`.trim());
         }
     });
 }
@@ -153,10 +156,13 @@ function setupStudyTools(container, unitId, cards) {
 async function buildUnitPager(cur) {
     try {
         if (!cur || !cur.bookId) return;
-        const snap = await getDocs(query(collection(db, 'units'), where('bookId', '==', cur.bookId)));
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-            .filter(u => !isDraft(u))
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const { data } = await cachedLoad(`units:${cur.bookId}`, async () => {
+            const snap = await getDocs(query(collection(db, 'units'), where('bookId', '==', cur.bookId)));
+            return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => !isDraft(u));
+        }).catch(() => ({ data: null }));
+        if (!data) return;
+        const list = data;
+        list.sort((a, b) => (a.order || 0) - (b.order || 0));
         const idx = list.findIndex(u => u.id === cur.id);
         if (idx === -1) return;
         const prev = idx > 0 ? list[idx - 1] : null;
@@ -301,9 +307,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (unitId && titleEl) {
             try {
-                const unitDoc = await getDoc(doc(db, "units", unitId));
-                if (unitDoc.exists()) {
-                    const unitData = unitDoc.data();
+                const { data: unitData } = await cachedLoad(`unit:${unitId}`, async () => {
+                    const s = await getDoc(doc(db, "units", unitId));
+                    return s.exists() ? s.data() : null;
+                });
+                if (unitData) {
                     titleEl.innerText = unitData.title || '';
                     document.title = `${unitData.title} — Thor's Notes`;
 
@@ -356,9 +364,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const loadBooks = async () => {
             showSkeleton(booksListContainer, 2);
             try {
-                const booksSnapshot = await getDocs(collection(db, "books"));
-                const books = booksSnapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-                    .filter(b => !isDraft(b));
+                const { data: books } = await cachedLoad('books', async () => {
+                    const snap = await getDocs(collection(db, "books"));
+                    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                        .filter(b => !isDraft(b));
+                });
                 books.sort((a, b) => (a.order || 0) - (b.order || 0));
 
                 if (books.length === 0) {
@@ -420,8 +430,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 if (bookId) {
                     // Fetch only the requested book document instead of the whole collection
-                    const bookSnap = await getDoc(doc(db, "books", bookId));
-                    const currentBook = bookSnap.exists() ? bookSnap.data() : null;
+                    const { data: currentBook } = await cachedLoad(`book:${bookId}`, async () => {
+                        const s = await getDoc(doc(db, "books", bookId));
+                        return s.exists() ? s.data() : null;
+                    });
                     const header = document.querySelector('.course-header');
                     if (header && currentBook) {
                         header.innerHTML = `${escapeHtml(currentBook.title)} ${currentBook.subtitle ? `<br><span style="font-size:0.8em;font-weight:400;">${escapeHtml(currentBook.subtitle)}</span>` : ''}`;
@@ -437,12 +449,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // Server-side filter by bookId when available
-                const unitsQuery = bookId
-                    ? query(collection(db, "units"), where("bookId", "==", bookId))
-                    : collection(db, "units");
-                const unitsSnapshot = await getDocs(unitsQuery);
-                const units = unitsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-                    .filter(u => !isDraft(u));
+                const { data: units } = await cachedLoad(`units:${bookId || 'all'}`, async () => {
+                    const unitsQuery = bookId
+                        ? query(collection(db, "units"), where("bookId", "==", bookId))
+                        : collection(db, "units");
+                    const snap = await getDocs(unitsQuery);
+                    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                        .filter(u => !isDraft(u));
+                });
                 units.sort((a, b) => (a.order || 0) - (b.order || 0));
 
                 if (units.length === 0) {
@@ -499,15 +513,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!unitId) {
             showError(vocabListContainer, 'Unit ID missing from the URL.');
         } else {
-            const loadVocab = async () => {
-                showSkeleton(vocabListContainer, 4);
-                try {
-                    const vocabSnapshot = await getDocs(
-                        query(collection(db, "vocabularies"), where("unitId", "==", unitId))
-                    );
-                    const vocabs = vocabSnapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-                        .filter(v => !isDraft(v));
-                    vocabs.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
+                const loadVocab = async () => {
+                    showSkeleton(vocabListContainer, 4);
+                    try {
+                        const { data: vocabs } = await cachedLoad(`vocab:${unitId}`, async () => {
+                            const snap = await getDocs(
+                                query(collection(db, "vocabularies"), where("unitId", "==", unitId))
+                            );
+                            return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                                .filter(v => !isDraft(v));
+                        });
+                        vocabs.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
 
                     // Expose words to the dictionary popup (double-click lookup)
                     registerLexicon(vocabs);
@@ -584,6 +600,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 const item = vocabs.find(x => x.id === id);
                                 if (getBookmark(id)) setBookmark(id, null);
                                 else if (item) setBookmark(id, { word: item.word, def: item.def, example: item.example, pron: item.pron, unitId });
+                                window.announce?.(getBookmark(id) ? `Bookmarked ${item?.word || ''}`.trim() : 'Bookmark removed');
                                 rerender();
                             });
                         });
@@ -728,8 +745,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const load = async () => {
             showSkeleton(container, 3);
             try {
-                const snap = await getDocs(query(collection(db, cfg.collectionName), where("unitId", "==", unitId)));
-                const items = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                const { data: items } = await cachedLoad(`${cfg.collectionName}:${unitId}`, async () => {
+                    const snap = await getDocs(query(collection(db, cfg.collectionName), where("unitId", "==", unitId)));
+                    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                });
                 items.sort((a, b) => (a[cfg.sortKey] || '').localeCompare(b[cfg.sortKey] || ''));
                 registerLexicon(items);
 
@@ -785,8 +804,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const load = async () => {
             showSkeleton(container, 3);
             try {
-                const snap = await getDocs(query(collection(db, "word_formations"), where("unitId", "==", unitId)));
-                const wordforms = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                const { data: wordforms } = await cachedLoad(`word_formations:${unitId}`, async () => {
+                    const snap = await getDocs(query(collection(db, "word_formations"), where("unitId", "==", unitId)));
+                    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                });
                 wordforms.sort((a, b) => (a.rootWord || '').localeCompare(b.rootWord || ''));
 
                 // Expose every derived form to the dictionary popup (B7).
@@ -940,8 +961,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const load = async () => {
             showSkeleton(container, 3);
             try {
-                const snap = await getDocs(query(collection(db, "word_patterns"), where("unitId", "==", unitId)));
-                const patterns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                const { data: patterns } = await cachedLoad(`word_patterns:${unitId}`, async () => {
+                    const snap = await getDocs(query(collection(db, "word_patterns"), where("unitId", "==", unitId)));
+                    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                });
                 patterns.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
 
                 registerLexicon(patterns);
@@ -1022,8 +1045,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const load = async () => {
             showSkeleton(container, 3);
             try {
-                const snap = await getDocs(query(collection(db, "lexical_expansions"), where("unitId", "==", unitId)));
-                const lexicals = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                const { data: lexicals } = await cachedLoad(`lexical_expansions:${unitId}`, async () => {
+                    const snap = await getDocs(query(collection(db, "lexical_expansions"), where("unitId", "==", unitId)));
+                    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                });
 
                 // Expose every expansion word to the dictionary popup (B7)
                 registerLexicon(lexicals.flatMap(l => l.words || []));
