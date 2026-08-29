@@ -788,6 +788,10 @@ function startQuiz(vocabs, mode) {
 
     _quizData = shuffle(pool).slice(0, Math.min(10, pool.length)).map(v => ({
         ...v,
+        answered: false,
+        correct: false,
+        chosen: null,
+        typed: '',
         options: mode === 'choice'
             ? buildOptions(v, pool)
             : mode === 'listening'
@@ -848,12 +852,70 @@ function renderQuizQuestion() {
     const q = _quizData[_quizIndex];
     const area = document.getElementById('quiz-question-area');
     if (!q || !area) return;
-    _quizAnswered = false;
+    _quizAnswered = q.answered;
     setQuizChrome(_quizIndex, _quizData.length);
 
     if (_quizMode === 'choice') renderChoiceQuestion(q, area);
     else if (_quizMode === 'typing') renderTypingQuestion(q, area);
     else renderListeningQuestion(q, area);
+
+    renderQuizNav(area);
+    if (q.answered) restoreAnsweredState(q, area);
+}
+
+function quizScore() {
+    return _quizData.filter(q => q.answered && q.correct).length;
+}
+
+function renderQuizNav(area) {
+    const last = _quizIndex === _quizData.length - 1;
+    const nav = document.createElement('div');
+    nav.className = 'quiz-nav';
+    nav.innerHTML = `
+        <button type="button" class="fc-btn fc-btn-prev" id="quiz-back-btn" ${_quizIndex === 0 ? 'disabled' : ''}>&#8592; Back</button>
+        <button type="button" class="fc-btn fc-btn-next" id="quiz-next-btn" ${_quizData[_quizIndex].answered ? '' : 'disabled'}>${last ? 'Finish' : 'Next &#8594;'}</button>`;
+    area.appendChild(nav);
+    nav.querySelector('#quiz-back-btn').addEventListener('click', () => {
+        if (_quizIndex === 0) return;
+        stopQuizAudio();
+        _quizIndex--;
+        renderQuizQuestion();
+    });
+    nav.querySelector('#quiz-next-btn').addEventListener('click', () => {
+        if (!_quizData[_quizIndex].answered) return;
+        stopQuizAudio();
+        if (_quizIndex < _quizData.length - 1) { _quizIndex++; renderQuizQuestion(); }
+        else renderQuizSummary();
+    });
+}
+
+function updateQuizNextBtn() {
+    const btn = document.getElementById('quiz-next-btn');
+    if (btn) btn.disabled = !_quizData[_quizIndex]?.answered;
+}
+
+function restoreAnsweredState(q, area) {
+    const fb = document.getElementById('quiz-feedback');
+    if (_quizMode === 'typing') {
+        const input = document.getElementById('typing-input');
+        if (input) { input.value = q.typed; input.setAttribute('readonly', 'true'); }
+        const exact = normAns(q.typed) === normAns(stripPos(q.word));
+        const near = !exact && levenshtein(normAns(q.typed), normAns(stripPos(q.word))) <= 1;
+        if (q.correct) {
+            if (fb) fb.textContent = near ? `Correct — “${stripPos(q.word)}” (close enough!)` : 'Correct!';
+            area.querySelector('.quiz-typing-def')?.classList.add('correct');
+        } else {
+            if (fb) fb.innerHTML = `Not quite — the answer was <strong>${escapeHtml(stripPos(q.word))}</strong>`;
+            area.querySelector('.quiz-typing-def')?.classList.add('wrong');
+        }
+        return;
+    }
+    area.querySelectorAll('.quiz-option').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.correct === '1') b.classList.add('correct');
+        if (+b.dataset.index === q.chosen && b.dataset.correct !== '1') b.classList.add('wrong');
+    });
+    if (fb) fb.textContent = q.correct ? 'Correct!' : `Answer: ${stripPos(q.word)}`;
 }
 
 /* ---------- mode: multiple choice ---------- */
@@ -881,7 +943,9 @@ function renderChoiceQuestion(q, area) {
 
 function settleChoice(area, correct, chosenBtn, q) {
     _quizAnswered = true;
-    if (correct) _quizScore++;
+    q.answered = true;
+    q.correct = correct;
+    q.chosen = +chosenBtn.dataset.index;
     area.querySelectorAll('.quiz-option').forEach(b => {
         b.disabled = true;
         if (b.dataset.correct === '1') b.classList.add('correct');
@@ -889,7 +953,7 @@ function settleChoice(area, correct, chosenBtn, q) {
     if (!correct) chosenBtn.classList.add('wrong');
     const fb = document.getElementById('quiz-feedback');
     if (fb) fb.textContent = correct ? 'Correct!' : `Answer: ${stripPos(q.word)}`;
-    setTimeout(advanceQuiz, correct ? 700 : 1600);
+    updateQuizNextBtn();
 }
 
 /* ---------- mode: typing ---------- */
@@ -912,6 +976,9 @@ function renderTypingQuestion(q, area) {
         if (!guess) return;
         const exact = guess === answer;
         const near = !exact && levenshtein(guess, answer) <= 1;
+        q.answered = true;
+        q.correct = exact || near;
+        q.typed = input.value;
         gradeTyping(area, q, exact, near, answer);
     });
 }
@@ -920,7 +987,6 @@ function gradeTyping(area, q, exact, near, answer) {
     _quizAnswered = true;
     const fb = document.getElementById('quiz-feedback');
     if (exact || near) {
-        _quizScore++;
         if (fb) fb.textContent = near ? `Correct — “${stripPos(q.word)}” (close enough!)` : 'Correct!';
         area.querySelector('.quiz-typing-def')?.classList.add('correct');
     } else {
@@ -928,7 +994,7 @@ function gradeTyping(area, q, exact, near, answer) {
         area.querySelector('.quiz-typing-def')?.classList.add('wrong');
     }
     document.getElementById('typing-input')?.setAttribute('readonly', 'true');
-    setTimeout(advanceQuiz, exact ? 700 : 1600);
+    updateQuizNextBtn();
 }
 
 /* ---------- mode: listening ---------- */
@@ -955,7 +1021,7 @@ function renderListeningQuestion(q, area) {
         </div>
         <div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>`;
 
-    playQuizAudio(q.audio);
+    if (!q.answered) playQuizAudio(q.audio);
     area.querySelector('.quiz-replay-btn')?.addEventListener('click', () => playQuizAudio(q.audio));
     area.querySelectorAll('.quiz-option').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -966,14 +1032,9 @@ function renderListeningQuestion(q, area) {
     });
 }
 
-function advanceQuiz() {
-    stopQuizAudio();
-    if (_quizIndex < _quizData.length - 1) { _quizIndex++; renderQuizQuestion(); }
-    else renderQuizSummary();
-}
-
 function renderQuizSummary() {
     stopQuizAudio();
+    _quizScore = quizScore();
     recordActivity(Math.max(1, Math.round(_quizScore / 2)));
     const area = document.getElementById('quiz-question-area');
     const counter = document.getElementById('quiz-counter');

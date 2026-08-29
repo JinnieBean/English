@@ -66,7 +66,8 @@ document.getElementById('import-btn')?.addEventListener('click', async () => {
         const ok = await confirmDialog({
             title: `Import into "${collName}"?`,
             message: `${docs.length} documents found — ${newCount} will be created, ${updateCount} existing will be overwritten by ID.`,
-            confirmText: 'Import'
+            confirmText: 'Import',
+            danger: false
         });
         if (!ok) return;
 
@@ -228,7 +229,8 @@ document.getElementById('audio-apply-btn')?.addEventListener('click', async () =
     const ok = await confirmDialog({
         title: 'Rewrite audio URLs?',
         message: `${totalDocs} document(s) will be updated (${totalUrls} URL(s)). This cannot be undone with Undo — export a backup first if unsure.`,
-        confirmText: 'Update'
+        confirmText: 'Update',
+        danger: false
     });
     if (!ok) return;
 

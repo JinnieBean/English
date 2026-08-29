@@ -115,7 +115,7 @@ function ensureConfirmOverlay() {
             <p id="confirm-message"></p>
             <div class="confirm-actions">
                 <button type="button" class="btn-secondary" id="confirm-cancel">Cancel</button>
-                <button type="button" class="btn-danger" id="confirm-ok">Delete</button>
+                <button type="button" class="btn-primary btn-danger" id="confirm-ok">Delete</button>
             </div>
         </div>`;
     document.body.appendChild(overlay);
@@ -128,13 +128,13 @@ function ensureConfirmOverlay() {
     return overlay;
 }
 
-export function confirmDialog({ title = 'Please confirm', message = '', confirmText = 'Delete' } = {}) {
+export function confirmDialog({ title = 'Please confirm', message = '', confirmText = 'Delete', danger = true } = {}) {
     const overlay = ensureConfirmOverlay();
     overlay.querySelector('#confirm-title').textContent = title;
     overlay.querySelector('#confirm-message').textContent = message;
     const okBtn = overlay.querySelector('#confirm-ok');
     okBtn.textContent = confirmText;
-    okBtn.classList.toggle('btn-danger', confirmText === 'Delete');
+    okBtn.classList.toggle('btn-danger', danger);
     overlay.style.display = 'flex';
     document.body.classList.add('modal-open');
     okBtn.focus();

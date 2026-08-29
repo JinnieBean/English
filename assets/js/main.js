@@ -480,7 +480,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="vocab-tools-left">
                             <button type="button" id="flashcard-toggle-btn" class="flashcard-toggle-btn">&#127924; Flashcards</button>
                             <button type="button" id="quiz-toggle-btn" class="flashcard-toggle-btn">&#10067; Quiz</button>
-                            <button type="button" id="print-worksheet-btn" class="flashcard-toggle-btn" title="Print a study worksheet">&#128424; Worksheet</button>
                             <label class="starred-filter"><input type="checkbox" id="starred-only-checkbox"> &#9733; Starred</label>
                         </div>
                         <div class="vocab-tools-right">
@@ -578,42 +577,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     wireSearch(searchInput, vocabs,
                         (list, searching) => renderVocabList(starredOnly ? list.filter(v => getBookmark(v.id)) : list, searching),
                         searchVocab);
-
-                    // Printable worksheet (Part A: word->meaning, Part B: recall)
-                    document.getElementById('print-worksheet-btn')?.addEventListener('click', () => {
-                        if (!vocabs.length) return;
-                        document.getElementById('worksheet-root')?.remove();
-                        const stripPosW = (w) => String(w || '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
-                        const title = document.getElementById('unit-detail-title')?.innerText || 'Unit vocabulary';
-                        const date = new Date().toLocaleDateString();
-                        const rowsA = vocabs.map((v, i) => `
-                            <tr><td class="ws-num">${i + 1}</td>
-                                <td class="ws-word">${escapeHtml(stripPosW(v.word))}</td>
-                                <td>${escapeHtml(v.def || '')}</td></tr>`).join('');
-                        const rowsB = vocabs.map((v, i) => `
-                            <tr><td class="ws-num">${i + 1}</td>
-                                <td>${escapeHtml(v.def || '')}</td>
-                                <td class="ws-blank"></td></tr>`).join('');
-                        const root = document.createElement('div');
-                        root.id = 'worksheet-root';
-                        root.innerHTML = `
-                            <header><h1>${escapeHtml(title)} — Worksheet</h1><span>${date}</span></header>
-                            <section><h2>Part A · Match each word with its meaning</h2>
-                                <table><thead><tr><th>#</th><th>Word</th><th>Meaning</th></tr></thead><tbody>${rowsA}</tbody></table>
-                            </section>
-                            <section class="ws-break"><h2>Part B · Write the word</h2>
-                                <table><thead><tr><th>#</th><th>Meaning</th><th>Your answer</th></tr></thead><tbody>${rowsB}</tbody></table>
-                            </section>`;
-                        document.body.appendChild(root);
-                        document.body.classList.add('printing-worksheet');
-                        const cleanup = () => {
-                            document.body.classList.remove('printing-worksheet');
-                            window.removeEventListener('afterprint', cleanup);
-                            setTimeout(() => root.remove(), 300);
-                        };
-                        window.addEventListener('afterprint', cleanup);
-                        window.print();
-                    });
 
                     // Initial render happens inside wireSearch (honours ?q=)
 

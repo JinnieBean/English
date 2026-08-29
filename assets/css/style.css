@@ -1691,6 +1691,15 @@ html[data-theme="dark"] .dm-label::before { content: "Light Mode"; }
 }
 .quiz-feedback { min-height: 1.6rem; margin-top: 1rem; text-align: center; color: var(--text-secondary); font-style: italic; }
 
+.quiz-nav {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-top: 1.25rem;
+}
+.quiz-nav .fc-btn { flex: 0 1 auto; min-width: 110px; }
+.quiz-nav .fc-btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
 /* =========================================
    MISC — coming soon cards, lexical top section
    ========================================= */
@@ -2052,28 +2061,6 @@ button.wf-toggle {
 @media (max-width: 480px) {
     .unit-pager { flex-direction: column; }
     .up-next { text-align: left; align-items: flex-start; }
-}
-
-/* Worksheet is screen-hidden, print-only */
-#worksheet-root { display: none; }
-@media print {
-    body.printing-worksheet > *:not(#worksheet-root) { display: none !important; }
-    body.printing-worksheet #worksheet-root {
-        display: block !important;
-        font-family: Georgia, serif;
-        color: #000;
-        padding: 1cm;
-    }
-    #worksheet-root header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #000; padding-bottom: .3rem; margin-bottom: 1rem; }
-    #worksheet-root h1 { font-size: 16pt; }
-    #worksheet-root h2 { font-size: 13pt; margin: 1rem 0 .5rem; }
-    #worksheet-root table { width: 100%; border-collapse: collapse; }
-    #worksheet-root th, #worksheet-root td { border: 1px solid #999; padding: .35rem .5rem; text-align: left; vertical-align: top; font-size: 11pt; }
-    #worksheet-root th { background: #eee; }
-    #worksheet-root .ws-num { width: 28px; text-align: right; }
-    #worksheet-root .ws-word { width: 30%; font-weight: bold; }
-    #worksheet-root .ws-blank { height: 2.2em; }
-    #worksheet-root .ws-break { page-break-before: always; }
 }
 
 /* =========================================
