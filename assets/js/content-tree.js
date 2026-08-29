@@ -246,31 +246,6 @@ function enhanceLessonPage() {
     onScroll();
 
     /* Font size controls (persisted) */
-    const SCALE_KEY = 'lesson-font-scale';
-    let scale = parseFloat(localStorage.getItem(SCALE_KEY) || '1') || 1;
-    const applyScale = () => {
-        content.style.fontSize = (1.05 * scale).toFixed(2) + 'rem';
-    };
-    applyScale();
-    if (!document.getElementById('lesson-font-controls')) {
-        const fc = document.createElement('div');
-        fc.id = 'lesson-font-controls';
-        fc.setAttribute('role', 'group');
-        fc.setAttribute('aria-label', 'Text size');
-        fc.innerHTML = `
-            <button type="button" data-fs="-" title="Smaller text" aria-label="Smaller text">A&minus;</button>
-            <button type="button" data-fs="0" title="Reset text size" aria-label="Reset text size">A</button>
-            <button type="button" data-fs="+" title="Larger text" aria-label="Larger text">A+</button>`;
-        document.body.appendChild(fc);
-        fc.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-            scale = b.dataset.fs === '+' ? Math.min(1.6, scale + 0.1)
-                  : b.dataset.fs === '-' ? Math.max(0.8, scale - 0.1)
-                  : 1;
-            localStorage.setItem(SCALE_KEY, String(scale));
-            applyScale();
-        }));
-    }
-
     /* Table of contents from h2/h3 */
     const headings = [...content.querySelectorAll('h2, h3')];
     const existingToc = document.getElementById('lesson-toc');
