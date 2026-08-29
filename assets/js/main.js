@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /* =========================================================
-       Unit Detail Page — Vocabulary (+ flashcards, quiz, CSV)
+       Unit Detail Page — Vocabulary (+ flashcards, quiz)
        ========================================================= */
     const vocabListContainer = document.getElementById('vocab-list-container');
     if (vocabListContainer) {
@@ -473,7 +473,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const searchInput = injectSearchBar(vocabListContainer, 'vocab-search-input', 'Search vocabulary…');
                     applyUrlSearchParam(searchInput);
 
-                    // Toolbar: flashcards / quiz / CSV / starred filter / progress badge
+                    // Toolbar: flashcards / quiz / starred filter / progress badge
                     const toolbar = document.createElement('div');
                     toolbar.className = 'vocab-toolbar reveal visible';
                     toolbar.innerHTML = `
@@ -485,7 +485,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <div class="vocab-tools-right">
                             <span class="progress-badge-slot" id="progress-badge-${escapeHtml(unitId)}"></span>
-                            <button type="button" id="export-csv-btn" class="csv-export-btn" title="Download this unit's words as CSV (Anki friendly)">Export CSV</button>
                         </div>`;
                     const titleEl = document.querySelector('.vocab-section-title');
                     if (titleEl) {
@@ -579,21 +578,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     wireSearch(searchInput, vocabs,
                         (list, searching) => renderVocabList(starredOnly ? list.filter(v => getBookmark(v.id)) : list, searching),
                         searchVocab);
-
-                    // Export CSV (Anki-friendly Front/Back)
-                    document.getElementById('export-csv-btn')?.addEventListener('click', () => {
-                        const rows = [['Front', 'Back', 'Example']];
-                        vocabs.forEach(v => rows.push([
-                            v.word || '', v.def || '', v.example || ''
-                        ]));
-                        const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-                        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = 'unit-vocabulary.csv';
-                        a.click();
-                        URL.revokeObjectURL(a.href);
-                    });
 
                     // Printable worksheet (Part A: word->meaning, Part B: recall)
                     document.getElementById('print-worksheet-btn')?.addEventListener('click', () => {

@@ -195,36 +195,98 @@ body {
 }
 
 /* =========================================
-   BREADCRUMB (#5)
+   BREADCRUMB (#5) — pill chips on a soft bar
    ========================================= */
+.breadcrumb-container {
+    min-height: 0;
+    margin: 1.25rem 0 1.5rem;
+    padding-inline: 4rem;
+}
+
 .breadcrumb {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    width: fit-content;
+    max-width: 100%;
     font-size: var(--text-sm);
     color: var(--text-secondary);
-    padding: 0.75rem 0 1.5rem;
-    flex-wrap: wrap;
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: 12px;
+    padding: 0.45rem 0.6rem;
+    box-shadow: var(--shadow-sm);
 }
 
-.breadcrumb a {
+.breadcrumb .bc-item {
+    display: inline-flex;
+    min-width: 0;
+}
+
+.breadcrumb .bc-link,
+.breadcrumb .bc-current {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 100%;
+    min-height: 32px;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.breadcrumb .bc-link {
     color: var(--text-secondary);
     text-decoration: none;
-    transition: color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.breadcrumb a:hover {
+.breadcrumb .bc-link:hover {
+    background: var(--nav-hover-bg);
     color: var(--accent-color);
 }
 
-.breadcrumb .bc-sep {
-    opacity: 0.5;
-    font-size: 0.8rem;
+.breadcrumb .bc-link:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 1px;
 }
 
 .breadcrumb .bc-current {
-    color: var(--text-primary);
-    font-weight: 500;
+    background: var(--nav-active-bg);
+    color: var(--nav-active-color);
+    font-weight: 600;
+}
+
+.breadcrumb .bc-sep {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    opacity: 0.45;
+}
+
+.breadcrumb .bc-icon {
+    flex-shrink: 0;
+}
+
+/* Skeleton shown on dynamic pages until data arrives */
+.breadcrumb .bc-skeleton {
+    display: inline-block;
+    min-height: 32px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--line-color) 25%, var(--nav-hover-bg) 50%, var(--line-color) 75%);
+    background-size: 200% 100%;
+    animation: bc-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes bc-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .breadcrumb .bc-skeleton { animation: none; }
 }
 
 /* =========================================
@@ -1086,6 +1148,7 @@ html[data-theme="dark"] .dm-label::before { content: "Light Mode"; }
    ========================================= */
 @media (max-width: 900px) {
     .container { padding: 2rem; }
+    .breadcrumb-container { padding-inline: 2rem; }
 }
 
 @media (max-width: 768px) {
@@ -1222,7 +1285,9 @@ html[data-theme="dark"] .dm-label::before { content: "Light Mode"; }
 
 @media (max-width: 480px) {
     .container { padding: 1.5rem 1rem; }
-    .breadcrumb { padding-left: 0.25rem; }
+    .breadcrumb-container { margin: 0.75rem 0 1rem; padding-inline: 1rem; }
+    .breadcrumb { padding: 0.35rem 0.45rem; border-radius: 10px; }
+    .breadcrumb .bc-item { max-width: 40vw; }
     .nav-link-text, .dm-label { font-size: 0.6rem; }
     .nav-link .icon, .nav-link .icon svg { width: 20px; height: 20px; }
     .dark-mode-toggle,
@@ -1478,16 +1543,6 @@ html[data-theme="dark"] .dm-label::before { content: "Light Mode"; }
 /* =========================================
    SECTION SEARCH + TOOLBAR
    ========================================= */
-.breadcrumb-container { min-height: 0; }
-.breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    padding-top: 1.25rem;
-}
 .vocab-search-container { margin-bottom: 1.5rem; }
 .vocab-search-container input[type="search"] {
     width: 100%;
@@ -1517,20 +1572,6 @@ html[data-theme="dark"] .dm-label::before { content: "Light Mode"; }
 .vocab-section-title .vocab-toolbar { margin-bottom: 0; }
 .vocab-tools-left,
 .vocab-tools-right { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
-.csv-export-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--line-color);
-    color: var(--text-secondary);
-    border-radius: 20px;
-    height: 2.25rem;
-    padding: 0 1.2rem;
-    font-family: var(--font-body);
-    font-size: var(--text-sm);
-    line-height: 1.2;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.csv-export-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
 .starred-filter {
     display: inline-flex;
     align-items: center;

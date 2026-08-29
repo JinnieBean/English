@@ -62,9 +62,14 @@ function initRevealAnimations() {
 /* ==============================================
    #5 — BREADCRUMB GENERATION
    Usage: <nav class="breadcrumb-container" id="breadcrumb-container"
-             data-crumbs='[{"label":"Home","href":"index.html"},...]'></nav>
+            data-crumbs='[{"label":"Home","href":"index.html"},...]'></nav>
    Dynamic pages may instead call window.renderBreadcrumb([{label, href}...]).
+   Pages that fill the container asynchronously should mark it with
+   `data-section` or `data-dynamic` so a skeleton shows until data arrives.
    ============================================== */
+const BC_HOME_SVG = '<svg class="bc-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>';
+const BC_CHEVRON_SVG = '<svg class="bc-sep" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>';
+
 window.renderBreadcrumb = function (crumbs) {
     const container = document.getElementById('breadcrumb-container');
     if (!container || !crumbs?.length) return;
@@ -72,15 +77,26 @@ window.renderBreadcrumb = function (crumbs) {
     const items = crumbs.map((c, i) => {
         const isLast = i === crumbs.length - 1;
         const label = escapeHtml(c.label);
+        const icon = (i === 0 && /^home$/i.test(String(c.label).trim())) ? BC_HOME_SVG : '';
+        const sep = isLast ? '' : BC_CHEVRON_SVG;
         if (isLast || !c.href) {
-            return `<span class="bc-current" aria-current="page">${label}</span>`;
+            return `<span class="bc-item"><span class="bc-current" aria-current="page">${icon}${label}</span></span>${sep}`;
         }
-        return `<a href="${escapeHtml(c.href)}">${label}</a><span class="bc-sep" aria-hidden="true">›</span>`;
+        return `<span class="bc-item"><a class="bc-link" href="${escapeHtml(c.href)}">${icon}${label}</a></span>${sep}`;
     });
 
     container.hidden = false;
     container.innerHTML = `<nav class="breadcrumb" aria-label="Breadcrumb">${items.join('')}</nav>`;
 };
+
+function renderBreadcrumbPlaceholder(container) {
+    container.hidden = false;
+    container.innerHTML = `<nav class="breadcrumb" aria-label="Breadcrumb" aria-busy="true">`
+        + `<span class="bc-skeleton" style="width:5rem"></span>${BC_CHEVRON_SVG}`
+        + `<span class="bc-skeleton" style="width:7.5rem"></span>${BC_CHEVRON_SVG}`
+        + `<span class="bc-skeleton" style="width:9.5rem"></span>`
+        + `</nav>`;
+}
 
 function initBreadcrumb() {
     const container = document.getElementById('breadcrumb-container');
@@ -90,7 +106,9 @@ function initBreadcrumb() {
     try { crumbs = JSON.parse(container.dataset.crumbs || '[]'); } catch { crumbs = []; }
     if (!crumbs.length) {
         // Dynamic pages fill this container themselves after their data loads
-        if (!container.dataset.section && !container.id.includes('dynamic')) {
+        if (container.dataset.section || 'dynamic' in container.dataset) {
+            renderBreadcrumbPlaceholder(container);
+        } else if (!container.id.includes('dynamic')) {
             container.hidden = true;
         }
         return;
