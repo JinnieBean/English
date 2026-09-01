@@ -303,6 +303,7 @@ body {
    ========================================= */
 .notes-section {
     margin-top: 1rem;
+    margin-bottom: 2.5rem;
 }
 
 .section-title {
@@ -387,7 +388,7 @@ body {
    ========================================= */
 .index-quote {
     text-align: center;
-    padding: 3rem 2rem 1rem;
+    padding: 2rem 2rem 1rem;
     max-width: 680px;
     margin: 0 auto;
 }
@@ -2402,7 +2403,10 @@ button.wf-toggle {
    ========================================= */
 
 /* Resume shortcut card */
-.resume-card { margin: 0 0 1.5rem; }
+.resume-card {
+    max-width: 680px;
+    margin: 0 auto 2rem;
+}
 .resume-link {
     display: flex;
     align-items: center;
