@@ -295,9 +295,9 @@ body.modal-open { overflow: hidden; }
     color: var(--text-primary) !important;
 }
 
-[data-theme="dark"] .input-field:not(.tox *),
-[data-theme="dark"] textarea:not(.tox *),
-[data-theme="dark"] select:not(.tox *) {
+[data-theme="dark"] .input-field,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
     background-color: var(--input-bg);
     border-color: var(--input-border);
     color: var(--text-primary);
@@ -337,11 +337,11 @@ body.modal-open { overflow: hidden; }
 [data-theme="dark"] .modal-content label {
     color: var(--text-primary);
 }
-[data-theme="dark"] input[type="text"]:not(.tox *),
-[data-theme="dark"] input[type="number"]:not(.tox *),
-[data-theme="dark"] input[type="url"]:not(.tox *),
-[data-theme="dark"] textarea:not(.tox *),
-[data-theme="dark"] select:not(.tox *) {
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="url"],
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
     background-color: var(--input-bg);
     border: 1px solid var(--input-border);
     color: var(--text-primary);

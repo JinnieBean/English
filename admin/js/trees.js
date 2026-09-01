@@ -457,44 +457,7 @@ export function initTinyMCE() {
             "99CCFF", "Light sky blue", "CC99FF", "Plum"
         ],
         custom_colors: true,
-        extended_valid_elements: 'span[style|class|id],audio[controls|src|width|height|style|class|id|preload|autoplay|loop|muted|crossorigin],video[controls|src|width|height|style|class|id|poster|preload|autoplay|loop|muted|crossorigin],source[src|type],iframe[src|width|height|style|class|id|allowfullscreen|frameborder|title|referrerpolicy],img[src|alt|title|width|height|style|class|id|loading]',
-        media_dimensions: true,
-        audio_template_callback: function (data) {
-            var widthAttr = data.width ? ' width="' + data.width + '"' : '';
-            var heightAttr = data.height ? ' height="' + data.height + '"' : '';
-            var styleParts = [];
-            if (data.width) {
-                var w = String(data.width).trim();
-                styleParts.push('width:' + (isNaN(w) ? w : w + 'px'));
-            }
-            if (data.height) {
-                var h = String(data.height).trim();
-                styleParts.push('height:' + (isNaN(h) ? h : h + 'px'));
-            }
-            var styleAttr = styleParts.length ? ' style="' + styleParts.join('; ') + ';"' : '';
-            return '<audio controls="controls"' + widthAttr + heightAttr + styleAttr + '>\n' +
-                '<source src="' + data.source + '"' + (data.sourcemime ? ' type="' + data.sourcemime + '"' : '') + ' />\n' +
-                (data.altsource ? '<source src="' + data.altsource + '"' + (data.altsourcemime ? ' type="' + data.altsourcemime + '"' : '') + ' />\n' : '') +
-                '</audio>';
-        },
-        video_template_callback: function (data) {
-            var widthAttr = data.width ? ' width="' + data.width + '"' : '';
-            var heightAttr = data.height ? ' height="' + data.height + '"' : '';
-            var styleParts = [];
-            if (data.width) {
-                var w = String(data.width).trim();
-                styleParts.push('width:' + (isNaN(w) ? w : w + 'px'));
-            }
-            if (data.height) {
-                var h = String(data.height).trim();
-                styleParts.push('height:' + (isNaN(h) ? h : h + 'px'));
-            }
-            var styleAttr = styleParts.length ? ' style="' + styleParts.join('; ') + ';"' : '';
-            return '<video controls="controls"' + widthAttr + heightAttr + styleAttr + (data.poster ? ' poster="' + data.poster + '"' : '') + '>\n' +
-                '<source src="' + data.source + '"' + (data.sourcemime ? ' type="' + data.sourcemime + '"' : '') + ' />\n' +
-                (data.altsource ? '<source src="' + data.altsource + '"' + (data.altsourcemime ? ' type="' + data.altsourcemime + '"' : '') + ' />\n' : '') +
-                '</video>';
-        },
+        extended_valid_elements: 'span[style|class|id]',
         menubar: true,
         height: 400,
         promotion: false,
