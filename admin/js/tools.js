@@ -235,7 +235,7 @@ document.getElementById('audio-apply-btn')?.addEventListener('click', async () =
     if (!ok) return;
 
     let origHtml = '';
-    if (btn) { origHtml = btn.innerHTML; btn.dataset.busy = '1'; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating…'; }
+    if (btn) { origHtml = btn.innerHTML; btn.dataset.busy = '1'; btn.disabled = true; btn.innerHTML = '<i aria-hidden="true" class="fas fa-spinner fa-spin"></i> Updating…'; }
 
     try {
         const CHUNK = 300;

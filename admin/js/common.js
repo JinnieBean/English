@@ -36,15 +36,59 @@ window.closeModalOverlay = function (modalOrId) {
     const modal = typeof modalOrId === 'string' ? document.getElementById(modalOrId) : modalOrId;
     if (modal) {
         modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
     }
+    syncBodyModalState();
     window.closeTinyMCEPopups();
     window.isModalDirty = false;
+    if (window.__modalReturnFocus && document.contains(window.__modalReturnFocus)) {
+        window.__modalReturnFocus.focus();
+    }
+    window.__modalReturnFocus = null;
 };
+
+/** Keep body scroll locked while ANY modal is still open (confirm-on-top safe). */
+function syncBodyModalState() {
+    const anyOpen = [...document.querySelectorAll('.modal')].some(m => m.style.display === 'flex');
+    document.body.classList.toggle('modal-open', anyOpen);
+}
+
+/* ---- Modal focus management (Tab trap + focus restore) ----
+   TinyMCE-safe: when focus sits inside the editor iframe or a .tox-* popup,
+   activeElement is outside the modal element and the handler steps aside,
+   letting the browser's native tab order apply. */
+const MODAL_FOCUSABLE = 'a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function topmostOpenModal() {
+    const open = [...document.querySelectorAll('.modal')].filter(m => m.style.display === 'flex');
+    return open[open.length - 1] || null;
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const modal = topmostOpenModal();
+    if (!modal) return;
+    const active = document.activeElement;
+    if (!active || active.tagName === 'IFRAME' || !modal.contains(active)) return;
+    const items = [...modal.querySelectorAll(MODAL_FOCUSABLE)]
+        .filter(el => el.offsetParent !== null && el.getAttribute('aria-hidden') !== 'true');
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+});
 // Legacy alias used by inline handlers
 window.closeModal = function (id) { window.closeModalOverlay(id); };
 
 export function openModal(modal) {
+    window.__modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    const heading = modal.querySelector('h2, h3');
+    if (heading) {
+        if (!heading.id) heading.id = modal.id + '-title';
+        modal.setAttribute('aria-labelledby', heading.id);
+    }
     modal.style.display = 'flex';
     document.body.classList.add('modal-open');
     window.isModalDirty = false;
@@ -65,9 +109,9 @@ window.showToast = function (message, type = 'success', action = null) {
     toast.className = 'toast ' + type;
 
     let icon = '';
-    if (type === 'success') icon = '<i class="fas fa-check-circle" style="color: #4caf50;"></i>';
-    else if (type === 'error') icon = '<i class="fas fa-exclamation-circle" style="color: #d32f2f;"></i>';
-    else icon = '<i class="fas fa-info-circle" style="color: #2196f3;"></i>';
+    if (type === 'success') icon = '<i aria-hidden="true" class="fas fa-check-circle" style="color: #4caf50;"></i>';
+    else if (type === 'error') icon = '<i aria-hidden="true" class="fas fa-exclamation-circle" style="color: #d32f2f;"></i>';
+    else icon = '<i aria-hidden="true" class="fas fa-info-circle" style="color: #2196f3;"></i>';
 
     const inner = document.createElement('div');
     inner.style.cssText = 'display:flex; align-items:center; gap:10px;';
@@ -135,6 +179,7 @@ export function confirmDialog({ title = 'Please confirm', message = '', confirmT
     const okBtn = overlay.querySelector('#confirm-ok');
     okBtn.textContent = confirmText;
     okBtn.classList.toggle('btn-danger', danger);
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     overlay.style.display = 'flex';
     document.body.classList.add('modal-open');
     okBtn.focus();
@@ -142,7 +187,8 @@ export function confirmDialog({ title = 'Please confirm', message = '', confirmT
         overlay._resolve = (val) => {
             overlay._resolve = null;
             overlay.style.display = 'none';
-            document.body.classList.remove('modal-open');
+            syncBodyModalState();
+            if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
             resolve(val);
         };
     });
@@ -160,7 +206,7 @@ export function onSubmit(form, handler) {
             origHtml = btn.innerHTML;
             btn.dataset.busy = '1';
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+            btn.innerHTML = '<i aria-hidden="true" class="fas fa-spinner fa-spin"></i> Saving…';
         }
         try {
             await handler();

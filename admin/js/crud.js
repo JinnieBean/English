@@ -1,6 +1,6 @@
 import { collection, addDoc, updateDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { adminDb as db } from './admin-firebase.js';
-import { escapeHtml, friendlyError, applyAudioVersion } from '../../assets/js/utils.js';
+import { escapeHtml, friendlyError, applyAudioVersion, debounce } from '../../assets/js/utils.js';
 import { hooks, openModal, onSubmit, stampCreate, stampUpdate, isDuplicate, dupToast, performDelete, assetUrl, publicUrlFor, enableDragReorder, confirmDialog, logAudit } from './common.js';
 import {
     booksData, unitsData, vocabData, phrasalData, prepData, wordformData, patternData, lexicalData,
@@ -128,7 +128,7 @@ window.deleteBook = async (id) => {
     await performDelete("books", id, 'book', warning);
 };
 
-document.getElementById('search-book')?.addEventListener('input', renderBooks);
+document.getElementById('search-book')?.addEventListener('input', debounce(renderBooks));
 
 /* =========================================================
    UNITS
@@ -176,7 +176,7 @@ onSubmit(unitForm, async () => {
     window.showToast('Saved!', 'success');
 });
 
-document.getElementById('search-unit')?.addEventListener('input', renderUnits);
+document.getElementById('search-unit')?.addEventListener('input', debounce(renderUnits));
 document.getElementById('sort-unit')?.addEventListener('change', renderUnits);
 document.getElementById('filter-unit-book')?.addEventListener('change', renderUnits);
 
@@ -329,7 +329,7 @@ wireAudioTest('vocab-audio-test', 'vocab-audio');
 wireAudioTest('phrasal-audio-test', 'phrasal-audio');
 
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
-document.getElementById('search-vocab').addEventListener('input', () => { resetPage('vocab'); renderVocab(); });
+document.getElementById('search-vocab').addEventListener('input', debounce(() => { resetPage('vocab'); renderVocab(); }));
 document.getElementById('sort-vocab').addEventListener('change', renderVocab);
 
 export function renderVocab() {
@@ -448,7 +448,7 @@ onSubmit(phrasalForm, async () => {
 });
 
 document.getElementById('filter-unit-select-phrasal').addEventListener('change', renderPhrasal);
-document.getElementById('search-phrasal').addEventListener('input', () => { resetPage('phrasal'); renderPhrasal(); });
+document.getElementById('search-phrasal').addEventListener('input', debounce(() => { resetPage('phrasal'); renderPhrasal(); }));
 document.getElementById('sort-phrasal').addEventListener('change', renderPhrasal);
 
 export function renderPhrasal() {
@@ -563,7 +563,7 @@ onSubmit(prepForm, async () => {
 });
 
 document.getElementById('filter-unit-select-prep').addEventListener('change', renderPrep);
-document.getElementById('search-prep').addEventListener('input', () => { resetPage('prep'); renderPrep(); });
+document.getElementById('search-prep').addEventListener('input', debounce(() => { resetPage('prep'); renderPrep(); }));
 document.getElementById('sort-prep').addEventListener('change', renderPrep);
 
 export function renderPrep() {
@@ -683,12 +683,12 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
         <button type="button" class="btn-secondary btn-danger btn-small wf-remove-btn" onclick="this.parentElement.remove()">Remove Form</button>
         <div class="form-row">
             <div class="input-group flex-1">
-                <label>Word</label>
-                <input type="text" class="input-field wf-word" value="${escapeHtml(wordVal)}" required>
+                <label for="${rowId}-word">Word</label>
+                <input type="text" id="${rowId}-word" class="input-field wf-word" value="${escapeHtml(wordVal)}" required>
             </div>
             <div class="input-group" style="width: 200px;">
-                <label>Part of Speech (POS)</label>
-                <input type="text" class="input-field wf-pos" value="${escapeHtml(posVal)}">
+                <label for="${rowId}-pos">Part of Speech (POS)</label>
+                <input type="text" id="${rowId}-pos" class="input-field wf-pos" value="${escapeHtml(posVal)}">
             </div>
         </div>
         <div class="input-group">
@@ -697,12 +697,12 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
             <button type="button" class="btn-secondary btn-small" onclick="window.addAudioToRow('${rowId}', '', '', true)">+ Add Audio</button>
         </div>
         <div class="input-group">
-            <label>Definitions</label>
-            <textarea class="input-field wf-defs" rows="3">${escapeHtml(definitions)}</textarea>
+            <label for="${rowId}-defs">Definitions</label>
+            <textarea id="${rowId}-defs" class="input-field wf-defs" rows="3">${escapeHtml(definitions)}</textarea>
         </div>
         <div class="input-group">
-            <label>Examples</label>
-            <textarea class="input-field wf-examples" rows="3">${escapeHtml(examples)}</textarea>
+            <label for="${rowId}-examples">Examples</label>
+            <textarea id="${rowId}-examples" class="input-field wf-examples" rows="3">${escapeHtml(examples)}</textarea>
         </div>
     `;
     wordformContainer.appendChild(row);
@@ -814,7 +814,7 @@ onSubmit(wordformForm, async () => {
 });
 
 document.getElementById('filter-unit-select-wordform').addEventListener('change', renderWordform);
-document.getElementById('search-wordform').addEventListener('input', () => { resetPage('wordform'); renderWordform(); });
+document.getElementById('search-wordform').addEventListener('input', debounce(() => { resetPage('wordform'); renderWordform(); }));
 document.getElementById('sort-wordform').addEventListener('change', renderWordform);
 
 export function renderWordform() {
@@ -940,7 +940,7 @@ onSubmit(patternForm, async () => {
 });
 
 document.getElementById('filter-unit-select-pattern').addEventListener('change', renderPattern);
-document.getElementById('search-pattern').addEventListener('input', () => { resetPage('pattern'); renderPattern(); });
+document.getElementById('search-pattern').addEventListener('input', debounce(() => { resetPage('pattern'); renderPattern(); }));
 document.getElementById('sort-pattern').addEventListener('change', renderPattern);
 
 export function renderPattern() {
@@ -1026,29 +1026,29 @@ window.addLexicalWordRow = function (word = '', pos = '', pron = '', audio = '',
         <button type="button" class="btn-secondary btn-danger btn-small lx-remove-btn" onclick="this.parentElement.remove()">Remove</button>
         <div class="form-row" style="margin-bottom: 0.5rem; padding-right: 4rem;">
             <div class="input-group flex-1">
-                <label>Word</label>
-                <input type="text" class="input-field lx-word" placeholder="Word" value="${escapeHtml(word)}">
+                <label for="${rowId}-word">Word</label>
+                <input type="text" id="${rowId}-word" class="input-field lx-word" placeholder="Word" value="${escapeHtml(word)}">
             </div>
             <div class="input-group" style="width: 100px;">
-                <label>POS</label>
-                <input type="text" class="input-field lx-pos" placeholder="POS" value="${escapeHtml(pos)}">
+                <label for="${rowId}-pos">POS</label>
+                <input type="text" id="${rowId}-pos" class="input-field lx-pos" placeholder="POS" value="${escapeHtml(pos)}">
             </div>
         </div>
         <div class="input-group" style="margin-bottom: 0.5rem;">
-            <label>Pronunciation / Notes</label>
-            <textarea class="lx-pron" rows="2" placeholder="Pronunciation / Notes">${escapeHtml(pron)}</textarea>
+            <label for="${rowId}-pron">Pronunciation / Notes</label>
+            <textarea id="${rowId}-pron" class="lx-pron" rows="2" placeholder="Pronunciation / Notes">${escapeHtml(pron)}</textarea>
         </div>
         <div class="input-group" style="margin-bottom: 0.5rem;">
-            <label>Audio URL (Link to .mp3)</label>
-            <input type="url" class="input-field lx-audio" placeholder="https://.../audio.mp3" value="${escapeHtml(audio)}">
+            <label for="${rowId}-audio">Audio URL (Link to .mp3)</label>
+            <input type="text" id="${rowId}-audio" class="input-field lx-audio" placeholder="https://.../audio.mp3" value="${escapeHtml(audio)}">
         </div>
         <div class="input-group" style="margin-bottom: 0.5rem;">
-            <label>Definition</label>
-            <textarea class="lx-def" rows="2" placeholder="Definition">${escapeHtml(def)}</textarea>
+            <label for="${rowId}-def">Definition</label>
+            <textarea id="${rowId}-def" class="lx-def" rows="2" placeholder="Definition">${escapeHtml(def)}</textarea>
         </div>
         <div class="input-group" style="margin-bottom: 0;">
-            <label>Example</label>
-            <textarea class="lx-example" rows="2" placeholder="Example">${escapeHtml(example)}</textarea>
+            <label for="${rowId}-example">Example</label>
+            <textarea id="${rowId}-example" class="lx-example" rows="2" placeholder="Example">${escapeHtml(example)}</textarea>
         </div>
     `;
     lexicalWordsContainer.appendChild(div);
