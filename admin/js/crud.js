@@ -646,6 +646,47 @@ window.deletePrep = (id) => performDelete("prep_phrases", id, 'phrase');
 /* =========================================================
    WORD FORMATION
    ========================================================= */
+const POS_OPTIONS = [
+    { code: 'v', label: 'v — verb' },
+    { code: 'n', label: 'n — noun' },
+    { code: 'adj', label: 'adj — adjective' },
+    { code: 'adv', label: 'adv — adverb' },
+    { code: 'prep', label: 'prep — preposition' },
+    { code: 'conj', label: 'conj — conjunction' },
+    { code: 'pron', label: 'pron — pronoun' },
+    { code: 'det', label: 'det — determiner' }
+];
+
+const POS_ALIASES = {
+    verb: 'v', v: 'v',
+    noun: 'n', n: 'n',
+    adjective: 'adj', adj: 'adj', a: 'adj',
+    adverb: 'adv', adv: 'adv',
+    preposition: 'prep', prep: 'prep',
+    conjunction: 'conj', conj: 'conj',
+    pronoun: 'pron', pron: 'pron',
+    determiner: 'det', det: 'det'
+};
+
+/** Map legacy POS text ("(noun)", "Verb", "ADJ") to a standard code; returns '' when unknown. */
+function normalizePos(raw) {
+    if (!raw) return '';
+    const clean = String(raw).trim().replace(/^\(+|\)+$/g, '').toLowerCase();
+    return POS_ALIASES[clean] || '';
+}
+
+/** Build <option> list for a POS <select>, preserving a non-standard stored value as a custom option. */
+function posOptionsHtml(selected) {
+    const std = normalizePos(selected);
+    const opts = POS_OPTIONS.map(o =>
+        `<option value="${o.code}" ${std === o.code ? 'selected' : ''}>${o.label}</option>`
+    ).join('');
+    if (selected && !std) {
+        return `<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)}</option>${opts}`;
+    }
+    return `<option value="" ${std ? '' : 'selected'} disabled hidden>Choose POS…</option>${opts}`;
+}
+
 const wordformModal = document.getElementById('wordform-modal');
 const wordformForm = document.getElementById('wordform-form');
 const wordformContainer = document.getElementById('wordform-forms-container');
@@ -655,20 +696,54 @@ let formIdCounter = 0;
 function focusNewRow(row) {
     if (!row) return;
     row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    const input = row.querySelector('input, textarea');
+    const sel = row.querySelector('select.wf-overview-pos');
+    if (sel && !sel.value) { sel.focus(); return; }
+    const input = row.querySelector('.wf-overview-words, input, textarea');
     if (input) input.focus();
 }
 
 function addOverviewRow(pos = '', words = '') {
     const row = document.createElement('div');
     row.className = 'wf-overview-row';
-    row.style.cssText = 'display:flex; gap:0.5rem;';
+    row.style.cssText = 'display:flex; gap:0.5rem; align-items:center;';
     row.innerHTML = `
-        <input type="text" class="input-field wf-overview-pos" placeholder="(noun)" value="${escapeHtml(pos)}" style="width: 100px;" required>
-        <input type="text" class="input-field wf-overview-words" placeholder="act, action" value="${escapeHtml(words)}" style="flex: 1;" required>
-        <button type="button" class="btn-secondary btn-danger btn-small" onclick="this.parentElement.remove()">X</button>
+        <select class="input-field wf-overview-pos" aria-label="Part of speech" style="width: 110px;" required>
+            ${posOptionsHtml(pos)}
+        </select>
+        <input type="text" class="input-field wf-overview-words" aria-label="Words for this part of speech" placeholder="act, action, reaction" value="${escapeHtml(words)}" style="flex: 1;" required>
+        <button type="button" class="btn-secondary btn-danger btn-small wf-row-remove" aria-label="Remove overview row" onclick="this.parentElement.remove()">X</button>
     `;
     wordformOverviewContainer.appendChild(row);
+}
+
+/* Chip quick-add: one click = new row with POS preselected, focus lands on the words input. */
+document.getElementById('wordform-pos-chips')?.addEventListener('click', (e) => {
+    const chip = e.target.closest('.wf-chip');
+    if (!chip) return;
+    addOverviewRow(chip.dataset.pos);
+    focusNewRow(wordformOverviewContainer.lastElementChild);
+});
+
+/** Fill Overview rows from the Detailed Forms already entered in the modal (grouped by POS, standard order). */
+function syncOverviewsFromForms() {
+    const groups = new Map();
+    wordformContainer.querySelectorAll('.wf-complex-row').forEach(r => {
+        const word = r.querySelector('.wf-word').value.trim();
+        const pos = normalizePos(r.querySelector('.wf-pos').value);
+        if (!word || !pos) return;
+        if (!groups.has(pos)) groups.set(pos, []);
+        groups.get(pos).push(word);
+    });
+    if (!groups.size) {
+        window.showToast('No detailed forms with word + POS to sync yet.', 'info');
+        return;
+    }
+    wordformOverviewContainer.innerHTML = '';
+    POS_OPTIONS.forEach(o => {
+        if (groups.has(o.code)) addOverviewRow(o.code, groups.get(o.code).join(', '));
+    });
+    focusNewRow(wordformOverviewContainer.lastElementChild);
+    window.showToast('Overview filled from detailed forms.', 'success');
 }
 
 function addWordformRow(title = '', audios = [], definitions = '', examples = '') {
@@ -683,8 +758,9 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
         const parts = title.trim().split(' ');
         if (parts.length > 1) {
             const lastPart = parts[parts.length - 1];
-            if (['v', 'n', 'adj', 'adv', 'prep', 'conj', 'pron', 'det'].includes(lastPart.toLowerCase())) {
-                posVal = lastPart;
+            const normalized = normalizePos(lastPart);
+            if (normalized) {
+                posVal = normalized;
                 wordVal = parts.slice(0, -1).join(' ');
             }
         }
@@ -699,7 +775,9 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
             </div>
             <div class="input-group" style="width: 200px;">
                 <label for="${rowId}-pos">Part of Speech (POS)</label>
-                <input type="text" id="${rowId}-pos" class="input-field wf-pos" value="${escapeHtml(posVal)}">
+                <select id="${rowId}-pos" class="input-field wf-pos" aria-label="Part of speech for this form">
+                    ${posOptionsHtml(posVal)}
+                </select>
             </div>
         </div>
         <div class="input-group">
@@ -748,6 +826,8 @@ document.getElementById('add-overview-btn').addEventListener('click', () => {
     focusNewRow(wordformOverviewContainer.lastElementChild);
 });
 
+document.getElementById('sync-overview-btn')?.addEventListener('click', syncOverviewsFromForms);
+
 document.getElementById('add-wordform-btn').addEventListener('click', () => {
     addWordformRow();
     focusNewRow(wordformContainer.lastElementChild);
@@ -767,6 +847,19 @@ document.getElementById('add-new-wordform-btn').addEventListener('click', () => 
 
     document.getElementById('wordform-modal-title').innerText = 'Add Word Formation';
     openModal(wordformModal);
+});
+
+/* Enter inside single-line inputs must never submit the whole form.
+   Inside the overview words input it appends the next overview row instead. */
+wordformForm.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    const el = e.target;
+    if (el.tagName !== 'INPUT' || el.type === 'checkbox') return;
+    e.preventDefault();
+    if (el.classList.contains('wf-overview-words')) {
+        addOverviewRow();
+        focusNewRow(wordformOverviewContainer.lastElementChild);
+    }
 });
 
 onSubmit(wordformForm, async () => {
@@ -844,7 +937,7 @@ export function renderWordform() {
     const pageItems = applyPagination('wordform', filtered);
     setCountBadge('count-wordform', filtered.length);
     if (!pageItems.length) {
-        list.innerHTML = `<tr><td colspan="3" class="empty-row">No word formations found.</td></tr>`;
+        list.innerHTML = `<tr><td colspan="4" class="empty-row">No word formations found.</td></tr>`;
         return;
     }
 

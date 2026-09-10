@@ -92,6 +92,25 @@ body.modal-open { overflow: hidden; }
     margin-top: 0.5rem;
 }
 .modal-actions .input-group { flex: 1; margin-bottom: 0; }
+
+/* Word Formation overview quick-add (chip bar + action row) */
+.wf-chip-bar { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
+.wf-chip {
+    padding: 0.25rem 0.65rem;
+    font-size: 0.8rem;
+    font-family: var(--font-family);
+    background: var(--white);
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+.wf-chip:hover { background: rgba(10, 79, 84, 0.08); border-color: var(--primary-color); }
+.wf-chip:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.wf-overview-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.wf-overview-actions .btn-small { margin-right: 0; }
+
 /* Sidebar Toggle & Sticky */
 
 /* Sidebar Toggle & Sticky */
@@ -348,6 +367,15 @@ body.modal-open { overflow: hidden; }
 }
 [data-theme="dark"] .btn-secondary:hover {
     background-color: var(--sidebar-hover);
+}
+[data-theme="dark"] .wf-chip {
+    background: var(--input-bg);
+    color: var(--sidebar-active-text);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .wf-chip:hover {
+    background: var(--sidebar-hover);
+    border-color: var(--sidebar-active-text);
 }
 
 [data-theme="dark"] .toast {
@@ -606,6 +634,8 @@ body.modal-open { overflow: hidden; }
     .data-table th, .data-table td { padding: 0.6rem; font-size: 0.85rem; }
     .modal-content { padding: 1.25rem; margin: 0.5rem; }
     .btn-small { padding: 0.55rem 0.9rem; min-height: 44px; margin-right: 0.4rem; }
+    .wf-chip { padding: 0.5rem 0.85rem; min-height: 44px; }
+    .wf-overview-row { flex-wrap: wrap; }
 }
 
 /* Dark-mode support for new components */
