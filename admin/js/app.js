@@ -333,7 +333,7 @@ window.renderWordsPerBook = renderWordsPerBook;
 async function renderAuditLog() {
     const tbodyEl = document.getElementById('audit-list');
     if (!tbodyEl) return;
-    tbodyEl.innerHTML = '<tr><td colspan="5" class="empty-row">Loading&hellip;</td></tr>';
+    tbodyEl.innerHTML = '<tr class="skeleton-row"><td colspan="5"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="5"><span class="skeleton-line" style="width: 62%"></span></td></tr>';
     try {
         const snap = await getDocs(query(collection(db, 'audit_logs'), orderBy('ts', 'desc'), limit(50)));
         if (!snap.docs.length) {

@@ -142,7 +142,7 @@
             <!-- Books Tab -->
             <div id="tab-books" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
-                    <h2>Books</h2>
+                    <h2>Books <span class="count-badge" id="count-books"></span></h2>
                     <button id="add-book-btn" class="btn-primary">+ Add Book</button>
                 </div>
                 <div class="filter-bar">
@@ -159,7 +159,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="books-list">
+                        <tbody id="books-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -169,7 +169,7 @@
             <!-- Units Tab -->
             <div id="tab-units" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
-                    <h2>Course Units</h2>
+                    <h2>Course Units <span class="count-badge" id="count-units"></span></h2>
                     <button id="add-unit-btn" class="btn-primary">+ Add Unit</button>
                 </div>
                 <div class="filter-bar">
@@ -195,7 +195,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="units-list">
+                        <tbody id="units-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -205,7 +205,7 @@
             <!-- Vocabulary Tab -->
             <div id="tab-vocab" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
-                    <h2>Vocabulary Database</h2>
+                    <h2>Vocabulary Database <span class="count-badge" id="count-vocab"></span></h2>
                     <button id="add-vocab-btn" class="btn-primary">+ Add Word</button>
                 </div>
                 <div class="filter-bar">
@@ -232,7 +232,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="vocab-list">
+                        <tbody id="vocab-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -242,7 +242,7 @@
             <!-- Phrasal Verbs Tab -->
             <div id="tab-phrasal" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
-                    <h2>Phrasal Verbs Database</h2>
+                    <h2>Phrasal Verbs Database <span class="count-badge" id="count-phrasal"></span></h2>
                     <button id="add-phrasal-btn" class="btn-primary">+ Add Phrasal Verb</button>
                 </div>
                 <div class="filter-bar">
@@ -268,7 +268,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="phrasal-list">
+                        <tbody id="phrasal-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -278,7 +278,7 @@
             <!-- Prepositional Phrases Tab -->
             <div id="tab-prep" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
-                    <h2>Prepositional Phrases Database</h2>
+                    <h2>Prepositional Phrases Database <span class="count-badge" id="count-prep"></span></h2>
                     <button id="add-prep-btn" class="btn-primary">+ Add Phrase</button>
                 </div>
                 <div class="filter-bar">
@@ -304,7 +304,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="prep-list">
+                        <tbody id="prep-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -314,7 +314,7 @@
             <!-- Word Formation Tab -->
             <div id="tab-wordform" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
-                    <h2>Word Formation Database</h2>
+                    <h2>Word Formation Database <span class="count-badge" id="count-wordform"></span></h2>
                     <button id="add-new-wordform-btn" class="btn-primary">+ Add Word Family</button>
                 </div>
                 <div class="filter-bar">
@@ -339,7 +339,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="wordform-list">
+                        <tbody id="wordform-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -348,7 +348,7 @@
             <!-- Word Patterns Tab -->
             <div id="tab-pattern" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
-                    <h2>Word Patterns Database</h2>
+                    <h2>Word Patterns Database <span class="count-badge" id="count-pattern"></span></h2>
                     <button id="add-pattern-btn" class="btn-primary">+ Add Pattern</button>
                 </div>
                 <div class="filter-bar">
@@ -373,7 +373,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="pattern-list">
+                        <tbody id="pattern-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -383,7 +383,7 @@
             <!-- Lexical Expansion Tab -->
             <div id="tab-lexical" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
-                    <h2>Lexical Expansion Database</h2>
+                    <h2>Lexical Expansion Database <span class="count-badge" id="count-lexical"></span></h2>
                     <button id="add-lexical-btn" class="btn-primary">+ Add Lexical Expansion</button>
                 </div>
                 <div class="filter-bar">
@@ -402,7 +402,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="lexical-list">
+                        <tbody id="lexical-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -431,7 +431,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="grammar-cat-list">
+                        <tbody id="grammar-cat-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS populated -->
                         </tbody>
                     </table>
@@ -459,7 +459,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="grammar-lesson-list">
+                        <tbody id="grammar-lesson-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS populated -->
                         </tbody>
                     </table>
@@ -491,7 +491,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="grammar-unit-list">
+                        <tbody id="grammar-unit-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS populated -->
                         </tbody>
                     </table>
@@ -517,7 +517,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="pronunciation-cat-list">
+                        <tbody id="pronunciation-cat-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS populated -->
                         </tbody>
                     </table>
@@ -545,7 +545,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="pronunciation-lesson-list">
+                        <tbody id="pronunciation-lesson-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS populated -->
                         </tbody>
                     </table>
@@ -577,7 +577,7 @@
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="pronunciation-unit-list">
+                        <tbody id="pronunciation-unit-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS populated -->
                         </tbody>
                     </table>
@@ -991,7 +991,7 @@
                         Form</button>
                 </div>
 
-                <hr style="margin: 1rem 0; border: 0; border-top: 1px solid #ccc;">
+                <hr class="section-divider">
 
                 <div class="input-group">
                     <label>Detailed Forms (Audios, Definitions, Examples)</label>
@@ -1059,7 +1059,7 @@
                     </div>
                 </div>
 
-                <hr style="margin: 1rem 0; border: 0; border-top: 1px solid #ccc;">
+                <hr class="section-divider">
 
                 <div class="input-group">
                     <label>Vocabulary Words associated with this section</label>
@@ -1085,7 +1085,7 @@
     <div id="grammar-cat-modal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
             <button type="button" class="close-modal" data-target="grammar-cat-modal">&times;</button>
-            <h2 id="grammar-cat-modal-title">Add Category</h2>
+            <h3 id="grammar-cat-modal-title">Add Category</h3>
             <form id="grammar-cat-form">
                 <input type="hidden" id="grammar-cat-id">
                 <div class="input-group">
@@ -1107,7 +1107,7 @@
     <div id="grammar-lesson-modal" class="modal">
         <div class="modal-content" style="max-width: 900px; width: 90%;">
             <button type="button" class="close-modal" data-target="grammar-lesson-modal">&times;</button>
-            <h2 id="grammar-lesson-modal-title">Add Lesson</h2>
+            <h3 id="grammar-lesson-modal-title">Add Lesson</h3>
             <form id="grammar-lesson-form">
                 <input type="hidden" id="grammar-lesson-id">
                 <div class="form-row">
@@ -1150,7 +1150,7 @@
     <div id="grammar-unit-modal" class="modal">
         <div class="modal-content" style="max-width: 900px; width: 90%;">
             <button type="button" class="close-modal" data-target="grammar-unit-modal">&times;</button>
-            <h2 id="grammar-unit-modal-title">Add Unit</h2>
+            <h3 id="grammar-unit-modal-title">Add Unit</h3>
             <form id="grammar-unit-form">
                 <input type="hidden" id="grammar-unit-id">
                 <div class="form-row">
@@ -1198,7 +1198,7 @@
     <div id="pronunciation-cat-modal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
             <button type="button" class="close-modal" data-target="pronunciation-cat-modal">&times;</button>
-            <h2 id="pronunciation-cat-modal-title">Add Category</h2>
+            <h3 id="pronunciation-cat-modal-title">Add Category</h3>
             <form id="pronunciation-cat-form">
                 <input type="hidden" id="pronunciation-cat-id">
                 <div class="input-group">
@@ -1219,7 +1219,7 @@
     <div id="pronunciation-lesson-modal" class="modal">
         <div class="modal-content" style="max-width: 900px; width: 90%;">
             <button type="button" class="close-modal" data-target="pronunciation-lesson-modal">&times;</button>
-            <h2 id="pronunciation-lesson-modal-title">Add Lesson</h2>
+            <h3 id="pronunciation-lesson-modal-title">Add Lesson</h3>
             <form id="pronunciation-lesson-form">
                 <input type="hidden" id="pronunciation-lesson-id">
                 <div class="form-row">
@@ -1261,7 +1261,7 @@
     <div id="pronunciation-unit-modal" class="modal">
         <div class="modal-content" style="max-width: 900px; width: 90%;">
             <button type="button" class="close-modal" data-target="pronunciation-unit-modal">&times;</button>
-            <h2 id="pronunciation-unit-modal-title">Add Unit</h2>
+            <h3 id="pronunciation-unit-modal-title">Add Unit</h3>
             <form id="pronunciation-unit-form">
                 <input type="hidden" id="pronunciation-unit-id">
                 <div class="form-row">

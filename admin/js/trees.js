@@ -58,8 +58,8 @@ function makeTreeManager(cfg) {
                 <td data-inline="1" data-tree-tab="${cfg.label}" data-kind="cat" data-id="${cat.id}" data-field="title"><strong>${escapeHtml(cat.title)}</strong></td>
                 <td>
                     ${publicUrlFor(cfg.categories, cat) ? `<a class="btn-secondary btn-small view-site-btn" href="${publicUrlFor(cfg.categories, cat)}" target="_blank" rel="noopener" title="View on site">&#8599;</a>` : ''}
-                    <button class="btn-secondary btn-small" onclick="${cfg.fnPrefix}EditCat('${cat.id}')">Edit</button>
-                    <button class="btn-danger btn-small" onclick="${cfg.fnPrefix}DeleteCat('${cat.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="${cfg.fnPrefix}EditCat('${cat.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-danger btn-small" onclick="${cfg.fnPrefix}DeleteCat('${cat.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`).join('');
     }
@@ -145,8 +145,8 @@ function makeTreeManager(cfg) {
                 <td data-inline="1" data-tree-tab="${cfg.label}" data-kind="lesson" data-id="${les.id}" data-field="title"><strong>${escapeHtml(les.title)}</strong> ${les.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
                 <td>
                     ${publicUrlFor(cfg.lessons, les) ? `<a class="btn-secondary btn-small view-site-btn" href="${publicUrlFor(cfg.lessons, les)}" target="_blank" rel="noopener" title="View on site">&#8599;</a>` : ''}
-                    <button class="btn-secondary btn-small" onclick="${cfg.fnPrefix}EditLesson('${les.id}')">Edit</button>
-                    <button class="btn-danger btn-small" onclick="${cfg.fnPrefix}DeleteLesson('${les.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="${cfg.fnPrefix}EditLesson('${les.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-danger btn-small" onclick="${cfg.fnPrefix}DeleteLesson('${les.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
         }).join('');
@@ -180,8 +180,8 @@ function makeTreeManager(cfg) {
                 <td data-inline="1" data-tree-tab="${cfg.label}" data-kind="unit" data-id="${unit.id}" data-field="title"><strong>${escapeHtml(unit.title)}</strong> ${unit.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
                 <td>
                     ${publicUrlFor(cfg.units, unit) ? `<a class="btn-secondary btn-small view-site-btn" href="${publicUrlFor(cfg.units, unit)}" target="_blank" rel="noopener" title="View on site">&#8599;</a>` : ''}
-                    <button class="btn-secondary btn-small" onclick="${cfg.fnPrefix}EditUnit('${unit.id}')">Edit</button>
-                    <button class="btn-danger btn-small" onclick="${cfg.fnPrefix}DeleteUnit('${unit.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="${cfg.fnPrefix}EditUnit('${unit.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-danger btn-small" onclick="${cfg.fnPrefix}DeleteUnit('${unit.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
         }).join('');

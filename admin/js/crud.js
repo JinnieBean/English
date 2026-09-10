@@ -8,6 +8,12 @@ import {
     rememberUnitSelection, applySavedUnitSelect, sessionState
 } from './data.js';
 
+/* Update the "<n>" badge next to a section title (hidden when zero/empty). */
+function setCountBadge(id, n) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = n > 0 ? String(n) : '';
+}
+
 /* =========================================================
    BOOKS
    ========================================================= */
@@ -66,6 +72,7 @@ export function renderBooks() {
 
     const filtered = booksData.filter(b => (b.title || '').toLowerCase().includes(searchTerm));
     filtered.sort((a, b) => (a.order || 0) - (b.order || 0));
+    setCountBadge('count-books', filtered.length);
 
     if (!filtered.length) {
         list.innerHTML = `<tr><td colspan="5" class="empty-row">No books found.</td></tr>`;
@@ -80,9 +87,9 @@ export function renderBooks() {
             <td data-inline="1" data-tab="books" data-id="${b.id}" data-field="title"><strong>${escapeHtml(b.title)}</strong> ${b.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}${b.subtitle ? `<br><small>${escapeHtml(b.subtitle)}</small>` : ''}</td>
             <td>
                 ${viewBtn('books', b)}
-                <button class="btn-secondary btn-small" onclick="editBook('${b.id}')">Edit</button>
-                <button class="btn-secondary btn-small" onclick="duplicateBook('${b.id}')">Duplicate</button>
-                <button class="btn-danger btn-small" onclick="deleteBook('${b.id}')">Delete</button>
+                <button class="btn-secondary btn-small" onclick="editBook('${b.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                <button class="btn-secondary btn-small" onclick="duplicateBook('${b.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
+                <button class="btn-danger btn-small" onclick="deleteBook('${b.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
             </td>
         </tr>
     `).join('');
@@ -195,6 +202,7 @@ export function renderUnits() {
     if (sortValue === 'az') filteredData.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     else if (sortValue === 'za') filteredData.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
     else filteredData.sort((a, b) => (a.order || 0) - (b.order || 0));
+    setCountBadge('count-units', filteredData.length);
 
     if (!filteredData.length) {
         list.innerHTML = `<tr><td colspan="5" class="empty-row">No units found.</td></tr>`;
@@ -211,9 +219,9 @@ export function renderUnits() {
                 <td data-inline="1" data-tab="units" data-id="${unit.id}" data-field="title"><strong>${escapeHtml(unit.title)}</strong> ${unit.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
                 <td>
                     ${viewBtn('units', unit)}
-                    <button class="btn-secondary btn-small" onclick="editUnit('${unit.id}')">Edit</button>
-                    <button class="btn-secondary btn-small" onclick="duplicateUnit('${unit.id}')">Duplicate</button>
-                    <button class="btn-danger btn-small" onclick="deleteUnit('${unit.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="editUnit('${unit.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-secondary btn-small" onclick="duplicateUnit('${unit.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deleteUnit('${unit.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
     }).join('');
@@ -348,6 +356,7 @@ export function renderVocab() {
     else if (sortValue === 'za') filtered.sort((a, b) => (b.word || '').localeCompare(a.word || ''));
 
     const pageItems = applyPagination('vocab', filtered);
+    setCountBadge('count-vocab', filtered.length);
     if (!pageItems.length) {
         list.innerHTML = `<tr><td colspan="6" class="empty-row">${filtered.length === 0 ? 'No vocabulary found.' : 'No vocabulary on this page.'}</td></tr>`;
         return;
@@ -364,9 +373,9 @@ export function renderVocab() {
                 <td>${escapeHtml(unitName)}</td>
                 <td>
                     ${viewBtn('vocabularies', v)}
-                    <button class="btn-secondary btn-small" onclick="editVocab('${v.id}')">Edit</button>
-                    <button class="btn-secondary btn-small" onclick="duplicateVocab('${v.id}')">Duplicate</button>
-                    <button class="btn-danger btn-small" onclick="deleteVocab('${v.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="editVocab('${v.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-secondary btn-small" onclick="duplicateVocab('${v.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deleteVocab('${v.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
     }).join('');
@@ -467,6 +476,7 @@ export function renderPhrasal() {
     else if (sortValue === 'za') filtered.sort((a, b) => (b.word || '').localeCompare(a.word || ''));
 
     const pageItems = applyPagination('phrasal', filtered);
+    setCountBadge('count-phrasal', filtered.length);
     if (!pageItems.length) {
         list.innerHTML = `<tr><td colspan="4" class="empty-row">No phrasal verbs found.</td></tr>`;
         return;
@@ -482,9 +492,9 @@ export function renderPhrasal() {
                 <td>${escapeHtml(unitName)}</td>
                 <td>
                     ${viewBtn('phrasal_verbs', p)}
-                    <button class="btn-secondary btn-small" onclick="editPhrasal('${p.id}')">Edit</button>
-                    <button class="btn-secondary btn-small" onclick="duplicatePhrasal('${p.id}')">Duplicate</button>
-                    <button class="btn-danger btn-small" onclick="deletePhrasal('${p.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="editPhrasal('${p.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-secondary btn-small" onclick="duplicatePhrasal('${p.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deletePhrasal('${p.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
     }).join('');
@@ -582,6 +592,7 @@ export function renderPrep() {
     else if (sortValue === 'za') filtered.sort((a, b) => (b.word || '').localeCompare(a.word || ''));
 
     const pageItems = applyPagination('prep', filtered);
+    setCountBadge('count-prep', filtered.length);
     if (!pageItems.length) {
         list.innerHTML = `<tr><td colspan="4" class="empty-row">No phrases found.</td></tr>`;
         return;
@@ -597,9 +608,9 @@ export function renderPrep() {
                 <td>${escapeHtml((p.def || '').slice(0, 120))}${(p.def || '').length > 120 ? '…' : ''}</td>
                 <td>
                     ${viewBtn('prep_phrases', p)}
-                    <button class="btn-secondary btn-small" onclick="editPrep('${p.id}')">Edit</button>
-                    <button class="btn-secondary btn-small" onclick="duplicatePrep('${p.id}')">Duplicate</button>
-                    <button class="btn-danger btn-small" onclick="deletePrep('${p.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="editPrep('${p.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-secondary btn-small" onclick="duplicatePrep('${p.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deletePrep('${p.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
     }).join('');
@@ -831,6 +842,7 @@ export function renderWordform() {
     else if (sortValue === 'za') filtered.sort((a, b) => (b.rootWord || '').localeCompare(a.rootWord || ''));
 
     const pageItems = applyPagination('wordform', filtered);
+    setCountBadge('count-wordform', filtered.length);
     if (!pageItems.length) {
         list.innerHTML = `<tr><td colspan="3" class="empty-row">No word formations found.</td></tr>`;
         return;
@@ -845,9 +857,9 @@ export function renderWordform() {
                 <td>${escapeHtml(unitName)}</td>
                 <td>
                     ${viewBtn('word_formations', w)}
-                    <button class="btn-secondary btn-small" onclick="editWordform('${w.id}')">Edit</button>
-                    <button class="btn-secondary btn-small" onclick="duplicateWordform('${w.id}')">Duplicate</button>
-                    <button class="btn-danger btn-small" onclick="deleteWordform('${w.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="editWordform('${w.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-secondary btn-small" onclick="duplicateWordform('${w.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deleteWordform('${w.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
     }).join('');
@@ -958,6 +970,7 @@ export function renderPattern() {
 
     // FIX: pagination now actually slices the list for this tab
     const pageItems = applyPagination('pattern', filtered);
+    setCountBadge('count-pattern', filtered.length);
     if (!pageItems.length) {
         list.innerHTML = `<tr><td colspan="3" class="empty-row">No word patterns found.</td></tr>`;
         return;
@@ -972,9 +985,9 @@ export function renderPattern() {
                 <td>${escapeHtml(unitName)}</td>
                 <td>
                     ${viewBtn('word_patterns', p)}
-                    <button class="btn-secondary btn-small" onclick="editPattern('${p.id}')">Edit</button>
-                    <button class="btn-secondary btn-small" onclick="duplicatePattern('${p.id}')">Duplicate</button>
-                    <button class="btn-danger btn-small" onclick="deletePattern('${p.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="editPattern('${p.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-secondary btn-small" onclick="duplicatePattern('${p.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deletePattern('${p.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
     }).join('');
@@ -1127,6 +1140,7 @@ export function renderLexical() {
 
     // FIX: pagination now actually slices the list for this tab
     const pageItems = applyPagination('lexical', filtered);
+    setCountBadge('count-lexical', filtered.length);
     if (!pageItems.length) {
         list.innerHTML = `<tr><td colspan="3" class="empty-row">No lexical expansions found.</td></tr>`;
         return;
@@ -1141,9 +1155,9 @@ export function renderLexical() {
                 <td><pre style="font-family:inherit; font-size: 0.8rem; max-width: 300px; max-height: 100px; overflow: hidden; margin:0;">${escapeHtml((p.textLeft || '').slice(0, 200))}</pre></td>
                 <td>
                     ${viewBtn('lexical_expansions', p)}
-                    <button class="btn-secondary btn-small" onclick="editLexical('${p.id}')">Edit</button>
-                    <button class="btn-secondary btn-small" onclick="duplicateLexical('${p.id}')">Duplicate</button>
-                    <button class="btn-danger btn-small" onclick="deleteLexical('${p.id}')">Delete</button>
+                    <button class="btn-secondary btn-small" onclick="editLexical('${p.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-secondary btn-small" onclick="duplicateLexical('${p.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deleteLexical('${p.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
     }).join('');
@@ -1275,7 +1289,7 @@ function ensureBulkBar() {
             <span class="bulk-count">0 selected</span>
             <button type="button" class="btn-secondary btn-small" data-bulk-action="draft">Draft</button>
             <button type="button" class="btn-secondary btn-small" data-bulk-action="publish">Publish</button>
-            <button type="button" class="btn-danger btn-small" data-bulk-action="delete">Delete</button>
+            <button type="button" class="btn-danger btn-small" data-bulk-action="delete"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
             <button type="button" class="btn-secondary btn-small" data-bulk-action="clear">Clear</button>`;
         document.body.appendChild(_bulkBar);
     }
