@@ -59,7 +59,9 @@
 
 ---
 
-### Giai đoạn 1 — Quick wins, rủi ro thấp (1–2 buổi) · P0
+### Giai đoạn 1 — Quick wins, rủi ro thấp (1–2 buổi) · P0 · ✅ **ĐÃ XONG**
+
+> Ghi chú thực thi: ngoài 4 hạng mục trong kế hoạch, đã phát hiện và thay thêm emoji màu ở các vị trí khác: 🎯 (nút Flashcards — main.js/bookmarks.js/content-tree.js), ❓ (nút Quiz ×4), ☁/💾 (ghi chú sync — review.js/mylearning.js), 🔥📚📖 (stat cards My Learning), 📚 (empty state Review), 📱 (offline.html). Các ký tự typographic đơn sắc được giữ cố ý: ★ ☆ ✓ ○ ► ▼ ← → ↗.
 
 **1.1. Thay emoji bằng inline SVG (stroke 2px, 24 viewBox — trùng bộ đang dùng trong sidebar)**
 - Dark toggle: xóa `.dm-icon::before`/`.dm-label::before` trong `style.css` (694–699), nhúng SVG moon/sun vào markup + đổi label bằng `data-theme` selector; giữ nguyên logic `initDarkMode()`.

@@ -9,7 +9,7 @@ import {
 } from './progress-store.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, iconSvg } from './utils.js';
 
 /* src tag -> the unit_* page that hosts the row (for jump-back links) */
 const SRC_PAGE = {
@@ -119,11 +119,11 @@ function renderToolbar(marks) {
     const cards = marks.map(([id, b]) => cardFromBookmark(id, b)).filter(c => c.word && c.def);
     bar.innerHTML = `
         <div class="bm-tools">
-            <button type="button" class="flashcard-toggle-btn" id="bm-fc-btn" ${cards.length ? '' : 'disabled'}>&#127924; Flashcards (${cards.length})</button>
-            ${cards.length >= 4 ? '<button type="button" class="flashcard-toggle-btn" id="bm-qz-btn">&#10067; Quiz</button>' : ''}
+            <button type="button" class="flashcard-toggle-btn" id="bm-fc-btn" ${cards.length ? '' : 'disabled'}>${iconSvg('layers')} Flashcards (${cards.length})</button>
+            ${cards.length >= 4 ? `<button type="button" class="flashcard-toggle-btn" id="bm-qz-btn">${iconSvg('help')} Quiz</button>` : ''}
             <span class="bm-tools-spacer"></span>
-            <button type="button" class="rv-secondary" id="bm-export-txt">&#8681; Export .txt</button>
-            <button type="button" class="rv-secondary" id="bm-export-json">&#8681; Export .json</button>
+            <button type="button" class="rv-secondary" id="bm-export-txt">${iconSvg('download')} Export .txt</button>
+            <button type="button" class="rv-secondary" id="bm-export-json">${iconSvg('download')} Export .json</button>
         </div>`;
     bar.querySelector('#bm-fc-btn')?.addEventListener('click', () => startFlashcards(cards));
     bar.querySelector('#bm-qz-btn')?.addEventListener('click', () => startQuiz(cards));
@@ -140,7 +140,8 @@ async function render() {
     if (!marks.length) {
         list.innerHTML = `
             <div class="rv-empty">
-                <span class="rv-empty-icon">&#9734;</span>
+                <span class="rv-empty-icon">${iconSvg('bookmark')}</span>
+                <p class="es-title">No bookmarks yet</p>
                 <p>No bookmarked words yet. Open any unit and press the
                 &#9734; button next to a word to keep it here.
                 Stars work on all six unit tabs &mdash; vocabulary, phrasal verbs,

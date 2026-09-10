@@ -9,7 +9,7 @@ import {
 } from './progress-store.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, iconSvg } from './utils.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -33,10 +33,10 @@ function renderSyncStatus() {
     }
     const u = getUser();
     if (u) {
-        el.innerHTML = `&#9729; Synced to <strong>${escapeHtml(u.email || 'your account')}</strong>`;
+        el.innerHTML = `${iconSvg('cloud')} Synced to <strong>${escapeHtml(u.email || 'your account')}</strong>`;
         el.style.color = 'var(--text-secondary)';
     } else {
-        el.innerHTML = '&#128190; Local only &mdash; sign in with Google (sidebar) to sync across devices.';
+        el.innerHTML = `${iconSvg('drive')} Local only &mdash; sign in with Google (sidebar) to sync across devices.`;
     }
 }
 

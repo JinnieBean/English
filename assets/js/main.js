@@ -1,6 +1,6 @@
 import { collection, getDocs, getDoc, doc, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
-import { escapeHtml, normalizeSearch } from './utils.js';
+import { escapeHtml, normalizeSearch, iconSvg } from './utils.js';
 import { allBookmarks, getBookmark, setBookmark } from './progress-store.js';
 import { cachedLoad } from './idb-cache.js';
 
@@ -129,8 +129,8 @@ function setupStudyTools(container, unitId, cards) {
     toolbar.className = 'vocab-toolbar reveal visible';
     toolbar.innerHTML = `
         <div class="vocab-tools-left">
-            <button type="button" id="flashcard-toggle-btn" class="flashcard-toggle-btn">&#127924; Flashcards</button>
-            ${cards.length >= 4 ? '<button type="button" id="quiz-toggle-btn" class="flashcard-toggle-btn">&#10067; Quiz</button>' : ''}
+            <button type="button" id="flashcard-toggle-btn" class="flashcard-toggle-btn">${iconSvg('layers')} Flashcards</button>
+            ${cards.length >= 4 ? `<button type="button" id="quiz-toggle-btn" class="flashcard-toggle-btn">${iconSvg('help')} Quiz</button>` : ''}
         </div>
         <div class="vocab-tools-right">
             <span class="progress-badge-slot" id="progress-badge-${escapeHtml(unitId)}"></span>
@@ -536,8 +536,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     toolbar.className = 'vocab-toolbar reveal visible';
                     toolbar.innerHTML = `
                         <div class="vocab-tools-left">
-                            <button type="button" id="flashcard-toggle-btn" class="flashcard-toggle-btn">&#127924; Flashcards</button>
-                            <button type="button" id="quiz-toggle-btn" class="flashcard-toggle-btn">&#10067; Quiz</button>
+                            <button type="button" id="flashcard-toggle-btn" class="flashcard-toggle-btn">${iconSvg('layers')} Flashcards</button>
+                            <button type="button" id="quiz-toggle-btn" class="flashcard-toggle-btn">${iconSvg('help')} Quiz</button>
                             <label class="starred-filter"><input type="checkbox" id="starred-only-checkbox"> &#9733; Starred</label>
                         </div>
                         <div class="vocab-tools-right">

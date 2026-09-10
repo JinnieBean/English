@@ -13,7 +13,7 @@
  */
 import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, iconSvg } from './utils.js';
 import {
     lessonLearned, setLessonLearned, recordActivity
 } from './progress-store.js';
@@ -274,7 +274,7 @@ function setupLessonStudyTools(headerEl, cards) {
     const fcBtn = document.createElement('button');
     fcBtn.type = 'button';
     fcBtn.className = 'lesson-learned-btn lesson-fc-btn';
-    fcBtn.innerHTML = `&#127924; Flashcards (${cards.length})`;
+    fcBtn.innerHTML = `${iconSvg('layers')} Flashcards (${cards.length})`;
     headerEl.appendChild(fcBtn);
     fcBtn.addEventListener('click', () => {
         ensureFlashcardOverlay();
@@ -287,7 +287,7 @@ function setupLessonStudyTools(headerEl, cards) {
         const qzBtn = document.createElement('button');
         qzBtn.type = 'button';
         qzBtn.className = 'lesson-learned-btn lesson-fc-btn';
-        qzBtn.innerHTML = '&#10067; Quiz';
+        qzBtn.innerHTML = `${iconSvg('help')} Quiz`;
         headerEl.appendChild(qzBtn);
         qzBtn.addEventListener('click', () => {
             const toggle = hiddenToolBtn('quiz-toggle-btn', 'flashcard-toggle-btn');

@@ -97,8 +97,8 @@
                 <div class="sidebar-bottom">
             <!-- Dark Mode Toggle (#7) -->
 <button class="dark-mode-toggle" id="dark-mode-toggle" title="Toggle dark mode">
-<span class="dm-icon">&#127769;</span>
-<span class="dm-label">Dark Mode</span>
+<span class="dm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><svg class="dm-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="dm-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
+<span class="dm-label"><span class="dm-text-dark">Dark Mode</span><span class="dm-text-light">Light Mode</span></span>
 </button>
             <div class="tn-auth-box" id="tn-auth-box">
                 <div class="tn-auth-status" role="status"></div>
@@ -109,8 +109,8 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <button id="mobile-menu-btn" class="mobile-menu-btn">&#9776;</button>
-            <header class="main-header">
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Open menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+            <header class="main-header compact">
                 <div class="header-line"></div>
                 <div class="header-content">
                     <a href="index.html"><h1>Thor's Notes</h1></a>
@@ -127,11 +127,11 @@
             <p class="page-subtitle" id="ml-sync-status">Loading&hellip;</p>
 
             <div class="ml-cards">
-                <div class="stat-card"><div class="stat-icon">&#10003;</div><div><h3>Words known</h3><p id="ml-known">&ndash;</p></div></div>
-                <div class="stat-card"><div class="stat-icon">&#8635;</div><div><h3>In SRS rotation</h3><p id="ml-learning">&ndash;</p></div></div>
-                <div class="stat-card"><div class="stat-icon">&#128293;</div><div><h3>Day streak</h3><p id="ml-streak">&ndash;</p></div></div>
-                <div class="stat-card"><div class="stat-icon">&#128218;</div><div><h3>Units studied</h3><p id="ml-units">&ndash;</p></div></div>
-                <div class="stat-card"><div class="stat-icon">&#128214;</div><div><h3>Lessons learned</h3><p id="ml-lessons">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></div><div><h3>Words known</h3><p id="ml-known">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></div><div><h3>In SRS rotation</h3><p id="ml-learning">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div><h3>Day streak</h3><p id="ml-streak">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div><div><h3>Units studied</h3><p id="ml-units">&ndash;</p></div></div>
+                <div class="stat-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><div><h3>Lessons learned</h3><p id="ml-lessons">&ndash;</p></div></div>
             </div>
 
             <div class="resume-card" data-resume-slot hidden style="margin-top:1.5rem;"></div>

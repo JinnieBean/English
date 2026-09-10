@@ -11,7 +11,7 @@ import {
 } from './progress-store.js';
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, iconSvg } from './utils.js';
 import { isLoadable, loadSrcCards } from './card-loader.js';
 
 const summaryEl = document.getElementById('review-summary');
@@ -130,8 +130,8 @@ function renderSyncNote() {
     }
     const u = getUser();
     el.innerHTML = u
-        ? `&#9729; Synced to <strong>${escapeHtml(u.email || 'your account')}</strong>`
-        : '&#128190; Local only &mdash; sign in with Google (sidebar) to sync your review schedule across devices.';
+        ? `${iconSvg('cloud')} Synced to <strong>${escapeHtml(u.email || 'your account')}</strong>`
+        : `${iconSvg('drive')} Local only &mdash; sign in with Google (sidebar) to sync your review schedule across devices.`;
 }
 
 function renderEmptySchedule() {
@@ -139,7 +139,8 @@ function renderEmptySchedule() {
     actionsEl.innerHTML = '';
     if (listContainer) listContainer.innerHTML = `
         <div class="rv-empty">
-            <span class="rv-empty-icon">&#128218;</span>
+            <span class="rv-empty-icon">${iconSvg('bookOpen')}</span>
+            <p class="es-title">Nothing to review yet</p>
             <p>Your review schedule is empty. Study a unit first &mdash; open
             <a href="book.html">Vocabulary</a>, pick a book and practise its flashcards.
             Words you mark as <em>Known</em> or <em>Still learning</em> will appear here

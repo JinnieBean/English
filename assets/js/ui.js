@@ -4,7 +4,7 @@
  *          Vocab Highlight (#14), Flashcard Mode (#10),
  *          Progress Indicator (#11), Breadcrumb (#5), Stats (#8)
  */
-import { escapeHtml, formatTime, applyAudioVersion, recordLastStudied, getLastStudied, debounce } from './utils.js';
+import { escapeHtml, formatTime, applyAudioVersion, recordLastStudied, getLastStudied, debounce, iconSvg } from './utils.js';
 import { ensureSearchIndex, searchItems } from './search-index.js';
 import {
     initStore, getKnownSet, markKnown,
@@ -156,7 +156,7 @@ function ttsButton(text) {
     }
     return `
         <button class="audio-tts-btn" type="button" title="Text-to-speech"
-            data-say="${escapeHtml(text)}" aria-label="Read aloud">&#128266;</button>
+            data-say="${escapeHtml(text)}" aria-label="Read aloud">${iconSvg('volume')}</button>
     `;
 }
 
@@ -180,8 +180,8 @@ function buildCustomAudioPlayer(src, ttsText) {
             <span class="audio-duration" id="${id}-dur">--:--</span>
             <div class="audio-controls-extra">
                 <button class="audio-speed-btn" type="button" title="Playback speed" aria-label="Playback speed">1x</button>
-                <button class="audio-loop-btn" type="button" title="Repeat" aria-label="Repeat" aria-pressed="false">&#128257;</button>
-                <a class="audio-download-btn" href="${safeSrc}" download title="Download" aria-label="Download audio">&#11015;</a>
+                <button class="audio-loop-btn" type="button" title="Repeat" aria-label="Repeat" aria-pressed="false">${iconSvg('repeat')}</button>
+                <a class="audio-download-btn" href="${safeSrc}" download title="Download" aria-label="Download audio">${iconSvg('download')}</a>
             </div>
             <audio id="${id}-audio" preload="none" src="${safeSrc}"></audio>
         </div>
@@ -1047,7 +1047,7 @@ function renderTypingQuestion(q, area) {
         <div class="quiz-prompt">Type the word for this meaning:</div>
         <div class="quiz-typing-def">${escapeHtml(q.def)}</div>
         <div class="quiz-typing-row">
-            <input type="text" id="typing-input" class="quiz-typing-input" autocomplete="off"
+            <input type="text" id="typing-input" class="quiz-typing-input" autocomplete="off" enterkeyhint="go"
                 autocapitalize="off" spellcheck="false" placeholder="Type the word…" aria-label="Your answer">
             <button type="button" class="fc-btn fc-btn-flip" id="typing-check-btn">Check</button>
         </div>
@@ -1096,7 +1096,7 @@ function renderListeningQuestion(q, area) {
     area.innerHTML = `
         <div class="quiz-prompt">Listen and choose the word:</div>
         <div class="quiz-listen-controls">
-            <button type="button" class="audio-tts-btn quiz-replay-btn" title="Replay audio" aria-label="Replay audio">&#128266;</button>
+            <button type="button" class="audio-tts-btn quiz-replay-btn" title="Replay audio" aria-label="Replay audio">${iconSvg('volume')}</button>
         </div>
         <div class="quiz-options">
             ${q.options.map((opt, i) => `
@@ -1391,7 +1391,7 @@ function initDictPopup() {
         lookupBtn = document.createElement('button');
         lookupBtn.type = 'button';
         lookupBtn.className = 'dict-lookup-btn';
-        lookupBtn.innerHTML = '&#128214; Look up';
+        lookupBtn.innerHTML = `${iconSvg('book')} Look up`;
         lookupBtn.style.left = Math.max(8, rect.left + rect.width / 2 - 48) + 'px';
         lookupBtn.style.top = Math.max(8, rect.top - 42) + 'px';
         lookupBtn.addEventListener('click', (ev) => {
@@ -1411,7 +1411,7 @@ function initDictPopup() {
         pop.className = 'dict-pop';
         const slug = encodeURIComponent(wordRaw.toLowerCase());
         const audioBtn = hit
-            ? `<button type="button" class="audio-tts-btn" data-say="${escapeHtml(hit.word)}" title="Read aloud">&#128266;</button>`
+            ? `<button type="button" class="audio-tts-btn" data-say="${escapeHtml(hit.word)}" title="Read aloud">${iconSvg('volume')}</button>`
             : '';
         pop.innerHTML = `
             <div class="dp-word">${escapeHtml(wordRaw)} ${audioBtn}</div>
@@ -1671,6 +1671,8 @@ function initSidebar() {
         const setMobileOpen = (on) => {
             sidebar.classList.toggle('mobile-open', on);
             document.body.classList.toggle('sidebar-lock', on);
+            mobileMenuBtn.setAttribute('aria-expanded', String(on));
+            mobileMenuBtn.setAttribute('aria-label', on ? 'Close menu' : 'Open menu');
         };
         mobileMenuBtn.addEventListener('click', () => {
             setMobileOpen(!sidebar.classList.contains('mobile-open'));
