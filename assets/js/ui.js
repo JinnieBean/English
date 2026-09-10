@@ -22,9 +22,30 @@ function initDarkMode() {
     const icon = toggle.querySelector('.dm-icon');
     const label = toggle.querySelector('.dm-label');
 
+    // Browser-chrome color follows the effective theme. Pages ship two metas:
+    // a default (light) one and one keyed to prefers-color-scheme. When the
+    // stored preference disagrees with the system, collapse to a fixed value.
+    const applyThemeColor = (dark) => {
+        const base = document.querySelector('meta[name="theme-color"]:not([media])');
+        const sys = document.querySelector('meta[name="theme-color"][media]');
+        if (!base) return;
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark === prefersDark) {
+            base.content = '#e8f0ec';
+            if (sys) {
+                sys.media = '(prefers-color-scheme: dark)';
+                sys.content = '#0f1f22';
+            }
+        } else {
+            base.content = dark ? '#0f1f22' : '#e8f0ec';
+            if (sys) sys.media = 'not all';
+        }
+    };
+
     const applyTheme = (dark) => {
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
         toggle.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+        applyThemeColor(dark);
     };
 
     // Apply saved preference immediately

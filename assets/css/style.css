@@ -1,7 +1,10 @@
 /* =========================================
    DESIGN TOKENS & TYPOGRAPHY SCALE (#19)
+   Breakpoint scale (Phase-0 decision): 480 / 768 / 1024 / 1440
+   — migrate legacy 560/640/900 breakpoints to these in Phase 2.
    ========================================= */
 :root {
+    color-scheme: light;
     /* Colors - Light Mode */
     --bg-color: #e8f0ec;
     --text-primary: #0a4f54;
@@ -38,12 +41,48 @@
     --text-4xl: 2.5rem;
     --text-5xl: 3.5rem;
     --text-6xl: 4.5rem;
+
+    /* Spacing scale — 4/8px rhythm (Phase 0) */
+    --space-1: 0.25rem;   /*  4px */
+    --space-2: 0.5rem;    /*  8px */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.5rem;    /* 24px */
+    --space-6: 2rem;      /* 32px */
+    --space-7: 3rem;      /* 48px */
+    --space-8: 4rem;      /* 64px */
+
+    /* Radii */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-full: 999px;
+
+    /* Motion */
+    --dur-fast: 150ms;
+    --dur-base: 250ms;
+    --dur-slow: 350ms;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Focus */
+    --focus-ring: 2px solid var(--accent-color);
+
+    /* Z-index scale — mirrors tiers already in use; migrate usages in Phase 2 */
+    --z-raised: 1;        /* floating element inside a component (search clear btn) */
+    --z-popover: 60;      /* global search results dropdown */
+    --z-popup: 90;        /* dictionary popup (95 = tap-to-lookup button) */
+    --z-progress: 200;    /* reading progress bar */
+    --z-mobilebar: 1000;  /* fixed bottom sidebar bar on mobile */
+    --z-toast: 1200;      /* toast / announcements */
+    --z-overlay: 2000;    /* backdrop + flashcard/quiz modal */
+    --z-skip: 2001;       /* skip link always on top */
 }
 
 /* =========================================
    DARK MODE (#7) — CSS Variables Override
    ========================================= */
 [data-theme="dark"] {
+    color-scheme: dark;
     --bg-color: #0f1f22;
     --text-primary: #c8e6e9;
     --text-secondary: #7db5ba;
