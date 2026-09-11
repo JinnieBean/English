@@ -92,11 +92,8 @@ function initRevealAnimations() {
 const BC_HOME_SVG = '<svg class="bc-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>';
 const BC_CHEVRON_SVG = '<svg class="bc-sep" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>';
 
-window.renderBreadcrumb = function (crumbs) {
-    const container = document.getElementById('breadcrumb-container');
-    if (!container || !crumbs?.length) return;
-
-    const items = crumbs.map((c, i) => {
+function bcRenderItems(crumbs) {
+    return crumbs.map((c, i) => {
         const isLast = i === crumbs.length - 1;
         const label = escapeHtml(c.label);
         const icon = (i === 0 && /^home$/i.test(String(c.label).trim())) ? BC_HOME_SVG : '';
@@ -106,6 +103,34 @@ window.renderBreadcrumb = function (crumbs) {
         }
         return `<span class="bc-item"><a class="bc-link" href="${escapeHtml(c.href)}">${icon}${label}</a></span>${sep}`;
     });
+}
+
+window.renderBreadcrumb = function (crumbs, opts = {}) {
+    const container = document.getElementById('breadcrumb-container');
+    if (!container || !crumbs?.length) return;
+
+    /* Phase 2 (mobile): trails longer than 3 levels collapse the middle
+       links into an ellipsis chip; clicking it expands the full trail. */
+    if (!opts.noCollapse && crumbs.length > 3) {
+        const head = crumbs[0];
+        const tail = crumbs[crumbs.length - 1];
+        const dropped = crumbs.slice(1, -1);
+        const fullTrail = crumbs.map(c => c.label).join(' / ');
+        const ellipsisChip = `<span class="bc-item">`
+            + `<button type="button" class="bc-link bc-ellipsis" aria-label="Show full breadcrumb path" title="${escapeHtml(fullTrail)}">…</button></span>${BC_CHEVRON_SVG}`;
+        container.hidden = false;
+        container.innerHTML = `<nav class="breadcrumb" aria-label="Breadcrumb">`
+            + bcRenderItems([head]).join('') + ellipsisChip + bcRenderItems([tail]).join('')
+            + `</nav>`;
+        const btn = container.querySelector('.bc-ellipsis');
+        if (btn) btn.addEventListener('click', () => {
+            const full = bcRenderItems([head, ...dropped, tail]);
+            container.innerHTML = `<nav class="breadcrumb" aria-label="Breadcrumb">${full.join('')}</nav>`;
+        });
+        return;
+    }
+
+    const items = bcRenderItems(crumbs);
 
     container.hidden = false;
     container.innerHTML = `<nav class="breadcrumb" aria-label="Breadcrumb">${items.join('')}</nav>`;

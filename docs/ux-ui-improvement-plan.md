@@ -86,7 +86,10 @@
 
 ---
 
-### Giai đoạn 2 — Nhất quán hệ thống (2–3 buổi) · P1
+### Giai đoạn 2 — Nhất quán hệ thống (2–3 buổi) · P1 · ✅ **ĐÃ XONG**
+
+> Ghi chú thực thi: theo yêu cầu, **mục 2.5 (Lesson content typography) đã bỏ qua** để không ảnh hưởng TinyMCE output. Mục 2.1 thực hiện scoped (breakpoints + spacing cho primitives dùng chung), không sweep toàn file để tránh rủi ro khi không test được bằng browser.
+> Thêm ngoài kế hoạch: token `--warning-contrast` (fix chữ trắng trên amber dark 1.9:1 → 8.7:1), token `--z-sticky`, fade cạnh subnav, focus restore khi expand breadcrumb.
 
 **2.1. Refactor spacing + breakpoints bằng token**
 - Thay thế giá trị spacing phổ biến trong `style.css`/`courses.css` bằng `--space-*`; gom media queries về 4 mốc chốt ở GĐ0. Ưu tiên các khối ảnh hưởng mobile (768/480) trước.

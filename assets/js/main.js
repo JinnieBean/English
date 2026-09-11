@@ -1,6 +1,6 @@
 import { collection, getDocs, getDoc, doc, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
-import { escapeHtml, normalizeSearch, iconSvg } from './utils.js';
+import { escapeHtml, normalizeSearch, iconSvg, debounce } from './utils.js';
 import { allBookmarks, getBookmark, setBookmark } from './progress-store.js';
 import { cachedLoad } from './idb-cache.js';
 
@@ -195,11 +195,23 @@ function renderUnitSubnav(active) {
         ['unit_pattern.html', 'Word Patterns'],
         ['unit_lexical.html', 'Lexical Expansion']
     ];
-    nav.innerHTML = tabs.map(([target, label]) => {
+    nav.innerHTML = `<div class="subnav-scroll">` + tabs.map(([target, label]) => {
         const href = unitId ? `${target}?id=${encodeURIComponent(unitId)}` : target;
         const isActive = target === active;
         return `<a href="${href}" class="subnav-link${isActive ? ' active' : ''}"${isActive ? ' aria-current="page"' : ''}>${label}</a>`;
-    }).join('');
+    }).join('') + `</div>`;
+
+    /* Phase 2: fade edges when the tab strip overflows (mobile). */
+    const strip = nav.querySelector('.subnav-scroll');
+    if (!strip) return;
+    const syncFades = () => {
+        const overflows = strip.scrollWidth > strip.clientWidth + 1;
+        nav.classList.toggle('subnav-overflow-left', overflows && strip.scrollLeft > 2);
+        nav.classList.toggle('subnav-overflow-right', overflows && strip.scrollLeft < strip.scrollWidth - strip.clientWidth - 2);
+    };
+    strip.addEventListener('scroll', syncFades, { passive: true });
+    window.addEventListener('resize', debounce(syncFades, 150), { passive: true });
+    syncFades();
 }
 
 /* Accessible expander for word-formation/lexical blocks. Delegated so

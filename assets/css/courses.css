@@ -208,15 +208,52 @@
 
 /* Tab bar shared by the six unit_* pages (rendered by renderUnitSubnav in main.js) */
 .unit-subnav {
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
+    /* Sticky tab bar: pins under the browser chrome while the unit
+       content scrolls. Opaque background so content never bleeds through. */
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px));
+    z-index: var(--z-sticky, 10);
+    background: var(--bg-color);
+    padding-top: 0.75rem;
     padding-bottom: 1rem;
     margin-bottom: 1.5rem;
     border-bottom: 1px solid var(--line-color);
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
 }
+
+/* The inner strip scrolls horizontally; the bar itself never scrolls,
+   so the ::before/::after edge fades stay pinned to the viewport edge. */
+.subnav-scroll {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.subnav-scroll::-webkit-scrollbar { display: none; }
+
+/* Edge fades (toggled by renderUnitSubnav when tabs overflow) */
+.unit-subnav::before,
+.unit-subnav::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1.25rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-fast, 150ms) ease;
+}
+.unit-subnav::before {
+    left: 0;
+    background: linear-gradient(to right, var(--bg-color), transparent);
+}
+.unit-subnav::after {
+    right: 0;
+    background: linear-gradient(to left, var(--bg-color), transparent);
+}
+.unit-subnav.subnav-overflow-left::before { opacity: 1; }
+.unit-subnav.subnav-overflow-right::after { opacity: 1; }
 
 .subnav-link {
     padding: 0.5rem 1rem;
@@ -235,6 +272,9 @@
     background: var(--accent-color);
     color: white;
     border-color: var(--accent-color);
+    /* Active tab is not color-only: bold + inset underline bar */
+    font-weight: 600;
+    box-shadow: inset 0 -3px 0 var(--bg-color);
 }
 
 .unit-detail-header {
@@ -293,7 +333,7 @@
     transform: translateY(-1px);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
     .unit-sections { flex-wrap: wrap; }
     .unit-tab-btn { flex: 1 1 auto; }
 }
@@ -387,7 +427,7 @@
     line-height: 1.5;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
     .book-container {
         flex-direction: column;
         text-align: center;

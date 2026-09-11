@@ -26,6 +26,18 @@
     --shadow-sm: 0 4px 12px rgba(10, 79, 84, 0.06);
     --shadow-md: 0 8px 24px rgba(10, 79, 84, 0.12);
     --shadow-lg: 0 16px 40px rgba(10, 79, 84, 0.18);
+    /* Semantic colors (Phase 2) - flip per theme, soft tints for backgrounds */
+    --success: #16a34a;
+    --success-strong: #15803d;
+    --success-soft: rgba(22, 163, 74, 0.12);
+    --danger: #dc2626;
+    --danger-soft: rgba(220, 38, 38, 0.12);
+    --warning: #b45309;
+    --warning-soft: rgba(180, 83, 9, 0.12);
+    --warning-contrast: #ffffff;   /* text on --warning backgrounds (4.6:1) */
+    --accent-soft: rgba(13, 112, 120, 0.12);
+    --skeleton-a: #f0f0f0;
+    --skeleton-b: #e0e0e0;
 
     /* Typography Scale (#19) */
     --font-heading: 'Playfair Display', serif;
@@ -69,6 +81,7 @@
 
     /* Z-index scale — mirrors tiers already in use; migrate usages in Phase 2 */
     --z-raised: 1;        /* floating element inside a component (search clear btn) */
+    --z-sticky: 10;       /* sticky bars (unit subnav) */
     --z-popover: 60;      /* global search results dropdown */
     --z-popup: 90;        /* dictionary popup (95 = tap-to-lookup button) */
     --z-progress: 200;    /* reading progress bar */
@@ -83,6 +96,17 @@
    ========================================= */
 [data-theme="dark"] {
     color-scheme: dark;
+    --success: #4ade80;
+    --success-strong: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.16);
+    --danger: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.16);
+    --warning: #fbbf24;
+    --warning-soft: rgba(251, 191, 36, 0.16);
+    --warning-contrast: #422006;   /* dark text on light amber (8.6:1) */
+    --accent-soft: rgba(13, 156, 170, 0.18);
+    --skeleton-a: #2a2a2a;
+    --skeleton-b: #3a3a3a;
     --bg-color: #0f1f22;
     --text-primary: #c8e6e9;
     --text-secondary: #7db5ba;
@@ -195,13 +219,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4rem 2rem 2rem;
+    padding: var(--space-8) var(--space-6) var(--space-6);
     max-width: 1400px;
     margin: 0 auto;
 }
 
 /* Compact variant for inner pages (units, lessons, review, ...) */
-.main-header.compact { padding: 1.5rem 2rem 1rem; }
+.main-header.compact { padding: var(--space-5) var(--space-6) var(--space-4); }
 .main-header.compact .header-content h1 { font-size: var(--text-3xl); }
 .main-header.compact .header-line { max-width: 220px; }
 
@@ -297,6 +321,12 @@ body {
     outline: var(--focus-ring);
     outline-offset: 1px;
 }
+.breadcrumb .bc-ellipsis {
+    font: inherit;
+    cursor: pointer;
+    border: 1px dashed var(--line-color);
+    letter-spacing: .1em;
+}
 
 .breadcrumb .bc-current {
     background: var(--nav-active-bg);
@@ -339,7 +369,7 @@ body {
 .container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem 4rem;
+    padding: var(--space-6) var(--space-8);
 }
 
 /* =========================================
@@ -1171,13 +1201,12 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
     line-height: 1;
 }
 
-.unit-progress-badge.unit-progress-complete { border-color: #22c55e; }
+.unit-progress-badge.unit-progress-complete { border-color: var(--success); }
 .unit-progress-complete .unit-progress-icon,
-.unit-progress-complete strong { color: #15803d; }
-[data-theme="dark"] .unit-progress-complete .unit-progress-icon,
-[data-theme="dark"] .unit-progress-complete strong { color: #4ade80; }
+.unit-progress-complete strong { color: var(--success-strong); }
+
 .unit-progress-complete .unit-progress-bar-fill {
-    background: linear-gradient(90deg, #22c55e, #15803d);
+    background: linear-gradient(90deg, var(--success), var(--success-strong));
 }
 
 .unit-progress-bar-wrap {
@@ -1198,12 +1227,13 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
 /* =========================================
    RESPONSIVE
    ========================================= */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
     .container { padding: 2rem; }
     .breadcrumb-container { padding-inline: 2rem; }
 }
 
 @media (max-width: 768px) {
+    .breadcrumb-container { padding-inline: 1rem; }
     .main-header {
         flex-direction: column;
         padding: 2rem 1rem 1rem;
@@ -1501,7 +1531,7 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
     100% { background-position: 200% 0; }
 }
 .skeleton {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     border-radius: 4px;
@@ -1520,7 +1550,7 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
     width: 60%;
 }
 [data-theme="dark"] .skeleton {
-    background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+    background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%);
     background-size: 200% 100%;
 }
 
@@ -1650,7 +1680,7 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
     z-index: 1;
 }
 .bookmark-btn:hover { transform: scale(1.15); }
-.bookmark-btn.active { color: #eab308; }
+.bookmark-btn.active { color: var(--warning); }
 
 /* =========================================
    AUDIO PLAYER — seek / loop / download / TTS
@@ -1699,13 +1729,13 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
 /* =========================================
    FLASHCARDS — grading buttons + summary
    ========================================= */
-.fc-btn-unknown { background: var(--card-bg); color: #b45309; border: 1px solid #eab308; }
-.fc-btn-known   { background: var(--card-bg); color: #15803d; border: 1px solid #22c55e; }
+.fc-btn-unknown { background: var(--card-bg); color: var(--warning); border: 1px solid var(--warning); }
+.fc-btn-known   { background: var(--card-bg); color: var(--success-strong); border: 1px solid var(--success); }
 .fc-btn-unknown:hover, .fc-btn-known:hover { filter: brightness(0.97); }
 .fc-active { box-shadow: inset 0 0 0 2px currentColor; }
 .fc-btn-flip { background: var(--nav-hover-bg); color: var(--text-secondary); border: 1px solid var(--line-color); }
 .flashcard-front { position: relative; }
-.fc-marked-known .flashcard-word::after { content: " \2713"; color: #22c55e; font-size: 0.7em; }
+.fc-marked-known .flashcard-word::after { content: " \2713"; color: var(--success); font-size: 0.7em; }
 .flashcard-summary { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 0.75rem; }
 .fc-summary-title { font-family: var(--font-heading); font-size: var(--text-2xl); color: var(--text-primary); }
 .fc-summary-text { color: var(--text-secondary); }
@@ -1734,8 +1764,8 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
 }
 .quiz-option:not(:disabled):hover { border-color: var(--accent-color); transform: translateX(3px); }
 .quiz-option:disabled { cursor: default; opacity: 0.75; }
-.quiz-option.correct { border-color: #22c55e; background: rgba(34, 197, 94, 0.12); opacity: 1; }
-.quiz-option.wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.12); opacity: 1; }
+.quiz-option.correct { border-color: var(--success); background: var(--success-soft); opacity: 1; }
+.quiz-option.wrong { border-color: var(--danger); background: var(--danger-soft); opacity: 1; }
 .quiz-option-key {
     flex: none;
     display: inline-flex;
@@ -1999,8 +2029,8 @@ button.wf-toggle {
 
 .nav-link.nav-study { position: relative; }
 .review-badge {
-    background: #eab308;
-    color: #fff;
+    background: var(--warning);
+    color: var(--warning-contrast);
     font-size: .68rem;
     font-weight: 700;
     border-radius: 10px;
@@ -2093,8 +2123,8 @@ button.wf-toggle {
     margin-bottom: 1rem;
     color: var(--text-primary);
 }
-.quiz-typing-def.correct { border-left-color: #22c55e; }
-.quiz-typing-def.wrong { border-left-color: #ef4444; }
+.quiz-typing-def.correct { border-left-color: var(--success); }
+.quiz-typing-def.wrong { border-left-color: var(--danger); }
 .quiz-typing-row { display: flex; gap: .7rem; }
 .quiz-typing-input {
     flex: 1;
@@ -2227,7 +2257,7 @@ button.wf-toggle {
     font-size: .9rem;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 480px) {
     .ml-unit-row { grid-template-columns: 1fr 60px; }
     .ml-unit-track { display: none; }
 }
@@ -2295,7 +2325,7 @@ button.wf-toggle {
 }
 .tn-icon-only { display: none; }
 .tn-auth-error {
-    color: #d64541;
+    color: var(--danger);
     font-size: .72rem;
     line-height: 1.4;
     display: inline-block;
@@ -2379,7 +2409,7 @@ button.wf-toggle {
 .rv-word { font-weight: 600; color: var(--text-primary); }
 .rv-pron { color: var(--text-secondary); font-size: var(--text-sm); white-space: nowrap; }
 .rv-def { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: 1.5; }
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .rv-word-row { grid-template-columns: 1fr; }
 }
 
@@ -2533,10 +2563,10 @@ button.wf-toggle {
     letter-spacing: .03em;
     text-transform: uppercase;
     color: var(--accent-color);
-    background: rgba(13, 112, 120, .12);
+    background: var(--accent-soft);
     vertical-align: middle;
 }
-[data-theme="dark"] .rv-src { background: rgba(13, 156, 170, .18); }
+[data-theme="dark"] .rv-src { background: var(--accent-soft); }
 
 /* Search dropdown: definition snippet + "see all" footer */
 .gs-item { flex-wrap: wrap; }
@@ -2707,8 +2737,8 @@ button.wf-toggle {
     left: 50%;
     bottom: calc(80px + env(safe-area-inset-bottom));
     transform: translate(-50%, 150%);
-    background: #b45309;
-    color: #fff;
+    background: var(--warning);
+    color: var(--warning-contrast);
     font-size: .82rem;
     font-weight: 600;
     padding: .5rem 1.1rem;
@@ -2759,8 +2789,8 @@ button.wf-toggle {
     margin-bottom: .5rem;
     background: var(--card-bg);
 }
-.qr-ok { border-left: 4px solid #16a34a; }
-.qr-bad { border-left: 4px solid #dc2626; }
+.qr-ok { border-left: 4px solid var(--success); }
+.qr-bad { border-left: 4px solid var(--danger); }
 .qr-num {
     font-size: .72rem;
     font-weight: 700;
@@ -2771,8 +2801,8 @@ button.wf-toggle {
 .qr-body { flex: 1; min-width: 0; }
 .qr-prompt { font-weight: 600; font-size: .88rem; color: var(--text-primary); }
 .qr-mine { font-size: .8rem; color: var(--text-secondary); margin-top: .15rem; }
-.qr-ok .qr-mine { color: #16a34a; }
-.qr-bad .qr-mine { color: #dc2626; }
+.qr-ok .qr-mine { color: var(--success); }
+.qr-bad .qr-mine { color: var(--danger); }
 .qr-right { font-size: .8rem; color: var(--text-primary); margin-top: .1rem; }
 
 /* Reduced motion (#14) — extend the existing breadcrumb-only rule */
