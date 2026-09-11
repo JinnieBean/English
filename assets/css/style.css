@@ -361,6 +361,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
     .breadcrumb .bc-skeleton { animation: none; }
+    /* Flashcard flip becomes an instant swap instead of a spin */
+    .flashcard-card-inner { transition: none; }
 }
 
 /* =========================================
@@ -428,6 +430,22 @@ body {
 .note-card:hover .note-image {
     box-shadow: var(--shadow-md);
     border-color: rgba(13, 112, 120, 0.25);
+}
+
+/* "Coming soon" chip under the English card image (G8) — the old
+   full-size Chinese card wasted 50% of the hero grid. Sits in normal
+   flow below the circle so it never covers the artwork. */
+.soon-chip {
+    margin: -1rem 0 1rem;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    padding: .3rem .85rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent-dark);
+    border: 1px solid var(--accent-color);
+    white-space: nowrap;
 }
 
 .note-image img {
@@ -1065,6 +1083,38 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
     text-align: center;
     cursor: pointer;
     perspective: 800px;
+    /* horizontal swipe = grade; keep vertical native gestures free */
+    touch-action: pan-y;
+    width: 100%;
+}
+
+/* 3D flip — both faces render once, JS only toggles .is-flipped */
+.flashcard-card-inner {
+    position: relative;
+    width: 100%;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transform-style: preserve-3d;
+    transition: transform var(--dur-slow) var(--ease-out);
+}
+.flashcard-card-inner.is-flipped {
+    transform: rotateY(180deg);
+}
+.fc-face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+.fc-face--back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
 }
 
 .flashcard-front,
@@ -1593,7 +1643,10 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
 /* =========================================
    UX STATES: loading / error / empty
    ========================================= */
-.list-skeleton { padding: 1rem 0; }
+/* One skeleton block ~ one real unit/book row (padding + 32px title +
+   20px text lines): keeps the placeholder height close to the final
+   layout so nothing jumps when data lands (CLS). */
+.list-skeleton { padding: 1rem 0; min-height: 130px; }
 .empty-state {
     padding: 2rem 1rem;
     text-align: center;
@@ -1740,6 +1793,10 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
 .fc-summary-title { font-family: var(--font-heading); font-size: var(--text-2xl); color: var(--text-primary); }
 .fc-summary-text { color: var(--text-secondary); }
 .fc-summary-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center; }
+/* Touch devices: append swipe instructions to the card hint */
+@media (pointer: coarse) {
+    .flashcard-hint::after { content: " · \2190 still learning · \2192 known"; opacity: .75; }
+}
 
 /* =========================================
    QUIZ MODE
@@ -1779,6 +1836,10 @@ html[data-theme="dark"] .dm-text-light { display: inline; }
     color: var(--text-secondary);
 }
 .quiz-feedback { min-height: 1.6rem; margin-top: 1rem; text-align: center; color: var(--text-secondary); font-style: italic; }
+.qfb { display: inline-flex; align-items: center; gap: .3rem; font-style: normal; font-weight: 600; }
+.qfb svg { width: 1em; height: 1em; flex-shrink: 0; }
+.qfb-ok { color: var(--success-strong); }
+.qfb-bad { color: var(--danger); }
 
 .quiz-nav {
     display: flex;
@@ -2191,7 +2252,8 @@ button.wf-toggle {
 .stat-icon svg { width: 24px; height: 24px; flex-shrink: 0; }
 .ml-cards .stat-icon svg { width: 26px; height: 26px; }
 .ml-cards h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); margin: 0; }
-.ml-cards p { font-size: 1.7rem; font-weight: 700; color: var(--text-primary); margin: .2rem 0 0; }
+/* 3.3 — bigger stat numbers with the display font (Urbanist) */
+.ml-cards p { font-family: var(--font-display); font-size: 2rem; font-weight: 700; color: var(--text-primary); margin: .2rem 0 0; }
 
 .ml-activity {
     display: flex;
@@ -2384,6 +2446,12 @@ button.wf-toggle {
 
 /* Review page layout */
 .rv-sync-note { font-size: var(--text-sm); }
+/* Review — 7-day forecast heading */
+.rv-forecast-title {
+    font-family: var(--font-heading);
+    font-size: var(--text-xl);
+    margin: 1.5rem 0 .6rem;
+}
 .rv-actions { display: flex; gap: .8rem; flex-wrap: wrap; align-items: center; margin: 1rem 0 1.5rem; }
 .rv-actions .btn-retry { padding: .65rem 1.6rem; font-size: var(--text-base); text-decoration: none; }
 

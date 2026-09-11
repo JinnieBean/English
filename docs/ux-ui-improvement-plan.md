@@ -110,7 +110,7 @@
 
 ---
 
-### Giai đoạn 3 — Nâng cao trải nghiệm học (2–4 buổi) · P2 (làm sau khi P0/P1 ổn)
+### Giai đoạn 3 — Nâng cao trải nghiệm học (2–4 buổi) · P2 (làm sau khi P0/P1 ổn) · ✅ **ĐÃ XONG**
 
 **3.1. Flashcard**
 - Flip 3D thật (`transform: rotateY` + `transform-style: preserve-3d`), thêm swipe trái/phải = "Chưa nhớ/Nhớ" — **chỉ trong overlay flashcard** (region cô lập, tránh xung đột với scroll dọc của trang, đúng nguyên tắc gesture conflict).
@@ -132,6 +132,13 @@
 - Skeleton: rà chiều cao skeleton khớp nội dung thật để giảm CLS (đặc biệt units list và lesson).
 - `offline.html`: bổ sung link về trang chủ + danh sách trang đã cache.
 - Bump `CACHE` const trong `sw.js` nếu đổi precache list (gotcha).
+
+**Kết quả GĐ3 (đã làm):**
+- 3.1: Flashcard 3D flip (`rotateY` + `preserve-3d`, cả 2 mặt render 1 lần — flip chỉ toggle class nên audio không đứt); swipe trái/phải = Learning/Known (pointer events, threshold 60px + |dx|>|dy|×1.6, `touch-action: pan-y`); hint swipe chỉ hiện trên `pointer: coarse`; reduced-motion → transition none (flip tức thì).
+- 3.2: Feedback quiz ✓/✗ SVG icon (`iconSvg('check')/('x')` — thêm 2 icon mới vào `_ICON_PATHS`) + màu `--success-strong`/`--danger`; summary thêm nút "Flashcards: wrong (N)" — đóng quiz, đổ wrong-cards vào engine flashcard (`openFlashcardsWith` + `_fcRestore` khôi phục session của trang khi đóng).
+- 3.3: Số stat 2rem `--font-display` (Urbanist); review.html thêm forecast 7 ngày (`#rv-forecast` reuse markup/CSS `ml-day` của mylearning, overdue gộp vào hôm nay, lọc `isLoadable`).
+- 3.4: resume-card chuyển lên ngay dưới hero (trước notes-grid); Chinese card xóa, thay bằng badge `.soon-badge` trên card English (không còn chiếm 50% grid).
+- 3.5: `sw.js` CACHE v14→v15; offline.html mới: nút home nổi bật + danh sách trang offline khả dụng (đọc Cache API ngay trong trang, dark-mode media query); `.list-skeleton` min-height 130px khớp row thật (giảm CLS).
 
 ---
 

@@ -487,9 +487,11 @@ window.renderProgressBadge = renderProgressBadge;
 let _flashcardData = [];
 let _flashcardIndex = 0;
 let _flashcardRevealed = false;
+let _fcKeysBound = false;
 let _flashcardUnitId = null;
 let _fcKnown = new Set();
 let _fcSessionDone = false;
+let _fcRestore = null;   // saved page session while quiz-wrong cards are shown
 let _lastFocused = null;
 
 function fcOpen() {
@@ -553,16 +555,39 @@ function bindFlashcardEvents(btn, overlay) {
         // Don't flip when interacting with action buttons or the shared
         // Longman/TTS audio player rendered on the card.
         if (e.target.closest('[data-fc-action], .custom-audio-player, .audio-tts-btn')) return;
-        _flashcardRevealed = !_flashcardRevealed;
-        renderFlashcard();
+        flipFlashcard();
     });
 
+    /* Swipe left/right on the card = Still learning / Known (mobile).
+       The overlay locks page scroll, so horizontal drags are unambiguous. */
+    const area = document.getElementById('flashcard-card-area');
+    let sw = null;
+    area?.addEventListener('pointerdown', (ev) => {
+        if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+        if (ev.target.closest('[data-fc-action], .custom-audio-player, .audio-tts-btn, input, button, a, svg')) return;
+        sw = { x: ev.clientX, y: ev.clientY, id: ev.pointerId };
+    });
+    area?.addEventListener('pointerup', (ev) => {
+        if (!sw || ev.pointerId !== sw.id) { sw = null; return; }
+        const dx = ev.clientX - sw.x, dy = ev.clientY - sw.y;
+        sw = null;
+        if (Math.abs(dx) >= 60 && Math.abs(dx) > 1.6 * Math.abs(dy)) {
+            handleFcAction(dx < 0 ? 'unknown' : 'known');
+        }
+    });
+    area?.addEventListener('pointercancel', () => { sw = null; });
+
+
+    // Bind the document-level shortcuts only once per page (the overlay
+    // markup can be injected from several places).
+    if (!_fcKeysBound) {
+    _fcKeysBound = true;
     document.addEventListener('keydown', (e) => {
         if (!fcOpen()) return;
         trapTab(e, overlay);
         switch (e.key) {
             case ' ': case 'Enter': case 'f': case 'F':
-                e.preventDefault(); _flashcardRevealed = !_flashcardRevealed; renderFlashcard(); break;
+                e.preventDefault(); flipFlashcard(); break;
             case 'ArrowRight': e.preventDefault(); handleFcAction('next'); break;
             case 'ArrowLeft': e.preventDefault(); handleFcAction('prev'); break;
             case '1': handleFcAction('unknown'); break;
@@ -570,6 +595,45 @@ function bindFlashcardEvents(btn, overlay) {
             case 'Escape': closeFlashcards(); break;
         }
     });
+    }
+}
+
+/** Open flashcards with an explicit card list (e.g. the words a quiz
+ *  session got wrong). Falls back to the current _flashcardData. */
+function openFlashcardsWith(cards) {
+    if (!cards?.length) return;
+    ensureOverlayThen(() => {
+        // Remember the page's own session so closing restores it
+        _fcRestore = { data: _flashcardData, unitId: _flashcardUnitId, known: _fcKnown };
+        _flashcardData = [...cards];
+        _flashcardUnitId = cards[0]?.unitId || null;
+        _fcKnown = getKnownSet(_flashcardUnitId);
+        openFlashcards();
+    });
+}
+
+function ensureOverlayThen(cb) {
+    if (document.getElementById('flashcard-overlay')) { cb(); return; }
+    /* Pages that never injected the overlay (e.g. quiz-only pages) get it
+       on demand so Flashcards: wrong always works. */
+    document.body.insertAdjacentHTML('beforeend', `
+        <div class="flashcard-overlay" id="flashcard-overlay" aria-hidden="true">
+            <div class="flashcard-modal" role="dialog" aria-modal="true" aria-label="Flashcard practice">
+                <button class="flashcard-close" id="flashcard-close" data-fc-action="close" aria-label="Close">&times;</button>
+                <div class="flashcard-counter" id="fc-counter" aria-live="polite">1 / 1</div>
+                <div class="flashcard-progress-bar">
+                    <div class="flashcard-progress-fill" id="fc-progress-fill" style="width:0%"></div>
+                </div>
+                <div class="flashcard-card" id="flashcard-card-area"></div>
+                <div class="flashcard-actions"></div>
+            </div>
+        </div>
+    `);
+    const ov = document.getElementById('flashcard-overlay');
+    const cardArea = document.getElementById('flashcard-card-area');
+    const btnFake = { addEventListener() {} };
+    bindFlashcardEvents(btnFake, ov, cardArea);
+    cb();
 }
 
 function openFlashcards() {
@@ -590,6 +654,14 @@ function openFlashcards() {
 function closeFlashcards() {
     const overlay = document.getElementById('flashcard-overlay');
     if (!overlay) return;
+    // If this session was a temporary one (quiz-wrong cards), restore the
+    // page's own vocabulary so the Flashcards toolbar button still works.
+    if (_fcRestore) {
+        _flashcardData = _fcRestore.data;
+        _flashcardUnitId = _fcRestore.unitId;
+        _fcKnown = _fcRestore.known;
+        _fcRestore = null;
+    }
     overlay.classList.remove('active');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
@@ -616,7 +688,7 @@ function persistKnown() {
 function handleFcAction(action) {
     switch (action) {
         case 'close': closeFlashcards(); break;
-        case 'flip': _flashcardRevealed = !_flashcardRevealed; renderFlashcard(); break;
+        case 'flip': flipFlashcard(); break;
         case 'prev':
             pauseAllAudio();
             if (_fcSessionDone) { restartFlashcards(_flashcardData); return; }
@@ -737,30 +809,37 @@ function renderFlashcard() {
     `;
 
     if (cardArea) {
-        if (!_flashcardRevealed) {
-            // Same Longman audio as the vocabulary list; TTS only as fallback
-            // when the word has no stored audio URL.
-            const audioHtml = v.audio
-                ? `<div class="flashcard-audio">${buildCustomAudioPlayer(v.audio)}</div>`
-                : ttsButton(cleanWord);
-            cardArea.innerHTML = `
-                <div class="flashcard-front ${isKnown ? 'fc-marked-known' : ''}">
+        // Same Longman audio as the vocabulary list; TTS only as fallback
+        // when the word has no stored audio URL.
+        const audioHtml = v.audio
+            ? `<div class="flashcard-audio">${buildCustomAudioPlayer(v.audio)}</div>`
+            : ttsButton(cleanWord);
+        // Both faces are rendered ONCE; flipping only toggles a CSS class,
+        // so audio keeps playing and the 3D rotation stays smooth.
+        cardArea.innerHTML = `
+            <div class="flashcard-card-inner${_flashcardRevealed ? ' is-flipped' : ''}">
+                <div class="flashcard-front fc-face ${isKnown ? 'fc-marked-known' : ''}">
                     <div class="flashcard-word">${escapeHtml(v.word || '')}</div>
                     <div class="flashcard-pron">${escapeHtml(v.pron || '')}</div>
                     ${audioHtml}
                     <div class="flashcard-hint">Tap card or press Space to reveal meaning</div>
                 </div>
-            `;
-        } else {
-            cardArea.innerHTML = `
-                <div class="flashcard-back">
+                <div class="flashcard-back fc-face fc-face--back">
                     <div class="flashcard-def">${escapeHtml(v.def || '')}</div>
                     ${exHighlight ? `<div class="flashcard-example">${exHighlight}</div>` : ''}
                     <div class="flashcard-hint">Press <strong>2</strong> if you know it, <strong>1</strong> to review later</div>
                 </div>
-            `;
-        }
+            </div>
+        `;
     }
+}
+
+/** Flip the current card WITHOUT re-rendering it (audio keeps playing).
+ *  The visual work is done by CSS rotateY on .flashcard-card-inner. */
+function flipFlashcard() {
+    _flashcardRevealed = !_flashcardRevealed;
+    document.querySelector('.flashcard-card-inner')
+        ?.classList.toggle('is-flipped', _flashcardRevealed);
 }
 
 /* ==============================================
@@ -1011,10 +1090,10 @@ function restoreAnsweredState(q, area) {
         const exact = normAns(q.typed) === normAns(stripPos(q.word));
         const near = !exact && levenshtein(normAns(q.typed), normAns(stripPos(q.word))) <= 1;
         if (q.correct) {
-            if (fb) fb.textContent = near ? `Correct — “${stripPos(q.word)}” (close enough!)` : 'Correct!';
+            if (fb) fb.innerHTML = `<span class="qfb qfb-ok">${iconSvg('check')} Correct${near ? ' — “' + escapeHtml(stripPos(q.word)) + '” (close enough!)' : '!'}</span>`;
             area.querySelector('.quiz-typing-def')?.classList.add('correct');
         } else {
-            if (fb) fb.innerHTML = `Not quite — the answer was <strong>${escapeHtml(stripPos(q.word))}</strong>`;
+            if (fb) fb.innerHTML = `<span class="qfb qfb-bad">${iconSvg('x')} Not quite — the answer was <strong>${escapeHtml(stripPos(q.word))}</strong></span>`;
             area.querySelector('.quiz-typing-def')?.classList.add('wrong');
         }
         return;
@@ -1024,7 +1103,9 @@ function restoreAnsweredState(q, area) {
         if (b.dataset.correct === '1') b.classList.add('correct');
         if (+b.dataset.index === q.chosen && b.dataset.correct !== '1') b.classList.add('wrong');
     });
-    if (fb) fb.textContent = q.correct ? 'Correct!' : `Answer: ${stripPos(q.word)}`;
+    if (fb) fb.innerHTML = q.correct
+            ? `<span class="qfb qfb-ok">${iconSvg('check')} Correct!</span>`
+            : `<span class="qfb qfb-bad">${iconSvg('x')} Answer: ${escapeHtml(stripPos(q.word))}</span>`;
 }
 
 /* ---------- mode: multiple choice ---------- */
@@ -1061,7 +1142,9 @@ function settleChoice(area, correct, chosenBtn, q) {
     });
     if (!correct) chosenBtn.classList.add('wrong');
     const fb = document.getElementById('quiz-feedback');
-    if (fb) fb.textContent = correct ? 'Correct!' : `Answer: ${stripPos(q.word)}`;
+    if (fb) fb.innerHTML = correct
+        ? `<span class="qfb qfb-ok">${iconSvg('check')} Correct!</span>`
+        : `<span class="qfb qfb-bad">${iconSvg('x')} Answer: ${escapeHtml(stripPos(q.word))}</span>`;
     quizGrade(q, correct);
     updateQuizNextBtn();
 }
@@ -1097,10 +1180,10 @@ function gradeTyping(area, q, exact, near, answer) {
     _quizAnswered = true;
     const fb = document.getElementById('quiz-feedback');
     if (exact || near) {
-        if (fb) fb.textContent = near ? `Correct — “${stripPos(q.word)}” (close enough!)` : 'Correct!';
+        if (fb) fb.innerHTML = `<span class="qfb qfb-ok">${iconSvg('check')} Correct${near ? ' — “' + escapeHtml(stripPos(q.word)) + '” (close enough!)' : '!'}</span>`;
         area.querySelector('.quiz-typing-def')?.classList.add('correct');
     } else {
-        if (fb) fb.innerHTML = `Not quite — the answer was <strong>${escapeHtml(stripPos(q.word))}</strong>`;
+        if (fb) fb.innerHTML = `<span class="qfb qfb-bad">${iconSvg('x')} Not quite — the answer was <strong>${escapeHtml(stripPos(q.word))}</strong></span>`;
         area.querySelector('.quiz-typing-def')?.classList.add('wrong');
     }
     document.getElementById('typing-input')?.setAttribute('readonly', 'true');
@@ -1162,6 +1245,7 @@ function renderQuizSummary() {
             <p class="fc-summary-text">${titles[_quizMode] || 'Quiz'} — you scored ${_quizScore} / ${_quizData.length} (${pct}%).</p>
             <div class="fc-summary-actions">
                 ${wrong.length ? `<button class="fc-btn fc-btn-unknown" type="button" id="quiz-retry-wrong">Retry wrong (${wrong.length})</button>` : ''}
+                ${wrong.length ? `<button class="fc-btn" type="button" id="quiz-study-wrong">${iconSvg('layers')} Flashcards: wrong (${wrong.length})</button>` : ''}
                 <button class="fc-btn" type="button" id="quiz-restart">Play again</button>
                 <button class="fc-btn fc-btn-secondary" type="button" id="quiz-review-btn" aria-expanded="false" aria-controls="quiz-review-list">Review answers</button>
                 <button class="fc-btn fc-btn-secondary" type="button" id="quiz-menu-btn">Other modes</button>
@@ -1170,6 +1254,13 @@ function renderQuizSummary() {
             <div class="quiz-review" id="quiz-review-list" hidden></div>
         </div>`;
     document.getElementById('quiz-retry-wrong')?.addEventListener('click', () => startQuiz(_quizSourcePool, _quizMode, wrong));
+    /* Study the missed words as flashcards: close the quiz and feed the
+       wrong answers straight into the flashcard engine (same module). */
+    document.getElementById('quiz-study-wrong')?.addEventListener('click', () => {
+        const cards = wrong.map(({ answered, correct, chosen, typed, options, ...v }) => v);
+        closeQuiz();
+        openFlashcardsWith(cards);
+    });
     document.getElementById('quiz-restart')?.addEventListener('click', () => startQuiz(_quizSourcePool, _quizMode));
     document.getElementById('quiz-menu-btn')?.addEventListener('click', () => openQuizMenu(_quizSourcePool));
     document.getElementById('quiz-close-2')?.addEventListener('click', closeQuiz);

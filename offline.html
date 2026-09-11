@@ -10,17 +10,81 @@
         body { font-family: system-ui, sans-serif; display: flex; min-height: 100vh;
                align-items: center; justify-content: center; text-align: center;
                background: #e8f0ec; color: #0a4f54; margin: 0; padding: 2rem; }
-        .box { max-width: 380px; }
-        h1 { font-size: 2rem; margin-bottom: .5rem; }
+        .box { max-width: 420px; }
+        h1 { font-size: 1.6rem; margin-bottom: .5rem; }
         p { color: #40686b; line-height: 1.6; }
         a { color: #0d7078; }
+        .home-link { display: inline-block; margin-top: .4rem; padding: .55rem 1.4rem;
+               border-radius: 999px; background: #0d7078; color: #fff;
+               text-decoration: none; font-weight: 600; }
+        .home-link:hover { background: #0a5a60; }
+        .cached-list { margin-top: 1.4rem; text-align: left;
+               background: rgba(255,255,255,.6); border: 1px solid rgba(13,112,120,.25);
+               border-radius: 12px; padding: 1rem 1.2rem; }
+        .cached-list h2 { font-size: .8rem; text-transform: uppercase;
+               letter-spacing: .05em; color: #40686b; margin: 0 0 .6rem; }
+        .cached-list ul { margin: 0; padding: 0; list-style: none;
+               display: flex; flex-direction: column; gap: .3rem; }
+        .cached-list a { display: block; padding: .3rem .4rem; border-radius: 6px;
+               text-decoration: none; }
+        .cached-list a:hover { background: rgba(13,112,120,.1); }
+        .muted { font-size: .8rem; opacity: .75; margin-top: .8rem; }
+        @media (prefers-color-scheme: dark) {
+            body { background: #0f1c1d; color: #cfe5e5; }
+            h1 { color: #e6f2f0; }
+            p, .cached-list h2 { color: #9db8b8; }
+            a { color: #7ad2d9; }
+            .home-link { background: #0d7078; color: #fff; }
+            .cached-list { background: rgba(255,255,255,.05); border-color: rgba(122,210,217,.2); }
+            .cached-list a:hover { background: rgba(122,210,217,.12); }
+        }
     </style>
 </head>
 <body>
     <div class="box">
         <h1><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0d7078" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> You're offline</h1>
         <p>This page hasn't been cached yet. Previously visited pages are still available offline.</p>
-        <p><a href="index.html">Back to home</a></p>
+        <a class="home-link" href="index.html">Back to home</a>
+        <div class="cached-list" id="cached-list" hidden>
+            <h2>Available offline</h2>
+            <ul id="cached-pages"></ul>
+            <p class="muted">Pages you've opened before work offline; others need a connection the first time.</p>
+        </div>
     </div>
+    <script>
+        // List cached HTML pages so learners can jump straight to what works.
+        // Runs in the page (same origin) — the SW cache API is readable here.
+        (async () => {
+            const names = ['tn-cache-v15', 'tn-cache-v14', 'tn-cache-v13'];
+            let cache = null;
+            for (const n of names) {
+                try { if (await caches.has(n)) { cache = await caches.open(n); break; } } catch {}
+            }
+            if (!cache) return;
+            const seen = new Set();
+            const items = [];
+            try {
+                const reqs = await cache.keys();
+                for (const req of reqs) {
+                    const url = new URL(req.url);
+                    if (url.origin !== location.origin) continue;
+                    const file = url.pathname.split('/').pop();
+                    if (!file.endsWith('.html') || url.search) continue;
+                    if (file === 'offline.html' || file === '404.html' || seen.has(file)) continue;
+                    seen.add(file);
+                    items.push(url.origin + url.pathname);
+                }
+            } catch {}
+            if (!items.length) return;
+            const pretty = (u) => {
+                const f = new URL(u).pathname.split('/').pop().replace('.html', '');
+                return f === '' || f === 'index' ? 'Home' : f.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            };
+            const ul = document.getElementById('cached-pages');
+            ul.innerHTML = items.sort().map(u =>
+                `<li><a href="${u}">${pretty(u)}</a></li>`).join('');
+            document.getElementById('cached-list').hidden = false;
+        })();
+    </script>
 </body>
 </html>

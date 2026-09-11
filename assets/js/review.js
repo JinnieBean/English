@@ -9,10 +9,42 @@ import {
     initStore, srsDueList, totalKnown, todayKey,
     onStoreAuthChanged, getUser, isAuthResolved
 } from './progress-store.js';
+
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
 import { escapeHtml, iconSvg } from './utils.js';
 import { isLoadable, loadSrcCards } from './card-loader.js';
+
+/* 7-day forecast: how many words come due each day (srs.next).
+   Overdue words fold into today's bucket. Mirrors mylearning.js. */
+function renderForecast() {
+    const wrap = document.getElementById('rv-forecast');
+    if (!wrap) return;
+    const entries = srsDueList('9999-12-30').filter(e => e.next !== '9999-12-31' && isLoadable(e));
+    const today = todayKey();
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        days.push({
+            k: todayKey(d),
+            n: 0,
+            label: i === 0 ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' })
+        });
+    }
+    entries.forEach(e => {
+        const k = (e.next || '') <= today ? today : e.next;
+        const day = days.find(d => d.k === k);
+        if (day) day.n++;
+    });
+    const max = Math.max(1, ...days.map(d => d.n));
+    wrap.innerHTML = days.map(d => `
+        <div class="ml-day ml-day-wide" title="${d.k}: ${d.n} word${d.n === 1 ? '' : 's'} due">
+            <div class="ml-bar" style="height:${Math.round((d.n / max) * 100)}%"></div>
+            <span>${d.label}</span>
+            <strong class="ml-day-count">${d.n}</strong>
+        </div>`).join('');
+}
 
 const summaryEl = document.getElementById('review-summary');
 const actionsEl = document.getElementById('review-actions');
@@ -174,6 +206,7 @@ function render() {
     setStat('rv-rotation', scheduled.length);
     setStat('rv-known', totalKnown());
     renderSyncNote();
+    renderForecast();
 
     // Nothing studied at all yet
     if (totalKnown() === 0 && scheduled.length === 0) {
