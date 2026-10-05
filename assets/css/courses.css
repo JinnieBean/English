@@ -257,7 +257,7 @@
 
 .subnav-link {
     padding: 0.5rem 1rem;
-    border: 1px solid var(--line-color);
+    border: none;
     border-radius: 20px;
     text-decoration: none;
     white-space: nowrap;
@@ -268,13 +268,15 @@
     color: var(--text-secondary);
 }
 
+.subnav-link:hover {
+    color: var(--text-primary);
+    background: var(--nav-hover-bg);
+}
+
 .subnav-link.active {
     background: var(--accent-color);
     color: white;
-    border-color: var(--accent-color);
-    /* Active tab is not color-only: bold + inset underline bar */
     font-weight: 600;
-    box-shadow: inset 0 -3px 0 var(--bg-color);
 }
 
 .unit-detail-header {
