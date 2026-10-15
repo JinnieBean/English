@@ -1,6 +1,7 @@
 import { collection, addDoc, updateDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { adminDb as db } from './admin-firebase.js';
 import { escapeHtml, friendlyError, applyAudioVersion, debounce } from '../../assets/js/utils.js';
+import { autofillWord, parseLongmanHtml, longmanUrlFor, slugFromLongmanInput } from '../../assets/js/longman.js';
 import { hooks, openModal, onSubmit, stampCreate, stampUpdate, isDuplicate, dupToast, performDelete, assetUrl, publicUrlFor, enableDragReorder, confirmDialog, logAudit } from './common.js';
 import {
     booksData, unitsData, vocabData, phrasalData, prepData, wordformData, patternData, lexicalData,
@@ -288,6 +289,9 @@ const vocabForm = document.getElementById('vocab-form');
 document.getElementById('add-vocab-btn').addEventListener('click', () => {
     document.getElementById('vocab-id').value = '';
     vocabForm.reset();
+    const st = document.getElementById('vocab-longman-status');
+    if (st) st.textContent = '';
+    document.getElementById('vocab-longman-manual')?.setAttribute('hidden', '');
     applySavedUnitSelect(document.getElementById('vocab-unit-id'), 'vocab');
     document.getElementById('vocab-status').value = 'published';
     document.getElementById('vocab-modal-title').innerText = 'Add New Vocabulary';
@@ -301,6 +305,7 @@ onSubmit(vocabForm, async () => {
         word: document.getElementById('vocab-word').value.trim(),
         pos: document.getElementById('vocab-pos').value.trim(),
         pron: document.getElementById('vocab-pron').value.trim(),
+        syllables: document.getElementById('vocab-syllables').value.trim(),
         audio: document.getElementById('vocab-audio').value.trim(),
         def: document.getElementById('vocab-def').value.trim(),
         example: document.getElementById('vocab-example').value.trim(),
@@ -335,6 +340,110 @@ function wireAudioTest(btnId, inputId) {
 }
 wireAudioTest('vocab-audio-test', 'vocab-audio');
 wireAudioTest('phrasal-audio-test', 'phrasal-audio');
+
+// Longman autofill for the vocabulary form. Paste a Longman link + Get:
+// the slug is extracted, the Word field is filled from it, and audio
+// (Longman file only), pronunciation and syllables are fetched in parallel.
+// Only empty fields are overwritten, except `syllables` which refreshes.
+/** Fill a word input from a Longman slug (carry-on -> "carry on").
+ *  Keeps the user's text when it already matches (preserves "(v)" suffixes). */
+function fillWordFromSlug(input, slug) {
+    if (!input || !slug) return;
+    const display = slug.replace(/-/g, ' ');
+    const cur = input.value.trim();
+    if (!cur) { input.value = display; return; }
+    if (slugFromLongmanInput(cur) === slug) return;
+    input.value = display;
+}
+document.getElementById('vocab-longman-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('vocab-longman-btn');
+    const statusEl = document.getElementById('vocab-longman-status');
+    // Pasted Longman link takes precedence; otherwise use the Word field.
+    const pasted = document.getElementById('vocab-longman-link')?.value.trim() || '';
+    const word = document.getElementById('vocab-word').value.trim();
+    const target = pasted || word;
+    if (!target) {
+        window.showToast('Paste a Longman link or enter the word first.', 'info');
+        return;
+    }
+    const slug = slugFromLongmanInput(target);
+    if (!slug) {
+        window.showToast('That link does not look like a Longman dictionary URL.', 'error');
+        return;
+    }
+    if (pasted) fillWordFromSlug(document.getElementById('vocab-word'), slug);
+    const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
+    btn.disabled = true;
+    const origLabel = btn.innerHTML;
+    btn.innerHTML = '<i aria-hidden="true" class="fas fa-spinner fa-spin"></i> Fetching…';
+    setStatus(`Fetching "${slug}"…`);
+    try {
+        const found = await autofillWord(slug, setStatus);
+        const pronInput = document.getElementById('vocab-pron');
+        const sylInput = document.getElementById('vocab-syllables');
+        const audioInput = document.getElementById('vocab-audio');
+        const filled = [];
+        if (found.audio && !audioInput.value.trim()) {
+            audioInput.value = found.audio;
+            filled.push(`audio (${found.audioSource})`);
+        }
+        if (found.pron && !pronInput.value.trim()) {
+            pronInput.value = found.pron;
+            filled.push(`pronunciation (${found.pronSource})`);
+        }
+        if (found.syllables) {
+            sylInput.value = found.syllables;
+            filled.push(`syllables (${found.syllablesSource})`);
+        }
+        if (!found.syllables) {
+            filled.push('syllables: not found automatically — open Longman and copy the dotted form');
+        }
+        setStatus(`Done: ${filled.join(' · ')}.`);
+        window.showToast('Autofill done — review the filled fields, then Save.', 'success');
+    } catch (err) {
+        console.warn('[longman]', err);
+        setStatus(`Auto sources failed (${(err?.log || []).join(' ')}). Use "Paste Longman HTML" below.`);
+        document.getElementById('vocab-longman-manual')?.removeAttribute('hidden');
+        window.showToast('Auto fetch failed — paste the Longman page HTML manually.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origLabel;
+    }
+});
+
+// Manual fallback: view-source (or save) the Longman page, paste the HTML
+// here, and parse it locally — no proxy/network needed for this step.
+document.getElementById('vocab-longman-parse')?.addEventListener('click', () => {
+    const raw = document.getElementById('vocab-longman-html')?.value || '';
+    if (!raw.trim()) {
+        window.showToast('Paste the Longman page HTML first.', 'info');
+        return;
+    }
+    const found = parseLongmanHtml(raw);
+    if (!found.audio && !found.pron && !found.syllables) {
+        window.showToast('No Longman audio/syllable tags found in that HTML.', 'error');
+        return;
+    }
+    if (found.audio) document.getElementById('vocab-audio').value = found.audio;
+    if (found.pron && !document.getElementById('vocab-pron').value.trim()) {
+        document.getElementById('vocab-pron').value = found.pron;
+    }
+    if (found.syllables) document.getElementById('vocab-syllables').value = found.syllables;
+    document.getElementById('vocab-longman-status').textContent =
+        `Pasted HTML: filled ${[found.audio && 'audio', found.pron && 'pronunciation', found.syllables && 'syllables'].filter(Boolean).join(', ')}.`;
+    window.showToast('Filled from pasted HTML.', 'success');
+});
+
+document.getElementById('vocab-longman-open')?.addEventListener('click', () => {
+    const pasted = document.getElementById('vocab-longman-link')?.value.trim() || '';
+    if (pasted && /^https?:\/\//i.test(pasted)) {
+        window.open(pasted, '_blank', 'noopener');
+        return;
+    }
+    const word = document.getElementById('vocab-word').value.trim();
+    if (!word) { window.showToast('Enter the word first.', 'info'); return; }
+    window.open(longmanUrlFor(word), '_blank', 'noopener');
+});
 
 document.getElementById('filter-unit-select').addEventListener('change', renderVocab);
 document.getElementById('search-vocab').addEventListener('input', debounce(() => { resetPage('vocab'); renderVocab(); }));
@@ -389,11 +498,15 @@ window.editVocab = (id) => {
         document.getElementById('vocab-word').value = v.word || '';
         document.getElementById('vocab-pos').value = v.pos || '';
         document.getElementById('vocab-pron').value = v.pron || '';
+        document.getElementById('vocab-syllables').value = v.syllables || '';
         document.getElementById('vocab-audio').value = v.audio || '';
         document.getElementById('vocab-def').value = v.def || '';
         document.getElementById('vocab-example').value = v.example || '';
         document.getElementById('vocab-status').value = v.status || 'published';
         document.getElementById('vocab-modal-title').innerText = 'Edit Vocabulary';
+        document.getElementById('vocab-longman-manual')?.setAttribute('hidden', '');
+        const vst = document.getElementById('vocab-longman-status');
+        if (vst) vst.textContent = '';
         openModal(vocabModal);
     }
 };
@@ -746,7 +859,7 @@ function syncOverviewsFromForms() {
     window.showToast('Overview filled from detailed forms.', 'success');
 }
 
-function addWordformRow(title = '', audios = [], definitions = '', examples = '') {
+function addWordformRow(title = '', audios = [], definitions = '', examples = '', syllables = '') {
     formIdCounter++;
     const rowId = `wf-row-${formIdCounter}`;
     const row = document.createElement('div');
@@ -778,6 +891,19 @@ function addWordformRow(title = '', audios = [], definitions = '', examples = ''
                 <select id="${rowId}-pos" class="input-field wf-pos" aria-label="Part of speech for this form">
                     ${posOptionsHtml(posVal)}
                 </select>
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="${rowId}-link">Longman link (optional — overrides the Word above)</label>
+            <input type="text" id="${rowId}-link" class="input-field wf-link" value="" placeholder="https://www.ldoceonline.com/dictionary/abroad">
+        </div>
+        <div class="form-row">
+            <div class="input-group flex-1">
+                <label for="${rowId}-syl">Syllables (Longman hyphenation)</label>
+                <input type="text" id="${rowId}-syl" class="input-field wf-syllables" value="${escapeHtml(syllables)}" placeholder="e.g. his‧to‧ry">
+            </div>
+            <div class="input-group" style="align-self: flex-end;">
+                <button type="button" class="btn-secondary btn-small" onclick="window.fetchWfRowLongman(this)" title="Fetch US audio, pronunciation and hyphenation from Longman for this word">⟳ Longman</button>
             </div>
         </div>
         <div class="input-group">
@@ -818,6 +944,50 @@ window.addAudioToRow = function (rowId, pron = '', url = '', shouldFocus = false
     if (shouldFocus) {
         div.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         div.querySelector('.wf-audio-pron').focus();
+    }
+}
+
+/** Fetch Longman audio/pronunciation/hyphenation for one word-formation row. */
+window.fetchWfRowLongman = async function (btn) {
+    const row = btn?.closest('.wf-complex-row');
+    if (!row) return;
+    // Pasted Longman link takes precedence; otherwise use the row's Word.
+    const pasted = row.querySelector('.wf-link')?.value.trim() || '';
+    const typed = row.querySelector('.wf-word')?.value.trim() || '';
+    const target = pasted || typed;
+    if (!target) {
+        window.showToast('Paste a Longman link or enter the word for this form first.', 'info');
+        return;
+    }
+    const slug = slugFromLongmanInput(target);
+    if (!slug) {
+        window.showToast('That link does not look like a Longman dictionary URL.', 'error');
+        return;
+    }
+    if (pasted) fillWordFromSlug(row.querySelector('.wf-word'), slug);
+    btn.disabled = true;
+    const orig = btn.textContent;
+    btn.textContent = 'Fetching…';
+    try {
+        const found = await autofillWord(slug, null);
+        if (found.syllables) row.querySelector('.wf-syllables').value = found.syllables;
+        const firstAudio = row.querySelector('.wf-audio-row');
+        if (firstAudio) {
+            const pronInput = firstAudio.querySelector('.wf-audio-pron');
+            const urlInput = firstAudio.querySelector('.wf-audio-url');
+            if (found.pron && pronInput && !pronInput.value.trim()) pronInput.value = found.pron;
+            if (found.audio && urlInput && !urlInput.value.trim()) urlInput.value = found.audio;
+        }
+        window.showToast(
+            `Filled: ${[found.audio && `audio (${found.audioSource})`, found.pron && 'pronunciation', found.syllables && 'syllables'].filter(Boolean).join(', ') || 'nothing new'}.`,
+            'success'
+        );
+    } catch (err) {
+        console.warn('[longman]', err);
+        window.showToast('Auto fetch failed — open Longman and copy the dotted syllables + audio manually.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = orig;
     }
 }
 
@@ -879,6 +1049,7 @@ onSubmit(wordformForm, async () => {
         const word = r.querySelector('.wf-word').value.trim();
         const pos = r.querySelector('.wf-pos').value.trim();
         const title = pos ? (word + ' ' + pos) : word;
+        const syllables = r.querySelector('.wf-syllables')?.value.trim() || '';
         const defs = r.querySelector('.wf-defs').value.trim();
         const examples = r.querySelector('.wf-examples').value.trim();
 
@@ -889,7 +1060,7 @@ onSubmit(wordformForm, async () => {
             if (pron || url) audios.push({ pron, url });
         });
 
-        if (title) forms.push({ title, definitions: defs, examples: examples, audios });
+        if (title) forms.push({ title, syllables, definitions: defs, examples: examples, audios });
     });
 
     const newWf = {
@@ -975,7 +1146,7 @@ window.editWordform = (id) => {
 
         wordformContainer.innerHTML = '';
         if (w.forms && w.forms.length > 0) {
-            w.forms.forEach(f => addWordformRow(f.title, f.audios, f.definitions, f.examples));
+            w.forms.forEach(f => addWordformRow(f.title, f.audios, f.definitions, f.examples, f.syllables));
         } else {
             addWordformRow();
         }

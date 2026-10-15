@@ -67,7 +67,7 @@ function bmStarHtml(item, src, sid) {
     const id = `${src}:${sid}`;
     const payload = {
         word: item.word || '', def: item.def || '', example: item.example || '',
-        pron: item.pron || '', unitId: item.unitId || null, src, sid
+        pron: item.pron || '', syllables: item.syllables || '', unitId: item.unitId || null, src, sid
     };
     const starred = !!getBookmark(id);
     return `<button type="button" class="bookmark-btn bm-star ${starred ? 'active' : ''}"
@@ -592,7 +592,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     aria-pressed="${starred}">${starred ? '&#9733;' : '&#9734;'}</button>
                                 <div class="vocab-left">
                                     <div class="vocab-word-group">
-                                        <span class="vocab-word">${window.formatWordWithPos(escapeHtml(v.word))}</span>
+                                        <span class="vocab-word"${v.syllables ? ` data-syllables="${escapeHtml(v.syllables)}" tabindex="0"` : ''}>${window.formatWordWithPos(escapeHtml(v.word))}</span>
                                         <span class="vocab-pos">${window.formatStandalonePos(v.pos)}</span>
                                     </div>
                                     <div class="vocab-audio-group">
@@ -611,7 +611,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 const id = btn.dataset.id;
                                 const item = vocabs.find(x => x.id === id);
                                 if (getBookmark(id)) setBookmark(id, null);
-                                else if (item) setBookmark(id, { word: item.word, def: item.def, example: item.example, pron: item.pron, unitId });
+                                else if (item) setBookmark(id, { word: item.word, def: item.def, example: item.example, pron: item.pron, syllables: item.syllables || '', unitId });
                                 window.announce?.(getBookmark(id) ? `Bookmarked ${item?.word || ''}`.trim() : 'Bookmark removed');
                                 rerender();
                             });
@@ -883,12 +883,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <div class="wf-form-block">
                                         <div class="wf-form-left">
                                             <div class="wf-form-title-row">
-                                                <h4 class="wf-form-title">${formatPos(escapeHtml(f.title))}</h4>
+                                                <h4 class="wf-form-title"${f.syllables ? ` data-syllables="${escapeHtml(f.syllables)}" tabindex="0"` : ''}>${formatPos(escapeHtml(f.title))}</h4>
                                                 ${bmStarHtml({
                                                     word: String(f.title || '').replace(/\s+\b(v|n|adj|adv|prep|conj|pron|det)\b\.?\s*$/i, ' ($1)'),
                                                     def: f.definitions || '',
                                                     example: (f.examples || '').split('\n')[0] || '',
                                                     pron: (f.audios || [])[0]?.pron || '',
+                                                    syllables: f.syllables || '',
                                                     unitId: w.unitId || unitId
                                                 }, 'wordform', `${w.id}#${i}`)}
                                             </div>

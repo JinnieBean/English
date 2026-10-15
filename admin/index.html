@@ -822,11 +822,36 @@
                     </div>
                 </div>
 
+                <div class="input-group">
+                    <label for="vocab-longman-link">Longman link (paste the dictionary URL, or leave blank to use the Word above)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="text" id="vocab-longman-link" placeholder="https://www.ldoceonline.com/dictionary/abroad" style="flex:1;">
+                        <button type="button" id="vocab-longman-btn" class="btn-secondary btn-small" title="Fetch US audio, pronunciation and hyphenation: Longman audio file + Wiktionary syllables"><i aria-hidden="true" class="fas fa-magic"></i> Get</button>
+                    </div>
+                    <small id="vocab-longman-status" style="color: var(--text-secondary, #666); font-size: 0.85rem; margin-top: 0.25rem; display: block;" aria-live="polite"></small>
+                </div>
+
+                <div class="input-group" id="vocab-longman-manual" hidden>
+                    <label for="vocab-longman-html">Manual fallback — paste Longman page HTML</label>
+                    <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                        <button type="button" id="vocab-longman-open" class="btn-secondary btn-small">Open Longman page</button>
+                        <button type="button" id="vocab-longman-parse" class="btn-secondary btn-small">Parse pasted HTML</button>
+                    </div>
+                    <textarea id="vocab-longman-html" rows="3" placeholder="View page source on ldoceonline.com (Ctrl+U), copy all, paste here…"></textarea>
+                </div>
+
                 <div class="form-row">
                     <div class="input-group flex-1">
                         <label for="vocab-pron">Pronunciation</label>
                         <input type="text" id="vocab-pron" placeholder="e.g. /biːt/">
                     </div>
+                    <div class="input-group flex-1">
+                        <label for="vocab-syllables">Syllables (Longman hyphenation)</label>
+                        <input type="text" id="vocab-syllables" placeholder="e.g. his‧to‧ry">
+                    </div>
+                </div>
+
+                <div class="form-row">
                     <div class="input-group flex-1">
                         <label for="vocab-audio">Audio URL (Link to .mp3) — optional</label>
                         <div style="display:flex; gap:0.5rem; align-items:center;">

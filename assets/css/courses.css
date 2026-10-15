@@ -384,6 +384,41 @@
     font-weight: 500;
 }
 
+/* Syllable tooltip (Longman hyphenation, e.g. his‧to‧ry).
+   Shown on hover AND keyboard focus for touch/keyboard users. */
+.vocab-word[data-syllables],
+.wf-form-title[data-syllables] {
+    position: relative;
+    cursor: help;
+}
+
+.vocab-word[data-syllables]:hover::after,
+.vocab-word[data-syllables]:focus-visible::after,
+.wf-form-title[data-syllables]:hover::after,
+.wf-form-title[data-syllables]:focus-visible::after {
+    content: attr(data-syllables);
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 6px);
+    white-space: nowrap;
+    font-size: 1.4rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--text-primary);
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    padding: 0.4rem 0.9rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    z-index: 20;
+    pointer-events: none;
+}
+
+.vocab-word[data-syllables]:focus,
+.wf-form-title[data-syllables]:focus {
+    outline: none;
+}
+
 .vocab-pos {
     font-size: 1.2rem;
     color: var(--text-secondary);

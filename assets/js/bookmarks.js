@@ -181,7 +181,7 @@ async function render() {
                     title="Remove bookmark" aria-label="Remove bookmark" aria-pressed="true">&#9733;</button>
                 <div class="vocab-left">
                     <div class="vocab-word-group">
-                        <span class="vocab-word">${escapeHtml(b.word || '')}</span>
+                        <span class="vocab-word"${b.syllables ? ` data-syllables="${escapeHtml(b.syllables)}" tabindex="0"` : ''}>${escapeHtml(b.word || '')}</span>
                         ${b.src ? `<span class="rv-src">${escapeHtml(SRC_LABEL[b.src] || b.src)}</span>` : ''}
                         ${jump}
                     </div>
