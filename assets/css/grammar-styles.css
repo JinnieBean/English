@@ -204,6 +204,17 @@
     max-width: 100%;
     height: auto;
 }
+.lesson-content audio { max-width: 100%; }
+.lesson-audio-fallback {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px dashed var(--line-color);
+    border-radius: 10px;
+    background: var(--card-bg);
+}
+.lesson-tts-inline { margin-left: 0.5rem; vertical-align: middle; }
 
 /* =========================================
    LESSON READING KIT

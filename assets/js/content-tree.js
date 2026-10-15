@@ -297,10 +297,98 @@ function setupLessonStudyTools(headerEl, cards) {
     }
 }
 
+/* ---------- Lesson audio hardening (temporary browser-TTS fallback) ----------
+   TinyMCE lesson content may embed raw <audio> tags pointing at hosts
+   that block hotlinking (notably dictionary.cambridge.org, which answers
+   direct media requests with a 403 Cloudflare challenge). Until those
+   URLs are re-hosted, every lesson <audio> gets a browser-TTS button so
+   learners can still listen:
+   - blocked/empty src -> replaced with a TTS fallback button (+ note)
+   - other hosts      -> kept, with a TTS button added beside them, and
+     swapped for the same fallback if the media element errors.
+   Clicks are handled by ui.js's global delegated .audio-tts-btn wiring
+   (window.speakText via speechSynthesis), so no per-button binding here. */
+const BLOCKED_AUDIO_HOSTS = ['dictionary.cambridge.org'];
+
+function wordFromAudioUrl(src) {
+    try {
+        const file = new URL(src, window.location.href).pathname.split('/').filter(Boolean).pop() || '';
+        const soundMatch = file.match(/sound[_-]([a-z' -]+?)(?:[_-]\d|$)/i);
+        if (soundMatch) return soundMatch[1].replace(/[_-]+/g, ' ').trim();
+        const stem = file.replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ').replace(/\d+$/, '').trim();
+        return /^[a-z' -]{2,60}$/i.test(stem) ? stem : '';
+    } catch { return ''; }
+}
+
+function speakTextForAudio(audioEl, src) {
+    if (audioEl?.dataset?.say) return audioEl.dataset.say;
+    const cap = audioEl?.closest?.('figure')?.querySelector?.('figcaption')?.textContent?.trim();
+    if (cap && cap.length <= 80) return cap;
+    let sib = audioEl?.previousElementSibling;
+    for (let i = 0; i < 3 && sib; i++, sib = sib.previousElementSibling) {
+        const t = sib.textContent?.trim();
+        if (t && t.length <= 80 && /[a-z]/i.test(t)) return t;
+    }
+    return wordFromAudioUrl(src);
+}
+
+function lessonAudioFallback(text) {
+    const say = escapeHtml(text || '');
+    const btn = (say && 'speechSynthesis' in window)
+        ? `<button class="audio-tts-btn" type="button" title="Read aloud with text-to-speech" data-say="${say}" aria-label="Read aloud">${iconSvg('volume')}</button>`
+        : '';
+    const note = say
+        ? `Audio source blocked — tap to listen via text-to-speech: ${say}.`
+        : 'Audio unavailable.';
+    return `<span class="lesson-audio-fallback">${btn}<span class="audio-none">${note}</span></span>`;
+}
+
+function upgradeLessonAudio(content) {
+    content.querySelectorAll('audio').forEach((audioEl) => {
+        if (audioEl.dataset.upgraded === '1') return;
+        audioEl.dataset.upgraded = '1';
+        const src = audioEl.getAttribute('src')
+            || audioEl.querySelector('source')?.getAttribute('src')
+            || '';
+        audioEl.setAttribute('preload', 'none');
+        audioEl.style.maxWidth = '100%';
+
+        let blocked = !src;
+        try {
+            const host = new URL(src, window.location.href).hostname.toLowerCase();
+            blocked = BLOCKED_AUDIO_HOSTS.some(h => host === h || host.endsWith('.' + h));
+        } catch { /* unparseable src -> error listener below handles it */ }
+
+        const swap = () => {
+            if (audioEl.dataset.swapped === '1') return;
+            audioEl.dataset.swapped = '1';
+            const tmp = document.createElement('span');
+            tmp.innerHTML = lessonAudioFallback(speakTextForAudio(audioEl, src));
+            audioEl.replaceWith(tmp.firstElementChild);
+        };
+
+        if (blocked) { swap(); return; }
+
+        // Temporary TTS companion next to working file audio
+        const say = speakTextForAudio(audioEl, src);
+        if (say && 'speechSynthesis' in window && !audioEl.nextElementSibling?.classList?.contains('lesson-tts-inline')) {
+            const wrap = document.createElement('span');
+            wrap.innerHTML = `<button class="audio-tts-btn lesson-tts-inline" type="button" title="Read aloud with text-to-speech (temporary)" data-say="${escapeHtml(say)}" aria-label="Read aloud">${iconSvg('volume')}</button>`;
+            audioEl.after(wrap.firstElementChild);
+        }
+
+        // Swap only on a real fetch failure, not on empty metadata
+        audioEl.addEventListener('error', swap, true);
+        audioEl.querySelectorAll('source').forEach(s => s.addEventListener('error', swap, true));
+    });
+}
+
 /* ---------- Lesson reading kit: progress bar, TOC, font size ---------- */
 function enhanceLessonPage() {
     const content = document.querySelector('.lesson-content');
     if (!content) return;
+
+    upgradeLessonAudio(content);
 
     /* Reading progress bar */
     if (!document.getElementById('reading-progress-bar')) {
