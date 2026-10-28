@@ -1,6 +1,7 @@
 import { collection, getDocs, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { adminDb as db } from './admin-firebase.js';
 import { friendlyError, AUDIO_VERSION } from '../../assets/js/utils.js';
+import { autofillWord } from '../../assets/js/longman.js';
 import { hooks, confirmDialog, logAudit } from './common.js';
 import { vocabData, phrasalData, patternData, wordformData, lexicalData, fetchAll } from './data.js';
 
@@ -259,5 +260,51 @@ document.getElementById('audio-apply-btn')?.addEventListener('click', async () =
         window.showToast(friendlyError(err), 'error');
     } finally {
         if (btn) { btn.dataset.busy = ''; btn.disabled = false; btn.innerHTML = origHtml; }
+    }
+});
+
+/* =========================================================
+   LONGMAN AUTOFILL — personal proxy override
+   Stored per-browser in localStorage (`tn-longman-proxy`); the autofill
+   engine tries it before every public proxy. The value must be a URL
+   prefix the target Longman URL is appended to, e.g.
+   https://your-worker.workers.dev/?url=
+   ========================================================= */
+const LONGMAN_PROXY_KEY = 'tn-longman-proxy';
+
+document.getElementById('longman-proxy').value =
+    localStorage.getItem(LONGMAN_PROXY_KEY) || '';
+
+document.getElementById('longman-proxy-save')?.addEventListener('click', () => {
+    const v = document.getElementById('longman-proxy').value.trim();
+    if (v) localStorage.setItem(LONGMAN_PROXY_KEY, v);
+    else localStorage.removeItem(LONGMAN_PROXY_KEY);
+    window.showToast(v ? 'Longman proxy saved on this browser.' : 'Longman proxy cleared.', 'success');
+});
+
+document.getElementById('longman-proxy-test')?.addEventListener('click', async () => {
+    const statusEl = document.getElementById('longman-proxy-status');
+    const btn = document.getElementById('longman-proxy-test');
+    if (!localStorage.getItem(LONGMAN_PROXY_KEY)) {
+        window.showToast('Save a proxy URL first.', 'info');
+        return;
+    }
+    btn.disabled = true;
+    if (statusEl) statusEl.textContent = 'Testing with "able"…';
+    try {
+        const r = await autofillWord('able', null);
+        const exact = [r.audioSource, r.pronSource, r.syllablesSource]
+            .some((s) => s && s.startsWith('longman (') && !s.includes('guessed'));
+        if (statusEl) {
+            statusEl.textContent = exact
+                ? `Proxy works — exact Longman data (${[r.audioSource, r.syllablesSource].filter(Boolean).join(', ')}).`
+                : 'Proxy reachable but no exact Longman tags — Longman may still block it.';
+        }
+        window.showToast(exact ? 'Proxy works!' : 'Proxy did not return Longman tags.', exact ? 'success' : 'error');
+    } catch (err) {
+        if (statusEl) statusEl.textContent = `Test failed: ${friendlyError(err)}`;
+        window.showToast(friendlyError(err), 'error');
+    } finally {
+        btn.disabled = false;
     }
 });

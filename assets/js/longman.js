@@ -13,7 +13,10 @@
  *   2. Longman media-URL guessing (ameProns/<word>[1..3].mp3), verified with
  *      an <audio> probe in parallel (probing playback needs no CORS).
  *   3. Wiktionary API (CORS-enabled: hyphenation + IPA).
- *   4. dictionaryapi.dev (free, CORS-enabled: phonetic text).
+ *   4. Offline TeX hyphenation patterns (no network; labelled 'auto').
+ *   5. dictionaryapi.dev (free, CORS-enabled: phonetic text).
+ * A personal proxy URL saved in Settings (localStorage `tn-longman-proxy`)
+ * is tried before all public proxies when present.
  * Audio is accepted ONLY from Longman (sources 1–2); pronunciation and
  * syllables come from the best available source per field.
  * When every automatic source fails, the admin UI offers a manual
@@ -21,6 +24,7 @@
  */
 
 import { AUDIO_VERSION } from './utils.js';
+import { autoSyllables } from './syllables.js';
 
 const LDOCE_BASE = 'https://www.ldoceonline.com/dictionary/';
 
@@ -135,9 +139,24 @@ const PROXIES = [
 
 async function fetchLongmanHtml(word) {
     const url = longmanUrlFor(word);
+    // A user-supplied proxy (Settings → Longman panel, stored in
+    // localStorage) is tried FIRST — e.g. a personal Cloudflare Worker,
+    // which may succeed where public proxies are blocked.
+    let custom = null;
+    try {
+        const prefix = (localStorage.getItem('tn-longman-proxy') || '').trim();
+        if (prefix) {
+            custom = {
+                name: 'custom',
+                build: (target) => prefix + encodeURIComponent(target),
+                extract: (res) => res.text()
+            };
+        }
+    } catch { /* storage unavailable — skip */ }
+    const proxies = custom ? [custom, ...PROXIES] : PROXIES;
     // Race all proxies in PARALLEL: first usable page wins instead of
     // waiting out each proxy's full timeout one after another.
-    const attempts = PROXIES.map((proxy) =>
+    const attempts = proxies.map((proxy) =>
         (async () => {
             const res = await fetchWithTimeout(proxy.build(url), 8000);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -421,7 +440,16 @@ function _autofillWordParallel(slug, apiWord, onStep) {
             // probe runs in parallel so audio rarely waits for slow proxies.
             { rank: 1, label: 'Longman audio', run: () => guessLongmanAudio(slug) },
             { rank: 2, label: 'Wiktionary', run: () => fetchWiktionary(apiWord) },
-            { rank: 3, label: 'dictionaryapi.dev', run: () => fetchDictionaryApi(apiWord) }
+            // Offline pattern-based split (no network): last resort before
+            // giving up on syllables.
+            {
+                rank: 3, label: 'Auto syllables', run: async () => {
+                    const s = await autoSyllables(apiWord);
+                    if (!s) throw new Error('no confident split');
+                    return { audio: '', pron: '', syllables: s, source: 'auto (patterns)' };
+                }
+            },
+            { rank: 4, label: 'dictionaryapi.dev', run: () => fetchDictionaryApi(apiWord) }
         ];
         let pending = SOURCES.length;
         let graceTimer = null;

@@ -641,6 +641,24 @@
                         </div>
                     </div>
 
+                    <div class="quick-actions-panel">
+                        <h3><i aria-hidden="true" class="fas fa-book-open"></i> Longman autofill</h3>
+                        <p class="qa-hint">
+                            The Get button fetches audio (Longman file), pronunciation and syllables
+                            (Wiktionary, then offline patterns). Longman pages themselves are blocked
+                            for public proxies — optionally paste your own proxy prefix below
+                            (e.g. a free Cloudflare Worker ending with <code>?url=</code>). It is tried first.
+                        </p>
+                        <div class="qa-row qa-col">
+                            <input type="text" id="longman-proxy" class="input-field" placeholder="https://your-worker.workers.dev/?url=">
+                        </div>
+                        <div class="qa-row">
+                            <button id="longman-proxy-save" class="btn-secondary"><i aria-hidden="true" class="fas fa-save"></i> Save proxy</button>
+                            <button id="longman-proxy-test" class="btn-secondary"><i aria-hidden="true" class="fas fa-vial"></i> Test with "able"</button>
+                            <span id="longman-proxy-status" class="qa-hint" style="margin:0;"></span>
+                        </div>
+                    </div>
+
                     <div class="quick-actions-panel settings-wide">
                         <h3><i aria-hidden="true" class="fas fa-history"></i> Activity log</h3>
                         <p class="qa-hint">Latest 50 changes made from this admin panel.</p>
