@@ -68,7 +68,7 @@
                 <li class="nav-item" data-tab="tab-prep" title="Prepositional Phrases"><i aria-hidden="true" class="fas fa-link"></i><span class="nav-text">Prepositional Phrases</span></li>
                 <li class="nav-item" data-tab="tab-wordform" title="Word Formation"><i aria-hidden="true" class="fas fa-shapes"></i><span class="nav-text">Word Formation</span></li>
                 <li class="nav-item" data-tab="tab-pattern" title="Word Patterns"><i aria-hidden="true" class="fas fa-project-diagram"></i><span class="nav-text">Word Patterns</span></li>
-                <li class="nav-item" data-tab="tab-lexical" title="Lexical Expansion"><i aria-hidden="true" class="fas fa-expand-arrows-alt"></i><span class="nav-text">Lexical Expansion</span></li>
+                <li class="nav-item" data-tab="tab-wordexp" title="Word Expansion"><i aria-hidden="true" class="fas fa-expand-arrows-alt"></i><span class="nav-text">Word Expansion</span></li>
 
                 
                 <div class="sidebar-section-title">Grammar</div>
@@ -380,15 +380,15 @@
                 </div>
             </div>
 
-            <!-- Lexical Expansion Tab -->
-            <div id="tab-lexical" class="tab-pane" style="display: none;">
+            <!-- Word Expansion Tab -->
+            <div id="tab-wordexp" class="tab-pane" style="display: none;">
                 <div class="dashboard-header">
-                    <h2>Lexical Expansion Database <span class="count-badge" id="count-lexical"></span></h2>
-                    <button id="add-lexical-btn" class="btn-primary">+ Add Lexical Expansion</button>
+                    <h2>Word Expansion Database <span class="count-badge" id="count-wordexp"></span></h2>
+                    <button id="add-wordexp-btn" class="btn-primary">+ Add Word Expansion</button>
                 </div>
                 <div class="filter-bar">
-                    <label for="filter-unit-select-lexical">Filter by Unit:</label>
-                    <select id="filter-unit-select-lexical" class="input-field" style="max-width: 200px;">
+                    <label for="filter-unit-select-wordexp">Filter by Unit:</label>
+                    <select id="filter-unit-select-wordexp" class="input-field" style="max-width: 200px;">
                         <option value="all">All Units</option>
                     </select>
                 </div>
@@ -396,13 +396,13 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th scope="col" class="col-check"><input type="checkbox" id="check-all-lexical" title="Select all"></th>
+                                <th scope="col" class="col-check"><input type="checkbox" id="check-all-wordexp" title="Select all"></th>
                                     <th scope="col">Unit</th>
                                 <th scope="col">Left Column Preview</th>
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="lexical-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
+                        <tbody id="wordexp-list"><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 85%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 60%"></span></td></tr><tr class="skeleton-row"><td colspan="9"><span class="skeleton-line" style="width: 72%"></span></td></tr>
                             <!-- JS Populated -->
                         </tbody>
                     </table>
@@ -604,7 +604,7 @@
                                 <option value="prep_phrases">prep_phrases</option>
                                 <option value="word_formations">word_formations</option>
                                 <option value="word_patterns">word_patterns</option>
-                                <option value="lexical_expansions">lexical_expansions</option>
+                                <option value="word_expansions">word_expansions</option>
                                 <option value="grammar_categories">grammar_categories</option>
                                 <option value="grammar_lessons">grammar_lessons</option>
                                 <option value="grammar_units">grammar_units</option>
@@ -617,11 +617,26 @@
                         </div>
                     </div>
 
+                    <div class="quick-actions-panel" id="migration-panel" hidden>
+                        <h3><i aria-hidden="true" class="fas fa-exchange-alt"></i> Data migration &mdash; Word Expansion rename</h3>
+                        <p class="qa-hint">
+                            The technical rename (<code>lexical_expansions</code> &rarr; <code>word_expansions</code>)
+                            needs a one-off copy of the data. This copies every legacy document into the new
+                            collection <strong>keeping the same document ids</strong> (bookmarks / review progress
+                            are unaffected) and normalizes <code>units.sections</code> ('lexical' &rarr; 'wordexp').
+                        </p>
+                        <p class="qa-hint" id="migration-status">Checking…</p>
+                        <div class="qa-row">
+                            <button id="migration-run-btn" class="btn-primary" disabled><i aria-hidden="true" class="fas fa-play"></i> Migrate data</button>
+                            <label class="qa-hint" style="margin:0;"><input type="checkbox" id="migration-delete-source"> Delete legacy documents after verified copy</label>
+                        </div>
+                    </div>
+
                     <div class="quick-actions-panel">
                         <h3><i aria-hidden="true" class="fas fa-volume-up"></i> Audio URL maintenance</h3>
                         <p class="qa-hint">
                             Bulk find &amp; replace across every audio field (vocabulary audio, phrasal-verb audio,
-                            word-pattern audio, word-formation audios, lexical word audio). "Find" is a regular
+                            word-pattern audio, word-formation audios, word-expansion word audio). "Find" is a regular
                             expression — e.g.
                             <code>version=1\.2\.\d+</code> replaced with <code>version=1.2.93</code>.
                         </p>
@@ -806,7 +821,7 @@
                         <label><input type="checkbox" name="unit-section" value="prep"> Prepositional Phrases</label>
                         <label><input type="checkbox" name="unit-section" value="wordform"> Word Formation</label>
                         <label><input type="checkbox" name="unit-section" value="pattern"> Word Patterns</label>
-                        <label><input type="checkbox" name="unit-section" value="lexical"> Lexical Expansion</label>
+                        <label><input type="checkbox" name="unit-section" value="wordexp"> Word Expansion</label>
                     </div>
                 </div>
                 <div class="input-group">
@@ -1070,29 +1085,29 @@
         </div>
     </div>
 
-    <!-- Lexical Expansion Modal -->
-    <div id="lexical-modal" class="modal">
+    <!-- Word Expansion Modal -->
+    <div id="wordexp-modal" class="modal">
         <div class="modal-content modal-large">
-            <button type="button" class="close-modal" data-target="lexical-modal">&times;</button>
-            <h3 id="lexical-modal-title">Add Lexical Expansion</h3>
-            <form id="lexical-form">
-                <input type="hidden" id="lexical-id">
+            <button type="button" class="close-modal" data-target="wordexp-modal">&times;</button>
+            <h3 id="wordexp-modal-title">Add Word Expansion</h3>
+            <form id="wordexp-form">
+                <input type="hidden" id="wordexp-id">
 
                 <div class="input-group">
-                    <label for="lexical-unit-id">Belongs to Unit</label>
-                    <select id="lexical-unit-id" class="input-field" required>
+                    <label for="wordexp-unit-id">Belongs to Unit</label>
+                    <select id="wordexp-unit-id" class="input-field" required>
                     </select>
                 </div>
 
                 <div class="form-row">
                     <div class="input-group flex-1">
-                        <label for="lexical-text-left">Left Column Text</label>
-                        <textarea id="lexical-text-left" rows="4"
+                        <label for="wordexp-text-left">Left Column Text</label>
+                        <textarea id="wordexp-text-left" rows="4"
                             placeholder="Enter tree structure or equations..."></textarea>
                     </div>
                     <div class="input-group" style="width: 150px;">
-                        <label for="lexical-align-left">Alignment</label>
-                        <select id="lexical-align-left" class="input-field">
+                        <label for="wordexp-align-left">Alignment</label>
+                        <select id="wordexp-align-left" class="input-field">
                             <option value="left">Left</option>
                             <option value="center">Center</option>
                             <option value="right">Right</option>
@@ -1102,12 +1117,12 @@
 
                 <div class="form-row">
                     <div class="input-group flex-1">
-                        <label for="lexical-text-right">Right Column Text (Optional)</label>
-                        <textarea id="lexical-text-right" rows="4" placeholder="Enter corresponding text..."></textarea>
+                        <label for="wordexp-text-right">Right Column Text (Optional)</label>
+                        <textarea id="wordexp-text-right" rows="4" placeholder="Enter corresponding text..."></textarea>
                     </div>
                     <div class="input-group" style="width: 150px;">
-                        <label for="lexical-align-right">Alignment</label>
-                        <select id="lexical-align-right" class="input-field">
+                        <label for="wordexp-align-right">Alignment</label>
+                        <select id="wordexp-align-right" class="input-field">
                             <option value="left">Left</option>
                             <option value="center">Center</option>
                             <option value="right">Right</option>
@@ -1119,20 +1134,20 @@
 
                 <div class="input-group">
                     <label>Vocabulary Words associated with this section</label>
-                    <div id="lexical-words-container"
+                    <div id="wordexp-words-container"
                         style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
                     </div>
-                    <button type="button" id="add-lexical-word-btn" class="btn-secondary btn-small">+ Add Word</button>
+                    <button type="button" id="add-wordexp-word-btn" class="btn-secondary btn-small">+ Add Word</button>
                 </div>
 
                 <div class="input-group">
-                    <label for="lexical-status">Status</label>
-                    <select id="lexical-status" class="input-field">
+                    <label for="wordexp-status">Status</label>
+                    <select id="wordexp-status" class="input-field">
                         <option value="published" selected>Published (visible on site)</option>
                         <option value="draft">Draft (hidden from site)</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Save Lexical Expansion</button>
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Save Word Expansion</button>
             </form>
         </div>
     </div>

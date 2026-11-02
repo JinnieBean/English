@@ -61,6 +61,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /word_expansions/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Legacy collection (pre-rename). The admin data migration moves these
+    // documents into /word_expansions; remove this block once the source
+    // collection has been deleted.
     match /lexical_expansions/{docId} {
       allow read: if true;
       allow write: if isAdmin();

@@ -34,16 +34,19 @@ import { escapeHtml, friendlyError } from '../../assets/js/utils.js';
 import { hooks, confirmDialog } from './common.js';
 import {
     booksData, unitsData, vocabData, phrasalData, prepData,
-    wordformData, patternData, lexicalData,
+    wordformData, patternData, wordexpData,
     fetchAll, assignData, addPaginationControls,
     populateBookSelects, populateUnitSelects
 } from './data.js';
 import {
     renderBooks, renderUnits, renderVocab, renderPhrasal,
-    renderPrep, renderWordform, renderPattern, renderLexical
+    renderPrep, renderWordform, renderPattern, renderWordexp
 } from './crud.js';
 import { initTinyMCE, loadGrammarData, loadPronunciationData, treeManagers } from './trees.js';
 import './tools.js';
+import { initMigration } from './migrate.js';
+
+initMigration();
 
 /* =========================================================
    DOM ELEMENTS + GLOBAL STATE
@@ -212,9 +215,9 @@ async function loadData() {
     const results = await Promise.allSettled([
         fetchAll("books"), fetchAll("units"), fetchAll("vocabularies"),
         fetchAll("phrasal_verbs"), fetchAll("prep_phrases"), fetchAll("word_formations"),
-        fetchAll("word_patterns"), fetchAll("lexical_expansions")
+        fetchAll("word_patterns"), fetchAll("word_expansions")
     ]);
-    const names = ["books", "units", "vocabularies", "phrasal_verbs", "prep_phrases", "word_formations", "word_patterns", "lexical_expansions"];
+    const names = ["books", "units", "vocabularies", "phrasal_verbs", "prep_phrases", "word_formations", "word_patterns", "word_expansions"];
     results.forEach((r, i) => {
         if (r.status === 'fulfilled') {
             assignData(names[i], r.value);
@@ -234,7 +237,7 @@ async function loadData() {
     renderPrep();
     renderWordform();
     renderPattern();
-    renderLexical();
+    renderWordexp();
     updateDashboardStats();
     renderWordsPerBook();
 }
@@ -254,7 +257,7 @@ async function reloadDataFor(collName) {
             books: ["books"], units: ["units"],
             vocabularies: ["vocabularies"], phrasal_verbs: ["phrasal_verbs"],
             prep_phrases: ["prep_phrases"], word_formations: ["word_formations"],
-            word_patterns: ["word_patterns"], lexical_expansions: ["lexical_expansions"]
+            word_patterns: ["word_patterns"], word_expansions: ["word_expansions"]
         };
         const names = targets[collName] || Object.values(targets).flat();
         const unique = [...new Set(names)];
@@ -262,7 +265,7 @@ async function reloadDataFor(collName) {
         values.forEach((v, i) => assignData(unique[i], v));
         renderBooks(); renderUnits();
         populateBookSelects(); populateUnitSelects();
-        renderVocab(); renderPhrasal(); renderPrep(); renderWordform(); renderPattern(); renderLexical();
+        renderVocab(); renderPhrasal(); renderPrep(); renderWordform(); renderPattern(); renderWordexp();
         updateDashboardStats();
     } catch (err) {
         console.error(err);
@@ -288,7 +291,7 @@ function updateDashboardStats() {
 
     // Draft items across every managed collection
     const allArrays = [booksData, unitsData, vocabData, phrasalData, prepData,
-        wordformData, patternData, lexicalData,
+        wordformData, patternData, wordexpData,
         treeManagers?.grammar.state.categories, treeManagers?.grammar.state.lessons,
         treeManagers?.grammar.state.units, treeManagers?.pronunciation.state.categories,
         treeManagers?.pronunciation.state.lessons, treeManagers?.pronunciation.state.units];

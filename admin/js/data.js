@@ -11,12 +11,12 @@ export const paginationState = {
     prep: { page: 1, limit: 50 },
     wordform: { page: 1, limit: 50 },
     pattern: { page: 1, limit: 50 },
-    lexical: { page: 1, limit: 50 }
+    wordexp: { page: 1, limit: 50 }
 };
 
 const PAG_RENDER_FN = {
     vocab: 'renderVocab', phrasal: 'renderPhrasal', prep: 'renderPrep',
-    wordform: 'renderWordform', pattern: 'renderPattern', lexical: 'renderLexical'
+    wordform: 'renderWordform', pattern: 'renderPattern', wordexp: 'renderWordexp'
 };
 
 export function addPaginationControls() {
@@ -100,7 +100,7 @@ export let phrasalData = [];
 export let prepData = [];
 export let wordformData = [];
 export let patternData = [];
-export let lexicalData = [];
+export let wordexpData = [];
 
 export async function fetchAll(name) {
     const snap = await getDocs(collection(db, name));
@@ -116,7 +116,7 @@ export function assignData(name, value) {
         case "prep_phrases": prepData = value; break;
         case "word_formations": wordformData = value; break;
         case "word_patterns": patternData = value; break;
-        case "lexical_expansions": lexicalData = value; break;
+        case "word_expansions": wordexpData = value; break;
     }
 }
 
@@ -133,7 +133,7 @@ export const unitSelectConfigs = [
     { key: 'prep', selectId: 'prep-unit-id', filterId: 'filter-unit-select-prep' },
     { key: 'wordform', selectId: 'wordform-unit-id', filterId: 'filter-unit-select-wordform' },
     { key: 'pattern', selectId: 'pattern-unit', filterId: 'filter-unit-select-pattern' },
-    { key: 'lexical', selectId: 'lexical-unit-id', filterId: 'filter-unit-select-lexical' }
+    { key: 'wordexp', selectId: 'wordexp-unit-id', filterId: 'filter-unit-select-wordexp' }
 ];
 
 export const lastUnitSelections = {};

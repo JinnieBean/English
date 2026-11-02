@@ -18,11 +18,13 @@ const SRC_PAGE = {
     prep: 'unit_prep.html',
     pattern: 'unit_pattern.html',
     wordform: 'unit_wordform.html',
-    lexical: 'unit_lexical.html'
+    wordexp: 'unit_wordexp.html',
+    lexical: 'unit_wordexp.html' // legacy tag
 };
 const SRC_LABEL = {
     phrasal: 'Phrasal', prep: 'Prep phrase', pattern: 'Pattern',
-    wordform: 'Word form', lexical: 'Lexical'
+    wordform: 'Word form', wordexp: 'Word expansion',
+    lexical: 'Word expansion' // legacy tag
 };
 
 async function fetchUnitTitles() {
@@ -145,7 +147,7 @@ async function render() {
                 <p>No bookmarked words yet. Open any unit and press the
                 &#9734; button next to a word to keep it here.
                 Stars work on all six unit tabs &mdash; vocabulary, phrasal verbs,
-                prepositional phrases, word forms, patterns and lexical expansions.</p>
+                prepositional phrases, word forms, patterns and word expansions.</p>
                 <a href="book.html" class="btn-retry">Browse vocabulary</a>
             </div>`;
         return;

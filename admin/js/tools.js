@@ -3,14 +3,14 @@ import { adminDb as db } from './admin-firebase.js';
 import { friendlyError, AUDIO_VERSION } from '../../assets/js/utils.js';
 import { autofillWord } from '../../assets/js/longman.js';
 import { hooks, confirmDialog, logAudit } from './common.js';
-import { vocabData, phrasalData, patternData, wordformData, lexicalData, fetchAll } from './data.js';
+import { vocabData, phrasalData, patternData, wordformData, wordexpData, fetchAll } from './data.js';
 
 /* =========================================================
    DATA TOOLS — Export / Import JSON
    ========================================================= */
 const ALL_COLLECTIONS = [
     'books', 'units', 'vocabularies', 'phrasal_verbs', 'prep_phrases',
-    'word_formations', 'word_patterns', 'lexical_expansions',
+    'word_formations', 'word_patterns', 'word_expansions',
     'grammar_categories', 'grammar_lessons', 'grammar_units',
     'pronunciation_categories', 'pronunciation_lessons', 'pronunciation_units'
 ];
@@ -52,7 +52,11 @@ document.getElementById('import-btn')?.addEventListener('click', async () => {
     try {
         const text = await file.text();
         const parsed = JSON.parse(text);
-        let docs = Array.isArray(parsed) ? parsed : (Array.isArray(parsed[collName]) ? parsed[collName] : null);
+        // A full-dump export made before the lexical_expansions -> word_expansions
+        // rename stores this collection under the legacy key — accept both.
+        let docs = Array.isArray(parsed) ? parsed : null;
+        if (!docs && Array.isArray(parsed?.[collName])) docs = parsed[collName];
+        if (!docs && collName === 'word_expansions' && Array.isArray(parsed?.lexical_expansions)) docs = parsed.lexical_expansions;
         if (!docs) {
             window.showToast('JSON format not recognised — expected an array of documents.', 'error');
             return;
@@ -102,9 +106,9 @@ document.getElementById('import-btn')?.addEventListener('click', async () => {
    Scans every audio-bearing field:
      vocabularies.audio · phrasal_verbs.audio · word_patterns.audio
      word_formations.forms[].audios[].url
-     lexical_expansions.words[].audio
+     word_expansions.words[].audio
    ========================================================= */
-const AUDIO_COLLECTIONS = ['vocabularies', 'phrasal_verbs', 'word_patterns', 'word_formations', 'lexical_expansions'];
+const AUDIO_COLLECTIONS = ['vocabularies', 'phrasal_verbs', 'word_patterns', 'word_formations', 'word_expansions'];
 
 // Show the currently forced Longman audio version in the Settings panel
 document.getElementById('audio-version-display')?.replaceChildren(document.createTextNode(AUDIO_VERSION));
@@ -114,7 +118,7 @@ const AUDIO_DATA_BY_COLL = () => ({
     phrasal_verbs: phrasalData,
     word_patterns: patternData,
     word_formations: wordformData,
-    lexical_expansions: lexicalData
+    word_expansions: wordexpData
 });
 
 /** Deep-clone a doc, run replacer over its audio URLs.
@@ -138,7 +142,7 @@ function mapAudioUrls(collName, data, replacer) {
             return touched ? { ...f, audios } : f;
         });
         if (urlsChanged > 0) out = { ...data, forms };
-    } else if (collName === 'lexical_expansions' && Array.isArray(data.words)) {
+    } else if (collName === 'word_expansions' && Array.isArray(data.words)) {
         let words = data.words, touched = false;
         words = words.map(w => {
             if (!w.audio) return w;
@@ -217,7 +221,7 @@ document.getElementById('audio-apply-btn')?.addEventListener('click', async () =
             const { out, urlsChanged } = mapAudioUrls(coll, d, replacer);
             if (!out) return;
             totalDocs++; totalUrls += urlsChanged;
-            const field = coll === 'word_formations' ? 'forms' : coll === 'lexical_expansions' ? 'words' : 'audio';
+            const field = coll === 'word_formations' ? 'forms' : coll === 'word_expansions' ? 'words' : 'audio';
             pending.push({ coll, id: d.id, field, value: out[field], label: field === 'audio' ? out.audio : `${out[field]?.length ?? 0} item(s)` });
         });
     });

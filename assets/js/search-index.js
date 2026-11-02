@@ -29,10 +29,22 @@ async function build() {
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(x => x.status !== 'draft');
 
+            // word_expansions is the current collection; fall back to the
+            // legacy lexical_expansions until the admin data migration runs.
+            // Read failures (e.g. rules not deployed yet) must not break the
+            // whole index build — treat them as "no documents".
+            const grabWordexp = async () => {
+                let docs = [];
+                try { docs = await grab('word_expansions'); }
+                catch (e) { console.warn('[search] word_expansions read failed:', e?.code || e); }
+                if (!docs.length) docs = await grab('lexical_expansions').catch(() => []);
+                return docs;
+            };
+
             const [vocabs, phrasals, preps, patterns, wordforms, lexicals, gLessons, gUnits, pLessons, pUnits, units, books] =
                 await Promise.all([
                     grab('vocabularies'), grab('phrasal_verbs'), grab('prep_phrases'),
-                    grab('word_patterns'), grab('word_formations'), grab('lexical_expansions'),
+                    grab('word_patterns'), grab('word_formations'), grabWordexp(),
                     grab('grammar_lessons'), grab('grammar_units'),
                     grab('pronunciation_lessons'), grab('pronunciation_units'),
                     grab('units'), grab('books')
@@ -47,7 +59,7 @@ async function build() {
             preps.forEach(v => v.word && items.push({ t: 'Prepositional Phrases', label: v.word, sub: inUnit(v.unitId), url: `unit_prep.html?id=${v.unitId}`, d: clip(v.def) }));
             patterns.forEach(v => v.word && items.push({ t: 'Word Patterns', label: v.word, sub: inUnit(v.unitId), url: `unit_pattern.html?id=${v.unitId}`, d: clip(`${v.pattern || ''} ${v.def || ''}`) }));
             wordforms.forEach(w => w.rootWord && items.push({ t: 'Word Formation', label: w.rootWord, sub: inUnit(w.unitId), url: `unit_wordform.html?id=${w.unitId}`, d: clip((w.forms || []).map(f => f.definitions).join(' ')) }));
-            lexicals.forEach(l => (l.words || []).forEach(w => w.word && items.push({ t: 'Lexical Expansion', label: w.word, sub: inUnit(l.unitId), url: `unit_lexical.html?id=${l.unitId}`, d: clip(w.def) })));
+            lexicals.forEach(l => (l.words || []).forEach(w => w.word && items.push({ t: 'Word Expansion', label: w.word, sub: inUnit(l.unitId), url: `unit_wordexp.html?id=${l.unitId}`, d: clip(w.def) })));
             books.forEach(b => b.title && items.push({ t: 'Books', label: b.title, sub: b.subtitle || 'Book', url: `units.html?bookId=${b.id}` }));
             gLessons.forEach(l => l.title && items.push({ t: 'Grammar', label: l.title, sub: 'Lesson', url: `grammar_lesson.html?id=${l.id}&type=lesson` }));
             gUnits.forEach(u => u.title && items.push({ t: 'Grammar', label: u.title, sub: 'Unit', url: `grammar_lesson.html?id=${u.id}&type=unit` }));

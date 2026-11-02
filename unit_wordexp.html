@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Basics Topic — Thor's Notes</title>
-    <meta name="description" content="Interactive basics lesson: alphabet, IPA, numbers and more — with audio and progress tracking.">
-    <meta property="og:title" content="Basics Topic — Thor's Notes">
-    <meta property="og:description" content="Interactive basics lesson: alphabet, IPA, numbers and more — with audio and progress tracking.">
+    <title>Word Expansion — Thor's Notes</title>
+    <meta name="description" content="Word expansion notes for this unit — topic vocabulary and useful phrases.">
+    <meta property="og:title" content="Word Expansion — Thor's Notes">
+    <meta property="og:description" content="Word expansion notes for this unit — topic vocabulary and useful phrases.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/images/logo.png">
     <meta name="twitter:card" content="summary">
@@ -20,7 +20,7 @@
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/basics.css">
+    <link rel="stylesheet" href="assets/css/courses.css">
     <script>
         // Prevent sidebar flash: apply collapsed class immediately if stored
         (function() {
@@ -68,7 +68,7 @@
                     <a href="english.html" class="nav-link" title="Home">
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span> <span class="nav-link-text">Home</span>
                     </a>
-                    <a href="book.html" class="nav-link" title="Vocabulary">
+                    <a href="book.html" class="nav-link active" title="Vocabulary">
                         <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span> <span class="nav-link-text">Vocabulary</span>
                     </a>
                     <a href="grammar.html" class="nav-link" title="Grammar">
@@ -76,10 +76,7 @@
                     </a>
                     <a href="pronunciation.html" class="nav-link" title="Pronunciation">
                     <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span> <span class="nav-link-text">Pronunciation</span>
-                    </a>
-                    <a href="basics.html" class="nav-link active" title="Basics">
-                    <span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg></span> <span class="nav-link-text">Basics</span>
-                    </a>
+</a>
                     </div>
                     <div class="nav-section">
                         <h3 class="nav-section-title">MY LEARNING</h3>
@@ -96,8 +93,6 @@
 
                 </div>
             </nav>
-        
-
                 <div class="sidebar-bottom">
             <!-- Dark Mode Toggle (#7) -->
 <button class="dark-mode-toggle" id="dark-mode-toggle" title="Toggle dark mode">
@@ -114,7 +109,7 @@
         <!-- Main Content -->
         <div class="main-content">
             <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Open menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-            <header class="main-header">
+            <header class="main-header compact">
                 <div class="header-line"></div>
                 <div class="header-content">
                     <a href="index.html">
@@ -124,23 +119,33 @@
                 </div>
                 <div class="header-line"></div>
             </header>
-    <div id="breadcrumb-container" class="breadcrumb-container" data-dynamic></div>
+    <div id="breadcrumb-container" class="breadcrumb-container" data-section="Word Expansion"></div>
 
             <main class="container" id="main-content">
-                <div id="basics-topic-container">
-                    <p style="padding: 1rem 0;">Loading data...</p>
+                <div class="units-container">
+                    <div class="unit-subnav" id="unit-subnav"></div>
+                    <div class="unit-detail-header" id="unit-detail-header-container">
+                        
+                        <h3 class="unit-detail-title" id="unit-detail-title">Loading...</h3>
+                        
+                    </div>
+                    <h3 class="vocab-section-title">Word Expansion</h3>
+                    
+                    <div id="wordexp-list-container" class="vocab-list">
+                        <!-- JS renders this -->
+                    </div>
                 </div>
             </main>
-            
+        
             <!-- Footer -->
             <footer class="site-footer">
                 <p>Made by Đậu nhỏ tung tăng</p>
             </footer>
-        </div>
+</div>
     </div>
 
-    <script type="module" src="assets/js/basics.js"></script>
     <script type="module" src="assets/js/ui.js"></script>
+    <script type="module" src="assets/js/main.js"></script>
 </body>
 
 </html>

@@ -119,6 +119,9 @@ export function getLastStudied(maxAgeDays = 30) {
         const e = JSON.parse(localStorage.getItem(LAST_STUDIED_KEY) || 'null');
         if (!e || !e.page || !e.id) return null;
         if (Date.now() - (e.ts || 0) > maxAgeDays * 864e5) return null;
+        // Renamed pages (Lexical Expansion -> Word Expansion): remap so saved
+        // resume records keep working.
+        if (e.page === 'unit_lexical.html') e.page = 'unit_wordexp.html';
         return e;
     } catch { return null; }
 }

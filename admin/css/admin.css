@@ -570,7 +570,7 @@ body.modal-open { overflow: hidden; }
     background: #fafafa;
 }
 
-/* Dynamic rows in Word Formation / Lexical forms
+/* Dynamic rows in Word Formation / Word Expansion forms
    (inline styles removed from JS) */
 .wf-complex-row {
     border: 1px solid var(--border-color);
@@ -585,7 +585,7 @@ body.modal-open { overflow: hidden; }
     top: 1rem;
     right: 1rem;
 }
-.lexical-word-row {
+.wordexp-word-row {
     border: 1px solid var(--border-color);
     padding: 0.5rem;
     padding-right: 6rem;
@@ -593,7 +593,7 @@ body.modal-open { overflow: hidden; }
     position: relative;
     margin-bottom: 0.75rem;
 }
-.lexical-word-row .lx-remove-btn { top: 0.5rem; right: 0.5rem; }
+.wordexp-word-row .lx-remove-btn { top: 0.5rem; right: 0.5rem; }
 
 /* =========================================
    RESPONSIVE ADMIN

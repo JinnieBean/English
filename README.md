@@ -4,7 +4,7 @@ A modern, responsive, and interactive web application designed to help users stu
 
 ## 🌟 Key Features
 
-- **Rich Vocabulary Sections**: Organized by units, featuring interactive tabs for Vocabulary, Phrasal Verbs, Prepositional Phrases, Word Formation, Word Patterns, and Lexical Expansion.
+- **Rich Vocabulary Sections**: Organized by units, featuring interactive tabs for Vocabulary, Phrasal Verbs, Prepositional Phrases, Word Formation, Word Patterns, and Word Expansion.
 - **Grammar Lessons**: Structured grammar materials categorized by topics with detailed explanations.
 - **Audio Integration**: Built-in audio players for vocabulary pronunciation.
 - **Dynamic Content**: Data is securely stored and fetched in real-time from Firebase Firestore.

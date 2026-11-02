@@ -7,9 +7,10 @@
  *   bookmarks:{ [wordDocId]: {word,def,example,pron,unitId} },
  *   srs:      { [wordDocId]: { box, next:'YYYY-MM-DD', unitId, src? } },
  *   lessonProgress: { ['grammar|pronunciation:lesson|unit|intro:id']: timestamp },
- *   basics:     { ['topic:<id>']: timestamp, ['items:<id>']: [label...] },
  *   activity: { 'YYYY-MM-DD': count }
  * }
+ * (removed 2026: the static Basics topic pages — their `basics` progress keys
+ *  are no longer written or merged and get dropped from stored state.)
  *
  * Legacy keys (progress-${unitId} arrays, vocab-bookmarks object) are migrated
  * once on first run. SRS intervals: 1 -> 3 -> 7 -> 14 days, then graduated.
@@ -28,7 +29,7 @@ const LS_OWNER = 'tn-store-v1-owner'; // uid the local copy belongs to (null = a
 export const SRS_INTERVALS = [1, 3, 7, 14]; // days per box
 
 function blankState() {
-    return { progress: {}, bookmarks: {}, srs: {}, lessonProgress: {}, basics: {}, activity: {} };
+    return { progress: {}, bookmarks: {}, srs: {}, lessonProgress: {}, activity: {} };
 }
 
 let state = null;
@@ -143,16 +144,6 @@ async function pullAndMerge(uid) {
             merged.activity[d] = Math.max(merged.activity[d] || 0, c || 0);
         });
 
-        merged.basics = { ...(remote.basics || {}) };
-        Object.entries(state.basics || {}).forEach(([k, v]) => {
-            const r = merged.basics[k];
-            if (Array.isArray(v) || Array.isArray(r)) {
-                merged.basics[k] = [...new Set([...(Array.isArray(r) ? r : []), ...(Array.isArray(v) ? v : [])])];
-            } else if (!r || (v || 0) > (r || 0)) {
-                merged.basics[k] = v;
-            }
-        });
-
         state = merged;
         persistNow();
         await pushToCloud();
@@ -206,35 +197,6 @@ export function setLessonLearned(key, learned) {
     scheduleSync();
 }
 
-/* ================= Basics (static pages) ================= */
-
-export function basicsTopicLearned(topicId) {
-    return !!(topicId && state?.basics?.[`topic:${topicId}`]);
-}
-export function setBasicsTopicLearned(topicId, learned) {
-    if (!topicId || !state) return;
-    if (!state.basics) state.basics = {};
-    const key = `topic:${topicId}`;
-    if (learned) state.basics[key] = Date.now();
-    else delete state.basics[key];
-    scheduleSync();
-}
-export function basicsLearnedCount() {
-    return Object.keys(state?.basics || {}).filter(k => k.startsWith('topic:')).length;
-}
-export function basicsItemSet(topicId) {
-    return new Set(state?.basics?.[`items:${topicId}`] || []);
-}
-export function toggleBasicsItem(topicId, label, on) {
-    if (!topicId || !state) return;
-    if (!state.basics) state.basics = {};
-    const key = `items:${topicId}`;
-    const set = new Set(state.basics[key] || []);
-    if (on) set.add(label); else set.delete(label);
-    state.basics[key] = [...set];
-    scheduleSync();
-}
-
 /* ================= activity & streak ================= */
 
 export function todayKey(d = new Date()) { return d.toISOString().slice(0, 10); }
@@ -280,8 +242,9 @@ export function srsCounts() {
 
 /** Grade a word after a flashcard/quiz answer and advance its SRS box.
  *  `src` tags cards that do NOT come from the vocabularies collection
- *  (phrasal/prep/wordform/pattern/lexical or generated lesson cards) so
- *  review.js knows which loader (card-loader.js) rebuilds them. */
+ *  (phrasal/prep/wordform/wordexp or generated lesson cards; `lexical` is
+ *  a legacy tag still accepted by card-loader.js) so review.js knows which
+ *  loader (card-loader.js) rebuilds them. */
 export function srsGrade(wordId, unitId, wasKnown, src) {
     const e = state.srs[wordId] || { box: 0, next: '', unitId: unitId || null };
     const d = new Date();

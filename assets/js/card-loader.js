@@ -1,8 +1,7 @@
 /**
  * card-loader.js — Rebuilds flashcard objects for SRS entries whose `src`
  * tag points at a non-vocabulary collection (phrasal/prep/pattern/wordform/
- * lexical) or at a generated Grammar/Pronunciation lesson card.
- *
+ * wordexp) or at a generated Grammar/Pronunciation lesson card.
  * Shared by review.js (due sessions) and content-tree.js (lesson flashcards)
  * so the card shape and the generated-card algorithm stay identical to the
  * ones main.js builds on the unit_* pages.
@@ -10,13 +9,16 @@
 import { collection, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from './firebase-config.js';
 
-/** src tag -> Firestore collection. */
+/** src tag -> Firestore collection. `lexical` is the legacy (pre-rename) tag
+ *  that still exists in previously saved SRS/bookmark entries and must keep
+ *  resolving, so both tags point at the same collection. */
 export const SRC_COLLECTIONS = {
     phrasal: 'phrasal_verbs',
     prep: 'prep_phrases',
     pattern: 'word_patterns',
     wordform: 'word_formations',
-    lexical: 'lexical_expansions',
+    wordexp: 'word_expansions',
+    lexical: 'word_expansions', // legacy tag
     grammar_lesson: 'grammar_lessons',
     grammar_unit: 'grammar_units',
     pronunciation_lesson: 'pronunciation_lessons',
@@ -81,7 +83,7 @@ function docCard(src, d, unitId) {
 /**
  * Rebuild flashcards for src-tagged SRS entries. Entries look like
  * { id, unitId, src } where id is a doc id (or `docId#index` for flattened
- * wordform/lexical/lesson rows).
+ * wordform/wordexp/lesson rows).
  */
 export async function loadSrcCards(entries) {
     const cards = [];
@@ -132,7 +134,7 @@ export async function loadSrcCards(entries) {
                                 pron: a0.pron || '', audio: a0.url || '', unitId, src
                             });
                         });
-                    } else if (src === 'lexical') {
+                    } else if (src === 'wordexp' || src === 'lexical') {
                         (data.words || []).forEach((w, i) => {
                             const cid = `${d.id}#${i}`;
                             if (!wanted.has(cid) || !w.word || !w.def) return;

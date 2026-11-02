@@ -1669,7 +1669,7 @@ function updateReviewBadge() {
     RESUME — "Continue studying" shortcut
     ============================================== */
 const UNIT_PAGES = ['unit_detail.html', 'unit_phrasal.html', 'unit_prep.html',
-    'unit_wordform.html', 'unit_pattern.html', 'unit_lexical.html'];
+    'unit_wordform.html', 'unit_pattern.html', 'unit_wordexp.html'];
 
 function trackLastStudied() {
     const page = location.pathname.split('/').pop();

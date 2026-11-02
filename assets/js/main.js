@@ -61,7 +61,7 @@ function registerLexicon(items) {
 /* ---------- Bookmarks for the five sibling unit pages ----------
    Bookmark keys are namespaced (`src:sid`) so they never collide with
    vocabulary doc ids. `sid` mirrors the SRS/flashcard id used on the unit
-   pages (docId, or `docId#index` for flattened wordform/lexical rows), so
+   pages (docId, or `docId#index` for flattened wordform/wordexp rows), so
    starring and reviewing share one identity per card. */
 function bmStarHtml(item, src, sid) {
     const id = `${src}:${sid}`;
@@ -193,7 +193,7 @@ function renderUnitSubnav(active) {
         ['unit_prep.html', 'Prepositional Phrases'],
         ['unit_wordform.html', 'Word Formation'],
         ['unit_pattern.html', 'Word Patterns'],
-        ['unit_lexical.html', 'Lexical Expansion']
+        ['unit_wordexp.html', 'Word Expansion']
     ];
     nav.innerHTML = `<div class="subnav-scroll">` + tabs.map(([target, label]) => {
         const href = unitId ? `${target}?id=${encodeURIComponent(unitId)}` : target;
@@ -214,7 +214,7 @@ function renderUnitSubnav(active) {
     syncFades();
 }
 
-/* Accessible expander for word-formation/lexical blocks. Delegated so
+/* Accessible expander for word-formation/word-expansion blocks. Delegated so
    re-renders (search, pagination…) never need re-binding. */
 document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-wf-toggle]');
@@ -482,14 +482,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     { id: 'prep', name: 'Prepositional Phrases', url: 'unit_prep.html' },
                     { id: 'wordform', name: 'Word Formation', url: 'unit_wordform.html' },
                     { id: 'pattern', name: 'Word Patterns', url: 'unit_pattern.html' },
-                    { id: 'lexical', name: 'Lexical Expansion', url: 'unit_lexical.html' }
+                    { id: 'wordexp', name: 'Word Expansion', url: 'unit_wordexp.html' }
                 ];
 
                 unitsListContainer.innerHTML = units.map(unit => {
                     let sectionsHtml;
                     if (unit.sections && unit.sections.length > 0) {
                         sectionsHtml = sectionMap
-                            .filter(sec => unit.sections.includes(sec.id))
+                            // 'lexical' is the legacy unit.sections id (pre-rename)
+                            .filter(sec => unit.sections.includes(sec.id)
+                                || (sec.id === 'wordexp' && unit.sections.includes('lexical')))
                             .map(sec => `<a href="${sec.url}?id=${encodeURIComponent(unit.id)}" class="unit-tab-btn">${sec.name}</a>`)
                             .join('');
                     } else {
@@ -740,7 +742,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupPatternList();
 
-    setupLexicalList();
+    setupWordexpList();
 
     /* ---------------- Section implementations ---------------- */
 
@@ -1045,8 +1047,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         load();
     }
 
-    function setupLexicalList() {
-        const container = document.getElementById('lexical-list-container');
+    function setupWordexpList() {
+        const container = document.getElementById('wordexp-list-container');
         if (!container) return;
         wireBmStars(container);
         const unitId = new URLSearchParams(window.location.search).get('id');
@@ -1058,20 +1060,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         const load = async () => {
             showSkeleton(container, 3);
             try {
-                const { data: lexicals } = await cachedLoad(`lexical_expansions:${unitId}`, async () => {
-                    const snap = await getDocs(query(collection(db, "lexical_expansions"), where("unitId", "==", unitId)));
-                    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                const { data: lexicals } = await cachedLoad(`word_expansions:${unitId}`, async () => {
+                    let docs = [];
+                    try {
+                        const snap = await getDocs(query(collection(db, "word_expansions"), where("unitId", "==", unitId)));
+                        docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                    } catch (e) {
+                        // New rules not deployed yet (or offline) — degrade to
+                        // legacy read so the page keeps working pre-migration.
+                        console.warn('[wordexp] primary read failed:', e?.code || e);
+                    }
+                    if (docs.length === 0) {
+                        // Legacy fallback — data still living in lexical_expansions
+                        // (removed once the admin data migration has run).
+                        try {
+                            const legacy = await getDocs(query(collection(db, "lexical_expansions"), where("unitId", "==", unitId)));
+                            docs = legacy.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !isDraft(x));
+                        } catch { /* legacy collection may not exist anymore */ }
+                    }
+                    return docs;
                 });
 
                 // Expose every expansion word to the dictionary popup (B7)
                 registerLexicon(lexicals.flatMap(l => l.words || []));
 
-                const searchInput = injectSearchBar(container, 'lexical-search-input', 'Search lexical expansions…');
+                const searchInput = injectSearchBar(container, 'wordexp-search-input', 'Search word expansions…');
                 applyUrlSearchParam(searchInput);
 
                 const render = (list, searching) => {
                     if (lexicals.length === 0) {
-                        container.innerHTML = '<p class="empty-state">This unit has no lexical expansion yet.</p>';
+                        container.innerHTML = '<p class="empty-state">This unit has no word expansion yet.</p>';
                         return;
                     }
                     if (list.length === 0) {
@@ -1100,7 +1118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         : '');
                                 return `
                                 <div class="vocab-item reveal">
-                                    ${bmStarHtml({ ...w, unitId: lex.unitId || unitId }, 'lexical', `${lex.id}#${i}`)}
+                                    ${bmStarHtml({ ...w, unitId: lex.unitId || unitId }, 'wordexp', `${lex.id}#${i}`)}
                                     <div class="vocab-left">
                                         <div class="vocab-word-group">
                                             <span class="vocab-word">${window.formatWordWithPos(escapeHtml(w.word))}</span>
@@ -1123,7 +1141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <div class="wf-item reveal" style="margin-bottom: 3rem; width: 100%;">
                                 ${topSectionHtml}
                                 <button type="button" class="wf-toggle" data-wf-toggle aria-expanded="false"
-                                    aria-label="Toggle lexical expansion details">&#9654;</button>
+                                    aria-label="Toggle word expansion details">&#9654;</button>
                                 <div class="wf-forms collapsed">
                                     <div style="display: flex; flex-direction: column; gap: 3rem; width: 100%;">
                                         ${wordsHtml}
@@ -1187,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             pron: w.pron || '',
                             audio: w.audio || '',
                             unitId,
-                            src: 'lexical'
+                            src: 'wordexp'
                         });
                     });
                 });

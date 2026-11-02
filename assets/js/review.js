@@ -15,6 +15,13 @@ import { db } from './firebase-config.js';
 import { escapeHtml, iconSvg } from './utils.js';
 import { isLoadable, loadSrcCards } from './card-loader.js';
 
+/** Friendly labels for src-tagged cards shown in the preview list. */
+const SRC_LABELS = {
+    wordform: 'Word form',
+    wordexp: 'Word expansion',
+    lexical: 'Word expansion' // legacy tag
+};
+
 /* 7-day forecast: how many words come due each day (srs.next).
    Overdue words fold into today's bucket. Mirrors mylearning.js. */
 function renderForecast() {
@@ -97,7 +104,7 @@ async function loadWordsFor(entries) {
         }
     }));
 
-    // src-tagged cards (phrasal/prep/pattern/wordform/lexical + lesson cards)
+    // src-tagged cards (phrasal/prep/pattern/wordform/wordexp + lesson cards)
     // are rebuilt by the shared card-loader.
     try {
         words.push(...await loadSrcCards(srcEntries));
@@ -123,7 +130,7 @@ function renderPreview(words) {
                     <div class="rv-word-main">
                         <span class="rv-word">${escapeHtml(v.word || '')}</span>
                         <span class="rv-pron">${escapeHtml(v.pron || '')}</span>
-                        ${v.src ? `<span class="rv-src">${escapeHtml(v.src.replace(/_/g, ' '))}</span>` : ''}
+                        ${v.src ? `<span class="rv-src">${escapeHtml(SRC_LABELS[v.src] || v.src.replace(/_/g, ' '))}</span>` : ''}
                     </div>
                     <p class="rv-def">${escapeHtml(v.def || '')}</p>
                 </div>`).join('')}

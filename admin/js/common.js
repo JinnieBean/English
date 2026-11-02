@@ -315,7 +315,8 @@ export function publicUrlFor(coll, item) {
         case 'prep_phrases': return u && `unit_prep.html?id=${u}`;
         case 'word_formations': return u && `unit_wordform.html?id=${u}`;
         case 'word_patterns': return u && `unit_pattern.html?id=${u}`;
-        case 'lexical_expansions': return u && `unit_lexical.html?id=${u}`;
+        case 'word_expansions': return u && `unit_wordexp.html?id=${u}`;
+        case 'lexical_expansions': return u && `unit_wordexp.html?id=${u}`; // legacy name
         case 'grammar_categories': return 'grammar.html';
         case 'grammar_lessons': return `grammar_lesson.html?id=${id}&type=lesson`;
         case 'grammar_units': return `grammar_lesson.html?id=${id}&type=unit`;

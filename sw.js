@@ -7,7 +7,7 @@
  *  - Other static assets (images/fonts/CDN): stale-while-revalidate
  *  - Never intercept /admin/** (keep the CMS always fresh) or non-GET
  */
-const CACHE = 'tn-cache-v15';
+const CACHE = 'tn-cache-v18';
 const OFFLINE_URL = 'offline.html';
 
 const PRECACHE = [
@@ -21,13 +21,11 @@ const PRECACHE = [
     'unit_prep.html',
     'unit_wordform.html',
     'unit_pattern.html',
-    'unit_lexical.html',
+    'unit_wordexp.html',
     'grammar.html',
     'grammar_lesson.html',
     'pronunciation.html',
     'pronunciation_lesson.html',
-    'basics.html',
-    'basics_topic.html',
     'review.html',
     'mylearning.html',
     'bookmarks.html',
@@ -39,7 +37,6 @@ const PRECACHE = [
     'assets/css/courses.css',
     'assets/css/english.css',
     'assets/css/grammar-styles.css',
-    'assets/css/basics.css',
     'assets/js/ui.js',
     'assets/js/main.js',
     'assets/js/utils.js',
@@ -48,8 +45,6 @@ const PRECACHE = [
     'assets/js/content-tree.js',
     'assets/js/grammar.js',
     'assets/js/pronunciation.js',
-    'assets/js/basics.js',
-    'assets/js/basics-data.js',
     'assets/js/review.js',
     'assets/js/mylearning.js',
     'assets/js/bookmarks.js',
@@ -88,6 +83,12 @@ self.addEventListener('fetch', (event) => {
 
     // Page navigations: network first, cached copy as fallback
     if (req.mode === 'navigate') {
+        // Removed pages (Basics was deleted 2026): never serve these from
+        // an older cache version — always go to the network (404 is fine).
+        if (/\/basics(_topic)?\.html$/i.test(url.pathname)) {
+            event.respondWith(fetch(req));
+            return;
+        }
         event.respondWith((async () => {
             try {
                 return await fetch(req);

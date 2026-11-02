@@ -4,7 +4,7 @@ import { escapeHtml, friendlyError, applyAudioVersion, debounce } from '../../as
 import { autofillWord, parseLongmanHtml, longmanUrlFor, slugFromLongmanInput } from '../../assets/js/longman.js';
 import { hooks, openModal, onSubmit, stampCreate, stampUpdate, isDuplicate, dupToast, performDelete, assetUrl, publicUrlFor, enableDragReorder, confirmDialog, logAudit } from './common.js';
 import {
-    booksData, unitsData, vocabData, phrasalData, prepData, wordformData, patternData, lexicalData,
+    booksData, unitsData, vocabData, phrasalData, prepData, wordformData, patternData, wordexpData,
     applyPagination, resetPage,
     rememberUnitSelection, applySavedUnitSelect, sessionState
 } from './data.js';
@@ -240,7 +240,9 @@ window.editUnit = (id) => {
         document.querySelectorAll('input[name="unit-section"]').forEach(cb => cb.checked = false);
         if (unit.sections) {
             unit.sections.forEach(sec => {
-                const cb = document.querySelector(`input[name="unit-section"][value="${sec}"]`);
+                // 'lexical' is the legacy sections id (pre-rename) -> 'wordexp'
+                const name = sec === 'lexical' ? 'wordexp' : sec;
+                const cb = document.querySelector(`input[name="unit-section"][value="${name}"]`);
                 if (cb) cb.checked = true;
             });
         }
@@ -272,7 +274,7 @@ window.deleteUnit = async (id) => {
         prepData.filter(v => v.unitId === id).length +
         wordformData.filter(v => v.unitId === id).length +
         patternData.filter(v => v.unitId === id).length +
-        lexicalData.filter(v => v.unitId === id).length;
+        wordexpData.filter(v => v.unitId === id).length;
     const warning = children > 0
         ? `${children} linked record${children > 1 ? 's' : ''} (vocabulary, phrases…) will be orphaned.`
         : '';
@@ -1288,16 +1290,16 @@ window.duplicatePattern = async (id) => {
 window.deletePattern = (id) => performDelete("word_patterns", id, 'pattern');
 
 /* =========================================================
-   LEXICAL EXPANSION
+   WORD EXPANSION
    ========================================================= */
-const lexicalModal = document.getElementById('lexical-modal');
-const lexicalForm = document.getElementById('lexical-form');
-const lexicalWordsContainer = document.getElementById('lexical-words-container');
+const wordexpModal = document.getElementById('wordexp-modal');
+const wordexpForm = document.getElementById('wordexp-form');
+const wordexpWordsContainer = document.getElementById('wordexp-words-container');
 
-window.addLexicalWordRow = function (word = '', pos = '', pron = '', audio = '', def = '', example = '') {
-    const rowId = 'lexical-word-' + Date.now() + Math.random().toString(36).slice(2, 11);
+window.addWordexpWordRow = function (word = '', pos = '', pron = '', audio = '', def = '', example = '') {
+    const rowId = 'wordexp-word-' + Date.now() + Math.random().toString(36).slice(2, 11);
     const div = document.createElement('div');
-    div.className = 'lexical-word-row';
+    div.className = 'wordexp-word-row';
     div.dataset.rowId = rowId;
     div.innerHTML = `
         <button type="button" class="btn-secondary btn-danger btn-small lx-remove-btn" onclick="this.parentElement.remove()">Remove</button>
@@ -1328,40 +1330,40 @@ window.addLexicalWordRow = function (word = '', pos = '', pron = '', audio = '',
             <textarea id="${rowId}-example" class="lx-example" rows="2" placeholder="Example">${escapeHtml(example)}</textarea>
         </div>
     `;
-    lexicalWordsContainer.appendChild(div);
+    wordexpWordsContainer.appendChild(div);
 };
 
-if (document.getElementById('add-lexical-word-btn')) {
-    document.getElementById('add-lexical-word-btn').addEventListener('click', () => {
-        addLexicalWordRow();
-        focusNewRow(lexicalWordsContainer.lastElementChild);
+if (document.getElementById('add-wordexp-word-btn')) {
+    document.getElementById('add-wordexp-word-btn').addEventListener('click', () => {
+        addWordexpWordRow();
+        focusNewRow(wordexpWordsContainer.lastElementChild);
     });
 }
 
-if (document.getElementById('add-lexical-btn')) {
-    document.getElementById('add-lexical-btn').addEventListener('click', () => {
-        document.getElementById('lexical-id').value = '';
-        lexicalForm.reset();
-        applySavedUnitSelect(document.getElementById('lexical-unit-id'), 'lexical');
-        document.getElementById('lexical-status').value = 'published';
-        lexicalWordsContainer.innerHTML = '';
-        addLexicalWordRow();
-        document.getElementById('lexical-modal-title').innerText = 'Add Lexical Expansion';
-        openModal(lexicalModal);
+if (document.getElementById('add-wordexp-btn')) {
+    document.getElementById('add-wordexp-btn').addEventListener('click', () => {
+        document.getElementById('wordexp-id').value = '';
+        wordexpForm.reset();
+        applySavedUnitSelect(document.getElementById('wordexp-unit-id'), 'wordexp');
+        document.getElementById('wordexp-status').value = 'published';
+        wordexpWordsContainer.innerHTML = '';
+        addWordexpWordRow();
+        document.getElementById('wordexp-modal-title').innerText = 'Add Word Expansion';
+        openModal(wordexpModal);
     });
 }
 
-if (lexicalForm) {
-    onSubmit(lexicalForm, async () => {
-        const id = document.getElementById('lexical-id').value;
-        const unitId = document.getElementById('lexical-unit-id').value;
-        const textLeft = document.getElementById('lexical-text-left').value;
-        const alignLeft = document.getElementById('lexical-align-left').value;
-        const textRight = document.getElementById('lexical-text-right').value;
-        const alignRight = document.getElementById('lexical-align-right').value;
+if (wordexpForm) {
+    onSubmit(wordexpForm, async () => {
+        const id = document.getElementById('wordexp-id').value;
+        const unitId = document.getElementById('wordexp-unit-id').value;
+        const textLeft = document.getElementById('wordexp-text-left').value;
+        const alignLeft = document.getElementById('wordexp-align-left').value;
+        const textRight = document.getElementById('wordexp-text-right').value;
+        const alignRight = document.getElementById('wordexp-align-right').value;
 
         const words = [];
-        lexicalWordsContainer.querySelectorAll('.lexical-word-row').forEach(r => {
+        wordexpWordsContainer.querySelectorAll('.wordexp-word-row').forEach(r => {
             const w = r.querySelector('.lx-word').value.trim();
             const p = r.querySelector('.lx-pos').value.trim();
             const pr = r.querySelector('.lx-pron').value.trim();
@@ -1371,42 +1373,42 @@ if (lexicalForm) {
             if (w) words.push({ word: w, pos: p, pron: pr, audio: au, def: d, example: ex });
         });
 
-        const payload = { unitId, textLeft, alignLeft, textRight, alignRight, words, status: document.getElementById('lexical-status').value };
+        const payload = { unitId, textLeft, alignLeft, textRight, alignRight, words, status: document.getElementById('wordexp-status').value };
 
-        rememberUnitSelection('lexical', unitId);
+        rememberUnitSelection('wordexp', unitId);
         if (!unitId) { window.showToast('Please select a unit.', 'error'); return; }
 
         try {
             if (id) {
-                await updateDoc(doc(db, "lexical_expansions", id), stampUpdate(payload));
+                await updateDoc(doc(db, "word_expansions", id), stampUpdate(payload));
             } else {
-                await addDoc(collection(db, "lexical_expansions"), stampCreate(payload));
+                await addDoc(collection(db, "word_expansions"), stampCreate(payload));
             }
-            await logAudit(id ? 'update' : 'create', 'lexical_expansions', id, payload.textLeft);
-            window.closeModalOverlay(lexicalModal);
-            await hooks.reload("lexical_expansions");
+            await logAudit(id ? 'update' : 'create', 'word_expansions', id, payload.textLeft);
+            window.closeModalOverlay(wordexpModal);
+            await hooks.reload("word_expansions");
             window.showToast('Saved!', 'success');
         } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
     });
 }
 
-if (document.getElementById('filter-unit-select-lexical')) {
-    document.getElementById('filter-unit-select-lexical').addEventListener('change', () => renderLexical());
+if (document.getElementById('filter-unit-select-wordexp')) {
+    document.getElementById('filter-unit-select-wordexp').addEventListener('change', () => renderWordexp());
 }
 
-export function renderLexical() {
-    const list = document.getElementById('lexical-list');
+export function renderWordexp() {
+    const list = document.getElementById('wordexp-list');
     if (!list) return;
-    const filter = document.getElementById('filter-unit-select-lexical').value;
+    const filter = document.getElementById('filter-unit-select-wordexp').value;
 
-    let filtered = filter === 'all' ? lexicalData : lexicalData.filter(p => p.unitId === filter);
+    let filtered = filter === 'all' ? wordexpData : wordexpData.filter(p => p.unitId === filter);
     filtered.sort((a, b) => (a.textLeft || '').localeCompare(b.textLeft || ''));
 
     // FIX: pagination now actually slices the list for this tab
-    const pageItems = applyPagination('lexical', filtered);
-    setCountBadge('count-lexical', filtered.length);
+    const pageItems = applyPagination('wordexp', filtered);
+    setCountBadge('count-wordexp', filtered.length);
     if (!pageItems.length) {
-        list.innerHTML = `<tr><td colspan="3" class="empty-row">No lexical expansions found.</td></tr>`;
+        list.innerHTML = `<tr><td colspan="3" class="empty-row">No word expansions found.</td></tr>`;
         return;
     }
 
@@ -1414,55 +1416,55 @@ export function renderLexical() {
         const unitName = unitsData.find(u => u.id === p.unitId)?.title || 'Unknown';
         return `
             <tr>
-                <td><input type="checkbox" class="bulk-check" data-tab="lexical" data-id="${p.id}"></td>
+                <td><input type="checkbox" class="bulk-check" data-tab="wordexp" data-id="${p.id}"></td>
                 <td>${escapeHtml(unitName)} ${p.status === 'draft' ? '<span class="badge badge-draft">Draft</span>' : ''}</td>
                 <td><pre style="font-family:inherit; font-size: 0.8rem; max-width: 300px; max-height: 100px; overflow: hidden; margin:0;">${escapeHtml((p.textLeft || '').slice(0, 200))}</pre></td>
                 <td>
-                    ${viewBtn('lexical_expansions', p)}
-                    <button class="btn-secondary btn-small" onclick="editLexical('${p.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
-                    <button class="btn-secondary btn-small" onclick="duplicateLexical('${p.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
-                    <button class="btn-danger btn-small" onclick="deleteLexical('${p.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
+                    ${viewBtn('word_expansions', p)}
+                    <button class="btn-secondary btn-small" onclick="editWordexp('${p.id}')"><i aria-hidden="true" class="fas fa-pen"></i> Edit</button>
+                    <button class="btn-secondary btn-small" onclick="duplicateWordexp('${p.id}')"><i aria-hidden="true" class="fas fa-copy"></i> Duplicate</button>
+                    <button class="btn-danger btn-small" onclick="deleteWordexp('${p.id}')"><i aria-hidden="true" class="fas fa-trash"></i> Delete</button>
                 </td>
             </tr>`;
     }).join('');
 }
 
-window.editLexical = (id) => {
-    const p = lexicalData.find(x => x.id === id);
+window.editWordexp = (id) => {
+    const p = wordexpData.find(x => x.id === id);
     if (p) {
-        document.getElementById('lexical-id').value = p.id;
-        document.getElementById('lexical-unit-id').value = p.unitId || '';
-        document.getElementById('lexical-text-left').value = p.textLeft || '';
-        document.getElementById('lexical-align-left').value = p.alignLeft || 'left';
-        document.getElementById('lexical-text-right').value = p.textRight || '';
-        document.getElementById('lexical-align-right').value = p.alignRight || 'left';
-        document.getElementById('lexical-status').value = p.status || 'published';
+        document.getElementById('wordexp-id').value = p.id;
+        document.getElementById('wordexp-unit-id').value = p.unitId || '';
+        document.getElementById('wordexp-text-left').value = p.textLeft || '';
+        document.getElementById('wordexp-align-left').value = p.alignLeft || 'left';
+        document.getElementById('wordexp-text-right').value = p.textRight || '';
+        document.getElementById('wordexp-align-right').value = p.alignRight || 'left';
+        document.getElementById('wordexp-status').value = p.status || 'published';
 
-        lexicalWordsContainer.innerHTML = '';
+        wordexpWordsContainer.innerHTML = '';
         if (p.words && p.words.length > 0) {
-            p.words.forEach(w => addLexicalWordRow(w.word, w.pos, w.pron, w.audio, w.def, w.example));
+            p.words.forEach(w => addWordexpWordRow(w.word, w.pos, w.pron, w.audio, w.def, w.example));
         } else {
-            addLexicalWordRow();
+            addWordexpWordRow();
         }
 
-        document.getElementById('lexical-modal-title').innerText = 'Edit Lexical Expansion';
-        openModal(lexicalModal);
+        document.getElementById('wordexp-modal-title').innerText = 'Edit Word Expansion';
+        openModal(wordexpModal);
     }
 };
 
-window.duplicateLexical = async (id) => {
-    const p = lexicalData.find(x => x.id === id);
+window.duplicateWordexp = async (id) => {
+    const p = wordexpData.find(x => x.id === id);
     if (!p) return;
     const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
     try {
-        const ref = await addDoc(collection(db, "lexical_expansions"), stampCreate(rest));
-        await logAudit('duplicate', 'lexical_expansions', ref.id, rest.textLeft);
-        await hooks.reload("lexical_expansions");
-        window.showToast('Lexical expansion duplicated.', 'success');
+        const ref = await addDoc(collection(db, "word_expansions"), stampCreate(rest));
+        await logAudit('duplicate', 'word_expansions', ref.id, rest.textLeft);
+        await hooks.reload("word_expansions");
+        window.showToast('Word expansion duplicated.', 'success');
     } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
 };
 
-window.deleteLexical = (id) => performDelete("lexical_expansions", id, 'lexical expansion');
+window.deleteWordexp = (id) => performDelete("word_expansions", id, 'word expansion');
 
 
 // Pagination controls invoke these via window[PAG_RENDER_FN]
@@ -1471,7 +1473,7 @@ window.renderPhrasal = renderPhrasal;
 window.renderPrep = renderPrep;
 window.renderWordform = renderWordform;
 window.renderPattern = renderPattern;
-window.renderLexical = renderLexical;
+window.renderWordexp = renderWordexp;
 
 
 // =========================================================
@@ -1480,7 +1482,7 @@ window.renderLexical = renderLexical;
 const BULK_COLL = {
     books: 'books', units: 'units', vocab: 'vocabularies',
     phrasal: 'phrasal_verbs', prep: 'prep_phrases', wordform: 'word_formations',
-    pattern: 'word_patterns', lexical: 'lexical_expansions'
+    pattern: 'word_patterns', wordexp: 'word_expansions'
 };
 
 const viewBtn = (coll, item) => {
