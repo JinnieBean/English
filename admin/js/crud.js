@@ -593,7 +593,7 @@ export function renderPhrasal() {
     const pageItems = applyPagination('phrasal', filtered);
     setCountBadge('count-phrasal', filtered.length);
     if (!pageItems.length) {
-        list.innerHTML = `<tr><td colspan="4" class="empty-row">No phrasal verbs found.</td></tr>`;
+        list.innerHTML = `<tr><td colspan="5" class="empty-row">No phrasal verbs found.</td></tr>`;
         return;
     }
 
@@ -709,7 +709,7 @@ export function renderPrep() {
     const pageItems = applyPagination('prep', filtered);
     setCountBadge('count-prep', filtered.length);
     if (!pageItems.length) {
-        list.innerHTML = `<tr><td colspan="4" class="empty-row">No phrases found.</td></tr>`;
+        list.innerHTML = `<tr><td colspan="5" class="empty-row">No phrases found.</td></tr>`;
         return;
     }
 
@@ -1238,7 +1238,7 @@ export function renderPattern() {
     const pageItems = applyPagination('pattern', filtered);
     setCountBadge('count-pattern', filtered.length);
     if (!pageItems.length) {
-        list.innerHTML = `<tr><td colspan="3" class="empty-row">No word patterns found.</td></tr>`;
+        list.innerHTML = `<tr><td colspan="4" class="empty-row">No word patterns found.</td></tr>`;
         return;
     }
 
@@ -1379,12 +1379,24 @@ if (wordexpForm) {
         if (!unitId) { window.showToast('Please select a unit.', 'error'); return; }
 
         try {
+            let targetColl = 'word_expansions';
             if (id) {
-                await updateDoc(doc(db, "word_expansions", id), stampUpdate(payload));
+                const existing = wordexpData.find(x => x.id === id);
+                targetColl = existing?._coll || 'word_expansions';
+                await updateDoc(doc(db, targetColl, id), stampUpdate(payload));
             } else {
-                await addDoc(collection(db, "word_expansions"), stampCreate(payload));
+                try {
+                    await addDoc(collection(db, "word_expansions"), stampCreate(payload));
+                } catch (writeErr) {
+                    if (writeErr?.code === 'permission-denied') {
+                        targetColl = 'lexical_expansions';
+                        await addDoc(collection(db, "lexical_expansions"), stampCreate(payload));
+                    } else {
+                        throw writeErr;
+                    }
+                }
             }
-            await logAudit(id ? 'update' : 'create', 'word_expansions', id, payload.textLeft);
+            await logAudit(id ? 'update' : 'create', targetColl, id, payload.textLeft);
             window.closeModalOverlay(wordexpModal);
             await hooks.reload("word_expansions");
             window.showToast('Saved!', 'success');
@@ -1408,7 +1420,7 @@ export function renderWordexp() {
     const pageItems = applyPagination('wordexp', filtered);
     setCountBadge('count-wordexp', filtered.length);
     if (!pageItems.length) {
-        list.innerHTML = `<tr><td colspan="3" class="empty-row">No word expansions found.</td></tr>`;
+        list.innerHTML = `<tr><td colspan="4" class="empty-row">No word expansions found.</td></tr>`;
         return;
     }
 
@@ -1455,16 +1467,20 @@ window.editWordexp = (id) => {
 window.duplicateWordexp = async (id) => {
     const p = wordexpData.find(x => x.id === id);
     if (!p) return;
-    const { id: _o, createdAt: _c, updatedAt: _u, ...rest } = p;
+    const { id: _o, createdAt: _c, updatedAt: _u, _coll, ...rest } = p;
+    const targetColl = _coll || 'word_expansions';
     try {
-        const ref = await addDoc(collection(db, "word_expansions"), stampCreate(rest));
-        await logAudit('duplicate', 'word_expansions', ref.id, rest.textLeft);
+        const ref = await addDoc(collection(db, targetColl), stampCreate(rest));
+        await logAudit('duplicate', targetColl, ref.id, rest.textLeft);
         await hooks.reload("word_expansions");
         window.showToast('Word expansion duplicated.', 'success');
     } catch (err) { console.error(err); window.showToast(friendlyError(err), 'error'); }
 };
 
-window.deleteWordexp = (id) => performDelete("word_expansions", id, 'word expansion');
+window.deleteWordexp = (id) => {
+    const item = wordexpData.find(x => x.id === id);
+    return performDelete(item?._coll || "word_expansions", id, 'word expansion');
+};
 
 
 // Pagination controls invoke these via window[PAG_RENDER_FN]
@@ -1512,6 +1528,9 @@ function getSelection() {
     return { tab, coll: BULK_COLL[tab], ids: checked.map(c => c.dataset.id).filter(Boolean) };
 }
 
+const docCollFor = (tab, coll, id) =>
+    tab === 'wordexp' ? (wordexpData.find(x => x.id === id)?._coll || coll) : coll;
+
 async function bulkDelete() {
     const { tab, coll, ids } = getSelection();
     if (!coll || !ids.length) return;
@@ -1523,7 +1542,7 @@ async function bulkDelete() {
     if (!ok) return;
     try {
         const batch = writeBatch(db);
-        ids.forEach(id => batch.delete(doc(db, coll, id)));
+        ids.forEach(id => batch.delete(doc(db, docCollFor(tab, coll, id), id)));
         await batch.commit();
         await logAudit('bulk-delete', coll, ids.join(','), `${ids.length} items`);
         window.showToast(`Deleted ${ids.length} item(s).`, 'success');
@@ -1536,7 +1555,7 @@ async function bulkSetStatus(status) {
     if (!coll || !ids.length) return;
     try {
         const batch = writeBatch(db);
-        ids.forEach(id => batch.update(doc(db, coll, id), { status, updatedAt: serverTimestamp() }));
+        ids.forEach(id => batch.update(doc(db, docCollFor(tab, coll, id), id), { status, updatedAt: serverTimestamp() }));
         await batch.commit();
         await logAudit(`set-${status}`, coll, ids.join(','), `${ids.length} items`);
         window.showToast(`${ids.length} item(s) marked ${status}.`, 'success');

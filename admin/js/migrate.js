@@ -182,8 +182,8 @@ async function run(legacyDocs, targetIds, missingIds, unitsNeedingSection) {
             const CHUNK = 300;
             for (let i = 0; i < missingIds.length; i += CHUNK) {
                 const batch = writeBatch(db);
-                for (const id of missingIds.slice(i, i + CHUNK)) {
-                    batch.delete(doc(db, LEGACY, id));
+                for (const d of missingIds.slice(i, i + CHUNK)) {
+                    batch.delete(doc(db, LEGACY, d.id));
                 }
                 await batch.commit();
                 deleted += Math.min(CHUNK, missingIds.length - i);

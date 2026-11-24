@@ -2,6 +2,23 @@ import {
     signInWithEmailAndPassword, signOut, onAuthStateChanged,
     setPersistence, browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
+import { escapeHtml, friendlyError } from '../../assets/js/utils.js';
+import { hooks, confirmDialog } from './common.js';
+import {
+    booksData, unitsData, vocabData, phrasalData, prepData,
+    wordformData, patternData, wordexpData,
+    fetchAll, assignData, addPaginationControls,
+    populateBookSelects, populateUnitSelects
+} from './data.js';
+import {
+    renderBooks, renderUnits, renderVocab, renderPhrasal,
+    renderPrep, renderWordform, renderPattern, renderWordexp
+} from './crud.js';
+import { initTinyMCE, loadGrammarData, loadPronunciationData, treeManagers } from './trees.js';
+import './tools.js';
+import { initMigration } from './migrate.js';
 
 /**
  * ⚠️ ADMIN WHITELIST — only these accounts may open the admin panel.
@@ -28,23 +45,6 @@ try {
 } catch (err) {
     console.warn('[auth] persistence change failed:', err?.code);
 }
-import { collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { adminAuth as auth, adminDb as db } from './admin-firebase.js';
-import { escapeHtml, friendlyError } from '../../assets/js/utils.js';
-import { hooks, confirmDialog } from './common.js';
-import {
-    booksData, unitsData, vocabData, phrasalData, prepData,
-    wordformData, patternData, wordexpData,
-    fetchAll, assignData, addPaginationControls,
-    populateBookSelects, populateUnitSelects
-} from './data.js';
-import {
-    renderBooks, renderUnits, renderVocab, renderPhrasal,
-    renderPrep, renderWordform, renderPattern, renderWordexp
-} from './crud.js';
-import { initTinyMCE, loadGrammarData, loadPronunciationData, treeManagers } from './trees.js';
-import './tools.js';
-import { initMigration } from './migrate.js';
 
 initMigration();
 
@@ -257,7 +257,8 @@ async function reloadDataFor(collName) {
             books: ["books"], units: ["units"],
             vocabularies: ["vocabularies"], phrasal_verbs: ["phrasal_verbs"],
             prep_phrases: ["prep_phrases"], word_formations: ["word_formations"],
-            word_patterns: ["word_patterns"], word_expansions: ["word_expansions"]
+            word_patterns: ["word_patterns"], word_expansions: ["word_expansions"],
+            lexical_expansions: ["word_expansions"]
         };
         const names = targets[collName] || Object.values(targets).flat();
         const unique = [...new Set(names)];

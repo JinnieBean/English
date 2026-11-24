@@ -103,6 +103,31 @@ export let patternData = [];
 export let wordexpData = [];
 
 export async function fetchAll(name) {
+    if (name === 'word_expansions') {
+        // Read both the current `word_expansions` collection and the legacy
+        // `lexical_expansions` collection so admin data displays even before
+        // the one-time migration runs (or before updated Firestore rules are
+        // deployed). Primary docs take precedence when an ID exists in both.
+        const [primary, legacy] = await Promise.allSettled([
+            getDocs(collection(db, 'word_expansions')),
+            getDocs(collection(db, 'lexical_expansions'))
+        ]);
+        if (primary.status === 'rejected' && legacy.status === 'rejected') {
+            throw primary.reason;
+        }
+        const byId = new Map();
+        if (legacy.status === 'fulfilled') {
+            legacy.value.docs.forEach(d => {
+                byId.set(d.id, { id: d.id, ...d.data(), _coll: 'lexical_expansions' });
+            });
+        }
+        if (primary.status === 'fulfilled') {
+            primary.value.docs.forEach(d => {
+                byId.set(d.id, { id: d.id, ...d.data(), _coll: 'word_expansions' });
+            });
+        }
+        return [...byId.values()];
+    }
     const snap = await getDocs(collection(db, name));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }

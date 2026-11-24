@@ -20,8 +20,13 @@ document.getElementById('export-all-btn')?.addEventListener('click', async () =>
         window.showToast('Collecting data…', 'info');
         const dump = {};
         for (const name of ALL_COLLECTIONS) {
-            const snap = await getDocs(collection(db, name));
-            dump[name] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (name === 'word_expansions') {
+                const items = await fetchAll('word_expansions');
+                dump[name] = items.map(({ _coll, ...rest }) => rest);
+            } else {
+                const snap = await getDocs(collection(db, name));
+                dump[name] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            }
         }
         const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
@@ -222,7 +227,8 @@ document.getElementById('audio-apply-btn')?.addEventListener('click', async () =
             if (!out) return;
             totalDocs++; totalUrls += urlsChanged;
             const field = coll === 'word_formations' ? 'forms' : coll === 'word_expansions' ? 'words' : 'audio';
-            pending.push({ coll, id: d.id, field, value: out[field], label: field === 'audio' ? out.audio : `${out[field]?.length ?? 0} item(s)` });
+            const targetColl = (coll === 'word_expansions' && d._coll) ? d._coll : coll;
+            pending.push({ coll: targetColl, id: d.id, field, value: out[field], label: field === 'audio' ? out.audio : `${out[field]?.length ?? 0} item(s)` });
         });
     });
 
